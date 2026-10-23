@@ -1,0 +1,1406 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/*
+ * next-themes puts the theme's name on <html> as a class, and only one: a
+ * theme cannot also carry `dark`. So `dark:` answers to every theme in the
+ * dark family by name. The list is checked against lib/themes.ts by a unit
+ * test — a dark theme missing from it would draw light-mode details.
+ */
+@custom-variant dark (&:is(.dark *, .midnight *, .black *, .forest *, .plum *, .graphite *, .rosewood *, .lagoon *, .cosmos *, .dim *, .garnet *, .moss *, .abyss *, .espresso *, .fjord *));
+
+/*
+ * Native controls — scrollbars, date pickers, autofill — follow the theme's
+ * family rather than the device. next-themes can only set this for themes
+ * literally named light and dark, and left the last value standing when
+ * switching to any other, so it is done here instead.
+ */
+:root {
+  color-scheme: light;
+}
+.dark,
+.midnight,
+.black,
+.forest,
+.plum,
+.graphite,
+.rosewood,
+.lagoon,
+.cosmos,
+.dim,
+.garnet,
+.moss,
+.abyss,
+.espresso,
+.fjord {
+  color-scheme: dark;
+}
+
+/* ---------------------------------------------------------------------------
+ * Almailgroup Task Management Portal — strict monochrome design tokens.
+ *
+ * The palette is deliberately colourless: pure white / pure black anchors with
+ * the zinc ramp in between. No saturated hues are defined anywhere, so a stray
+ * `bg-blue-500` in a component is an obvious outlier during review.
+ * ------------------------------------------------------------------------- */
+
+:root {
+  /* 16px. Corners are the loudest signal of when an interface was built: the
+   * old 8px read as a 2018 admin panel, and 14px still read as squared-off
+   * next to the pill-shaped controls. Everything derives from this, so the
+   * whole system rounds together. */
+  --radius: 1rem;
+
+  /*
+   * How far the chrome stands off the bottom of the screen.
+   *
+   * On an iPhone the home indicator wants about 34px; `max` keeps a small gap
+   * on everything else, because a bar flush against the edge of a phone is
+   * unpleasant to tap whether or not the hardware demands room.
+   */
+  --safe-bottom: max(0.4rem, env(safe-area-inset-bottom, 0px));
+  /* The notch, or nothing. */
+  --safe-top: env(safe-area-inset-top, 0px);
+  /* What the phone's floating navigation takes from the bottom of a page:
+   * the bar itself (4.25rem) and a little air above it, so the last card is
+   * not pressed against it. Every page that sizes itself to the screen
+   * subtracts this, so the space is changed here and nowhere else. */
+  --nav-space: 4.75rem;
+
+  /* Sidebar width. Overwritten before first paint by the script in the
+   * authenticated layout when a stored width exists, and by React after
+   * hydration; this is the fallback both fall back to. */
+  --sidebar-width: 240px;
+
+  /* How far the page panel is set into the frame on a wide screen. Pages that
+   * fill the window subtract it, or they would scroll by exactly this much. */
+  --panel-gap: 0px;
+
+  /* Surfaces. The page is a soft grey and cards are pure white, so a panel
+   * reads as a raised surface rather than an outline drawn on the same tone. */
+  --background: #f3f3f4;
+  --foreground: #111217;
+  --card: #ffffff;
+  --card-foreground: #111217;
+  --popover: #ffffff;
+  --popover-foreground: #111217;
+
+  /* Actions — inverted against the surface for maximum contrast. */
+  --primary: #111217;
+  --primary-foreground: #ffffff;
+  --secondary: #ebebef;
+  --secondary-foreground: #111217;
+
+  /* Recessive text and fills. muted-foreground is 7.2:1 on a card, up from
+   * 5.98 — secondary text was legible but washed out. */
+  --muted: #ececef;
+  --muted-foreground: #55575f;
+  --accent: #e6e6ec;
+  --accent-foreground: #111217;
+
+  /* Destructive stays greyscale in normal states; colour is reserved for
+   * genuinely irreversible actions so it actually reads as a warning. */
+  --destructive: #111217;
+  --destructive-foreground: #ffffff;
+
+  /* Two tiers of edge, because they answer to different rules.
+   *
+   * `border` separates surfaces. It is decorative — the card underneath it is
+   * already distinguishable by fill and shadow — so it is tuned by eye at
+   * 1.68:1 against white, up from a nearly invisible 1.34.
+   *
+   * `input` is the edge of a control, which WCAG 1.4.11 requires to reach 3:1
+   * against its surface because on a form field the outline IS the component.
+   * 3.02:1 measured, up from 1.45. */
+  --border: #c6c7d0;
+  --input: #93949a;
+
+  /* The focus ring is the foreground colour itself: maximum contrast, and
+   * unmistakable against every surface in the system. */
+  --ring: #111217;
+
+  /* The one colour in the system.
+   *
+   * Everything else is greyscale by design, which is exactly what gives this
+   * amber its force: it appears only on work that is late or urgent, so it
+   * always means the same thing. 5.02:1 as text on a card, 4.58:1 on its own
+   * tint — both above AA. The marker tone is used for non-text things like
+   * the priority ramp, which need 3:1 rather than 4.5. */
+  --warning: #b45309;
+  --warning-marker: #c2610a;
+  --warning-surface: #fef3e2;
+  --warning-border: #f3d9b0;
+
+  /* Chrome — the frame the page sits in. There is no line between them any
+   * more, so the step in tone is what separates the two: the page is a
+   * rounded panel inside a slightly darker frame. */
+  --chrome: #e5e5ea;
+  --chrome-border: #d9dae1;
+}
+
+.dark {
+  /* Same idea inverted: the page is the darkest tone and panels step up
+   * towards the light, so depth reads without leaning on shadow. The card is
+   * lifted from #34353b to #3a3b42 — the old step off the page was 1.12:1,
+   * which is almost no step at all. */
+  --background: #2c2d32;
+  --foreground: #f2f3f6;
+  --card: #3a3b42;
+  --card-foreground: #f2f3f6;
+  --popover: #3a3b42;
+  --popover-foreground: #f2f3f6;
+
+  --primary: #f2f3f6;
+  --primary-foreground: #1e1f23;
+  --secondary: #43444c;
+  --secondary-foreground: #f2f3f6;
+
+  --muted: #43444c;
+  --muted-foreground: #b2b4bd;
+  --accent: #4e4f58;
+  --accent-foreground: #f2f3f6;
+
+  --destructive: #f2f3f6;
+  --destructive-foreground: #1e1f23;
+
+  /* 1.58:1 and 3.03:1 against the card, up from 1.12 and 1.41. */
+  --border: #575862;
+  --input: #84858b;
+  --ring: #f2f3f6;
+
+  /* 6.68:1 on a card, 7.09:1 on the tint. */
+  --warning: #fbbf24;
+  --warning-marker: #fbbf24;
+  --warning-surface: #42352a;
+  --warning-border: #6b5326;
+
+  --chrome: #232429;
+  --chrome-border: #3d3e46;
+}
+
+/* ---------------------------------------------------------------------------
+ * The other themes.
+ *
+ * Light and Dark above are the house style. These tint the surfaces and the
+ * main action and nothing else; every token is restated so nothing leaks
+ * through from :root. Amber is the same in each family, because it means the
+ * same thing in each: late or urgent work. Contrast for every pair that
+ * carries text is measured, not eyeballed — see tests/unit/themes.test.ts.
+ * ------------------------------------------------------------------------- */
+
+/* Paper — warm off-white, like the company's own letterhead. */
+.paper {
+  --background: #f3efe7;
+  --foreground: #221e18;
+  --card: #fffdf8;
+  --card-foreground: #221e18;
+  --popover: #fffdf8;
+  --popover-foreground: #221e18;
+  --primary: #2b2620;
+  --primary-foreground: #fffdf8;
+  --secondary: #ebe5d9;
+  --secondary-foreground: #221e18;
+  --muted: #ece6da;
+  --muted-foreground: #5c5447;
+  --accent: #e6dfd1;
+  --accent-foreground: #221e18;
+  --destructive: #221e18;
+  --destructive-foreground: #fffdf8;
+  --border: #cfc6b4;
+  --input: #918877;
+  --ring: #221e18;
+  --warning: #b45309;
+  --warning-marker: #c2610a;
+  --warning-surface: #fef3e2;
+  --warning-border: #f3d9b0;
+  --chrome: #e8e1d3;
+  --chrome-border: #d9d0bf;
+}
+
+/* Ocean — cool greys, and the main action in blue. */
+.ocean {
+  --background: #edf2f8;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #1d4ed8;
+  --primary-foreground: #ffffff;
+  --secondary: #e2e9f3;
+  --secondary-foreground: #0f172a;
+  --muted: #e5ebf3;
+  --muted-foreground: #475569;
+  --accent: #dce6f5;
+  --accent-foreground: #0f172a;
+  --destructive: #0f172a;
+  --destructive-foreground: #ffffff;
+  --border: #c3cddb;
+  --input: #8792a5;
+  --ring: #1d4ed8;
+  --warning: #b45309;
+  --warning-marker: #c2610a;
+  --warning-surface: #fef3e2;
+  --warning-border: #f3d9b0;
+  --chrome: #e0e7f1;
+  --chrome-border: #d0d9e6;
+}
+
+/* Lavender — soft violet greys, and the main action in violet. */
+.lavender {
+  --background: #f2f0f8;
+  --foreground: #1c1830;
+  --card: #ffffff;
+  --card-foreground: #1c1830;
+  --popover: #ffffff;
+  --popover-foreground: #1c1830;
+  --primary: #6d28d9;
+  --primary-foreground: #ffffff;
+  --secondary: #e9e5f4;
+  --secondary-foreground: #1c1830;
+  --muted: #ebe7f5;
+  --muted-foreground: #554e6a;
+  --accent: #e3dcf5;
+  --accent-foreground: #1c1830;
+  --destructive: #1c1830;
+  --destructive-foreground: #ffffff;
+  --border: #ccc5de;
+  --input: #8f88a4;
+  --ring: #6d28d9;
+  --warning: #b45309;
+  --warning-marker: #c2610a;
+  --warning-surface: #fef3e2;
+  --warning-border: #f3d9b0;
+  --chrome: #e6e1f2;
+  --chrome-border: #d8d1ea;
+}
+
+/* Mint — fresh green-tinted greys, and the main action in a deep green. */
+.mint {
+  --background: #ecf5f0;
+  --foreground: #0f1f18;
+  --card: #ffffff;
+  --card-foreground: #0f1f18;
+  --popover: #ffffff;
+  --popover-foreground: #0f1f18;
+  --primary: #047857;
+  --primary-foreground: #ffffff;
+  --secondary: #e1eee7;
+  --secondary-foreground: #0f1f18;
+  --muted: #e3efe8;
+  --muted-foreground: #45584e;
+  --accent: #d7ebe0;
+  --accent-foreground: #0f1f18;
+  --destructive: #0f1f18;
+  --destructive-foreground: #ffffff;
+  --border: #c1d6ca;
+  --input: #7a9184;
+  --ring: #047857;
+  --warning: #b45309;
+  --warning-marker: #c2610a;
+  --warning-surface: #fef3e2;
+  --warning-border: #f3d9b0;
+  --chrome: #deebe4;
+  --chrome-border: #cde0d5;
+}
+
+/* Rose — blush greys, and the main action in a deep pink. */
+.rose {
+  --background: #f8eff3;
+  --foreground: #2a1220;
+  --card: #ffffff;
+  --card-foreground: #2a1220;
+  --popover: #ffffff;
+  --popover-foreground: #2a1220;
+  --primary: #be185d;
+  --primary-foreground: #ffffff;
+  --secondary: #f2e3ea;
+  --secondary-foreground: #2a1220;
+  --muted: #f3e5eb;
+  --muted-foreground: #68495a;
+  --accent: #f0dae4;
+  --accent-foreground: #2a1220;
+  --destructive: #2a1220;
+  --destructive-foreground: #ffffff;
+  --border: #e0c8d2;
+  --input: #9c8290;
+  --ring: #be185d;
+  --warning: #b45309;
+  --warning-marker: #c2610a;
+  --warning-surface: #fef3e2;
+  --warning-border: #f3d9b0;
+  --chrome: #f1e2e8;
+  --chrome-border: #e6d2db;
+}
+
+/* Sky — clear blue-green greys, and the main action in teal-blue. */
+.sky {
+  --background: #eaf4f7;
+  --foreground: #0c1f26;
+  --card: #ffffff;
+  --card-foreground: #0c1f26;
+  --popover: #ffffff;
+  --popover-foreground: #0c1f26;
+  --primary: #0e7490;
+  --primary-foreground: #ffffff;
+  --secondary: #deedf2;
+  --secondary-foreground: #0c1f26;
+  --muted: #e1eef2;
+  --muted-foreground: #435a62;
+  --accent: #d5eaf1;
+  --accent-foreground: #0c1f26;
+  --destructive: #0c1f26;
+  --destructive-foreground: #ffffff;
+  --border: #bed4dc;
+  --input: #7d939b;
+  --ring: #0e7490;
+  --warning: #b45309;
+  --warning-marker: #c2610a;
+  --warning-surface: #fef3e2;
+  --warning-border: #f3d9b0;
+  --chrome: #dbeaf0;
+  --chrome-border: #cbdfe6;
+}
+
+/* Teal — sea-glass greys, and the main action in deep teal. */
+.teal {
+  --background: #ebf5f3;
+  --foreground: #0d1f1d;
+  --card: #ffffff;
+  --card-foreground: #0d1f1d;
+  --popover: #ffffff;
+  --popover-foreground: #0d1f1d;
+  --primary: #0f766e;
+  --primary-foreground: #ffffff;
+  --secondary: #def0ec;
+  --secondary-foreground: #0d1f1d;
+  --muted: #e1efec;
+  --muted-foreground: #425955;
+  --accent: #d4ebe6;
+  --accent-foreground: #0d1f1d;
+  --destructive: #0d1f1d;
+  --destructive-foreground: #ffffff;
+  --border: #bdd6d1;
+  --input: #7a928d;
+  --ring: #0f766e;
+  --warning: #b45309;
+  --warning-marker: #c2610a;
+  --warning-surface: #fef3e2;
+  --warning-border: #f3d9b0;
+  --chrome: #dbebe8;
+  --chrome-border: #cbe0dc;
+}
+
+/* Indigo — cool blue-violet greys, and the main action in indigo. */
+.indigo {
+  --background: #eff0fa;
+  --foreground: #15172e;
+  --card: #ffffff;
+  --card-foreground: #15172e;
+  --popover: #ffffff;
+  --popover-foreground: #15172e;
+  --primary: #4338ca;
+  --primary-foreground: #ffffff;
+  --secondary: #e4e6f6;
+  --secondary-foreground: #15172e;
+  --muted: #e6e8f6;
+  --muted-foreground: #4f5370;
+  --accent: #dde0f6;
+  --accent-foreground: #15172e;
+  --destructive: #15172e;
+  --destructive-foreground: #ffffff;
+  --border: #c7cae4;
+  --input: #8a8ea8;
+  --ring: #4338ca;
+  --warning: #b45309;
+  --warning-marker: #c2610a;
+  --warning-surface: #fef3e2;
+  --warning-border: #f3d9b0;
+  --chrome: #e2e4f4;
+  --chrome-border: #d3d6ec;
+}
+
+/* Orchid — pale mauve, and the main action in deep fuchsia. */
+.orchid {
+  --background: #f7eff8;
+  --foreground: #24122a;
+  --card: #ffffff;
+  --card-foreground: #24122a;
+  --popover: #ffffff;
+  --popover-foreground: #24122a;
+  --primary: #a21caf;
+  --primary-foreground: #ffffff;
+  --secondary: #f0e2f2;
+  --secondary-foreground: #24122a;
+  --muted: #f1e4f3;
+  --muted-foreground: #634b69;
+  --accent: #ecd9ef;
+  --accent-foreground: #24122a;
+  --destructive: #24122a;
+  --destructive-foreground: #ffffff;
+  --border: #dcc7e0;
+  --input: #9a83a0;
+  --ring: #a21caf;
+  --warning: #b45309;
+  --warning-marker: #c2610a;
+  --warning-surface: #fef3e2;
+  --warning-border: #f3d9b0;
+  --chrome: #efe0f1;
+  --chrome-border: #e3d0e6;
+}
+
+/* Sage — soft grey-green, and the main action in deep olive. */
+.sage {
+  --background: #eff2ec;
+  --foreground: #1a2015;
+  --card: #ffffff;
+  --card-foreground: #1a2015;
+  --popover: #ffffff;
+  --popover-foreground: #1a2015;
+  --primary: #3f6212;
+  --primary-foreground: #ffffff;
+  --secondary: #e5eade;
+  --secondary-foreground: #1a2015;
+  --muted: #e6ebe0;
+  --muted-foreground: #4f5946;
+  --accent: #dde5d3;
+  --accent-foreground: #1a2015;
+  --destructive: #1a2015;
+  --destructive-foreground: #ffffff;
+  --border: #c9d2be;
+  --input: #87917c;
+  --ring: #3f6212;
+  --warning: #b45309;
+  --warning-marker: #c2610a;
+  --warning-surface: #fef3e2;
+  --warning-border: #f3d9b0;
+  --chrome: #e3e8dc;
+  --chrome-border: #d3dbca;
+}
+
+/* Slate — cool blue-greys, and the main action in slate. */
+.slate {
+  --background: #f0f2f5;
+  --foreground: #111827;
+  --card: #ffffff;
+  --card-foreground: #111827;
+  --popover: #ffffff;
+  --popover-foreground: #111827;
+  --primary: #334155;
+  --primary-foreground: #ffffff;
+  --secondary: #e5e8ed;
+  --secondary-foreground: #111827;
+  --muted: #e7eaee;
+  --muted-foreground: #4b5563;
+  --accent: #dfe3e9;
+  --accent-foreground: #111827;
+  --destructive: #111827;
+  --destructive-foreground: #ffffff;
+  --border: #c8ced8;
+  --input: #858d9a;
+  --ring: #334155;
+  --warning: #b45309;
+  --warning-marker: #c2610a;
+  --warning-surface: #fef3e2;
+  --warning-border: #f3d9b0;
+  --chrome: #e2e6ec;
+  --chrome-border: #d2d8e0;
+}
+
+/* Ruby — faint rose-red greys, and the main action in deep red. */
+.ruby {
+  --background: #f9efef;
+  --foreground: #2a1111;
+  --card: #ffffff;
+  --card-foreground: #2a1111;
+  --popover: #ffffff;
+  --popover-foreground: #2a1111;
+  --primary: #b91c1c;
+  --primary-foreground: #ffffff;
+  --secondary: #f3e3e3;
+  --secondary-foreground: #2a1111;
+  --muted: #f4e5e5;
+  --muted-foreground: #6b4a4a;
+  --accent: #f1dada;
+  --accent-foreground: #2a1111;
+  --destructive: #2a1111;
+  --destructive-foreground: #ffffff;
+  --border: #e2c9c9;
+  --input: #a08585;
+  --ring: #b91c1c;
+  --warning: #b45309;
+  --warning-marker: #c2610a;
+  --warning-surface: #fef3e2;
+  --warning-border: #f3d9b0;
+  --chrome: #f2e2e2;
+  --chrome-border: #e8d2d2;
+}
+
+/* Navy — crisp blue-greys, and the main action in dark navy. */
+.navy {
+  --background: #eef1f6;
+  --foreground: #0f1a2e;
+  --card: #ffffff;
+  --card-foreground: #0f1a2e;
+  --popover: #ffffff;
+  --popover-foreground: #0f1a2e;
+  --primary: #1e3a5f;
+  --primary-foreground: #ffffff;
+  --secondary: #e2e7ef;
+  --secondary-foreground: #0f1a2e;
+  --muted: #e4e9f0;
+  --muted-foreground: #4a5568;
+  --accent: #dbe2ec;
+  --accent-foreground: #0f1a2e;
+  --destructive: #0f1a2e;
+  --destructive-foreground: #ffffff;
+  --border: #c4cdda;
+  --input: #8590a2;
+  --ring: #1e3a5f;
+  --warning: #b45309;
+  --warning-marker: #c2610a;
+  --warning-surface: #fef3e2;
+  --warning-border: #f3d9b0;
+  --chrome: #e0e6ee;
+  --chrome-border: #d0d8e4;
+}
+
+/* Ink — black on white with strong edges, for the most contrast a light theme can give. */
+.ink {
+  --background: #ffffff;
+  --foreground: #000000;
+  --card: #ffffff;
+  --card-foreground: #000000;
+  --popover: #ffffff;
+  --popover-foreground: #000000;
+  --primary: #000000;
+  --primary-foreground: #ffffff;
+  --secondary: #f0f0f0;
+  --secondary-foreground: #000000;
+  --muted: #f0f0f0;
+  --muted-foreground: #3a3a3a;
+  --accent: #e8e8e8;
+  --accent-foreground: #000000;
+  --destructive: #000000;
+  --destructive-foreground: #ffffff;
+  --border: #8a8a8a;
+  --input: #595959;
+  --ring: #000000;
+  --warning: #b45309;
+  --warning-marker: #c2610a;
+  --warning-surface: #fef3e2;
+  --warning-border: #f3d9b0;
+  --chrome: #ebebeb;
+  --chrome-border: #b0b0b0;
+}
+
+/* Midnight — deep navy, for working late without a grey glare. */
+.midnight {
+  --background: #111a2e;
+  --foreground: #e8edf7;
+  --card: #1a2440;
+  --card-foreground: #e8edf7;
+  --popover: #1d2846;
+  --popover-foreground: #e8edf7;
+  --primary: #93b6ff;
+  --primary-foreground: #0b1222;
+  --secondary: #243052;
+  --secondary-foreground: #e8edf7;
+  --muted: #222d4c;
+  --muted-foreground: #aab5cc;
+  --accent: #2b3860;
+  --accent-foreground: #e8edf7;
+  --destructive: #e8edf7;
+  --destructive-foreground: #0b1222;
+  --border: #34416a;
+  --input: #7482a3;
+  --ring: #93b6ff;
+  --warning: #fbbf24;
+  --warning-marker: #fbbf24;
+  --warning-surface: #3a3226;
+  --warning-border: #6b5326;
+  --chrome: #0b1120;
+  --chrome-border: #1e2846;
+}
+
+/* Black — true black, which an iPhone's OLED screen does not light at all. */
+.black {
+  --background: #0c0c0e;
+  --foreground: #f5f5f7;
+  --card: #17171a;
+  --card-foreground: #f5f5f7;
+  --popover: #1b1b1f;
+  --popover-foreground: #f5f5f7;
+  --primary: #f5f5f7;
+  --primary-foreground: #000000;
+  --secondary: #222226;
+  --secondary-foreground: #f5f5f7;
+  --muted: #1f1f23;
+  --muted-foreground: #a6a6ae;
+  --accent: #29292e;
+  --accent-foreground: #f5f5f7;
+  --destructive: #f5f5f7;
+  --destructive-foreground: #000000;
+  --border: #33333a;
+  --input: #74747c;
+  --ring: #f5f5f7;
+  --warning: #fbbf24;
+  --warning-marker: #fbbf24;
+  --warning-surface: #33291b;
+  --warning-border: #6b5326;
+  --chrome: #000000;
+  --chrome-border: #1c1c20;
+}
+
+/* Forest — deep green, and the main action in a light leaf green. */
+.forest {
+  --background: #11211a;
+  --foreground: #e6f2ea;
+  --card: #1a2f25;
+  --card-foreground: #e6f2ea;
+  --popover: #1d3329;
+  --popover-foreground: #e6f2ea;
+  --primary: #86d9a8;
+  --primary-foreground: #0b1a12;
+  --secondary: #223a2e;
+  --secondary-foreground: #e6f2ea;
+  --muted: #20372b;
+  --muted-foreground: #a9c2b3;
+  --accent: #2a4537;
+  --accent-foreground: #e6f2ea;
+  --destructive: #e6f2ea;
+  --destructive-foreground: #0b1a12;
+  --border: #335141;
+  --input: #71907f;
+  --ring: #86d9a8;
+  --warning: #fbbf24;
+  --warning-marker: #fbbf24;
+  --warning-surface: #3a3423;
+  --warning-border: #6b5326;
+  --chrome: #0c1813;
+  --chrome-border: #1c3027;
+}
+
+/* Plum — deep violet, and the main action in a soft lilac. */
+.plum {
+  --background: #1c1426;
+  --foreground: #f0eaf7;
+  --card: #271c35;
+  --card-foreground: #f0eaf7;
+  --popover: #2a1f39;
+  --popover-foreground: #f0eaf7;
+  --primary: #c4a5ff;
+  --primary-foreground: #170f22;
+  --secondary: #31243f;
+  --secondary-foreground: #f0eaf7;
+  --muted: #2e223d;
+  --muted-foreground: #b8aac8;
+  --accent: #392a4b;
+  --accent-foreground: #f0eaf7;
+  --destructive: #f0eaf7;
+  --destructive-foreground: #170f22;
+  --border: #463659;
+  --input: #85759a;
+  --ring: #c4a5ff;
+  --warning: #fbbf24;
+  --warning-marker: #fbbf24;
+  --warning-surface: #3a2f24;
+  --warning-border: #6b5326;
+  --chrome: #140e1c;
+  --chrome-border: #261c32;
+}
+
+/* Graphite — blue-grey slate, quieter than Dark and warmer than Black. */
+.graphite {
+  --background: #1b1f24;
+  --foreground: #e7ebf0;
+  --card: #252a31;
+  --card-foreground: #e7ebf0;
+  --popover: #282e35;
+  --popover-foreground: #e7ebf0;
+  --primary: #cbd5e1;
+  --primary-foreground: #11151a;
+  --secondary: #2e343c;
+  --secondary-foreground: #e7ebf0;
+  --muted: #2c3239;
+  --muted-foreground: #a9b2bd;
+  --accent: #353c45;
+  --accent-foreground: #e7ebf0;
+  --destructive: #e7ebf0;
+  --destructive-foreground: #11151a;
+  --border: #3d454f;
+  --input: #788390;
+  --ring: #cbd5e1;
+  --warning: #fbbf24;
+  --warning-marker: #fbbf24;
+  --warning-surface: #362f22;
+  --warning-border: #6b5326;
+  --chrome: #13161a;
+  --chrome-border: #232830;
+}
+
+/* Rosewood — deep berry, and the main action in a soft pink. */
+.rosewood {
+  --background: #24141b;
+  --foreground: #f7e9ee;
+  --card: #311c25;
+  --card-foreground: #f7e9ee;
+  --popover: #351f29;
+  --popover-foreground: #f7e9ee;
+  --primary: #f9a8d4;
+  --primary-foreground: #22101a;
+  --secondary: #3c2530;
+  --secondary-foreground: #f7e9ee;
+  --muted: #39222d;
+  --muted-foreground: #c8aab7;
+  --accent: #452b37;
+  --accent-foreground: #f7e9ee;
+  --destructive: #f7e9ee;
+  --destructive-foreground: #22101a;
+  --border: #563643;
+  --input: #9a7584;
+  --ring: #f9a8d4;
+  --warning: #fbbf24;
+  --warning-marker: #fbbf24;
+  --warning-surface: #3a2b22;
+  --warning-border: #6b5326;
+  --chrome: #1a0e13;
+  --chrome-border: #2e1b23;
+}
+
+/* Lagoon — deep teal water, and the main action in bright aqua. */
+.lagoon {
+  --background: #0f2226;
+  --foreground: #e3f3f3;
+  --card: #173035;
+  --card-foreground: #e3f3f3;
+  --popover: #1a343a;
+  --popover-foreground: #e3f3f3;
+  --primary: #5eead4;
+  --primary-foreground: #062421;
+  --secondary: #1f3b40;
+  --secondary-foreground: #e3f3f3;
+  --muted: #1d383d;
+  --muted-foreground: #a3c3c4;
+  --accent: #27474d;
+  --accent-foreground: #e3f3f3;
+  --destructive: #e3f3f3;
+  --destructive-foreground: #062421;
+  --border: #2f5258;
+  --input: #6e9296;
+  --ring: #5eead4;
+  --warning: #fbbf24;
+  --warning-marker: #fbbf24;
+  --warning-surface: #36321f;
+  --warning-border: #6b5326;
+  --chrome: #0a1a1d;
+  --chrome-border: #19302f;
+}
+
+/* Cosmos — deep indigo night, and the main action in periwinkle. */
+.cosmos {
+  --background: #15162e;
+  --foreground: #ebebfa;
+  --card: #1f2142;
+  --card-foreground: #ebebfa;
+  --popover: #232548;
+  --popover-foreground: #ebebfa;
+  --primary: #a5b4fc;
+  --primary-foreground: #12132a;
+  --secondary: #282a50;
+  --secondary-foreground: #ebebfa;
+  --muted: #26284c;
+  --muted-foreground: #b0b2d4;
+  --accent: #30335c;
+  --accent-foreground: #ebebfa;
+  --destructive: #ebebfa;
+  --destructive-foreground: #12132a;
+  --border: #3a3d6b;
+  --input: #7b7ea8;
+  --ring: #a5b4fc;
+  --warning: #fbbf24;
+  --warning-marker: #fbbf24;
+  --warning-surface: #363022;
+  --warning-border: #6b5326;
+  --chrome: #0e0f22;
+  --chrome-border: #1e2040;
+}
+
+/* Dim — a softer, lighter dark grey, for those who find Dark too heavy. */
+.dim {
+  --background: #34373e;
+  --foreground: #f3f4f6;
+  --card: #3f434b;
+  --card-foreground: #f3f4f6;
+  --popover: #434750;
+  --popover-foreground: #f3f4f6;
+  --primary: #e5e7eb;
+  --primary-foreground: #1f2125;
+  --secondary: #484c55;
+  --secondary-foreground: #f3f4f6;
+  --muted: #474b54;
+  --muted-foreground: #c9ccd2;
+  --accent: #50545e;
+  --accent-foreground: #f3f4f6;
+  --destructive: #f3f4f6;
+  --destructive-foreground: #1f2125;
+  --border: #575c66;
+  --input: #8d929c;
+  --ring: #e5e7eb;
+  --warning: #fbbf24;
+  --warning-marker: #fbbf24;
+  --warning-surface: #4a4030;
+  --warning-border: #6b5326;
+  --chrome: #2b2d33;
+  --chrome-border: #3a3d44;
+}
+
+/* Garnet — deep red-brown, and the main action in soft coral-pink. */
+.garnet {
+  --background: #241012;
+  --foreground: #f8e8e8;
+  --card: #321719;
+  --card-foreground: #f8e8e8;
+  --popover: #361a1c;
+  --popover-foreground: #f8e8e8;
+  --primary: #fca5a5;
+  --primary-foreground: #2a0e0e;
+  --secondary: #3d2022;
+  --secondary-foreground: #f8e8e8;
+  --muted: #3a1e20;
+  --muted-foreground: #cfaaaa;
+  --accent: #472628;
+  --accent-foreground: #f8e8e8;
+  --destructive: #f8e8e8;
+  --destructive-foreground: #2a0e0e;
+  --border: #5a3335;
+  --input: #9c7678;
+  --ring: #fca5a5;
+  --warning: #fbbf24;
+  --warning-marker: #fbbf24;
+  --warning-surface: #3a2a1e;
+  --warning-border: #6b5326;
+  --chrome: #1a0b0c;
+  --chrome-border: #2f1719;
+}
+
+/* Moss — dark olive green, and the main action in fresh leaf green. */
+.moss {
+  --background: #161c12;
+  --foreground: #eaf1e3;
+  --card: #20281a;
+  --card-foreground: #eaf1e3;
+  --popover: #232c1d;
+  --popover-foreground: #eaf1e3;
+  --primary: #b5dd8b;
+  --primary-foreground: #141c0c;
+  --secondary: #29331f;
+  --secondary-foreground: #eaf1e3;
+  --muted: #27311e;
+  --muted-foreground: #aebaa0;
+  --accent: #303c25;
+  --accent-foreground: #eaf1e3;
+  --destructive: #eaf1e3;
+  --destructive-foreground: #141c0c;
+  --border: #3b482e;
+  --input: #77866a;
+  --ring: #b5dd8b;
+  --warning: #fbbf24;
+  --warning-marker: #fbbf24;
+  --warning-surface: #36321f;
+  --warning-border: #6b5326;
+  --chrome: #10150d;
+  --chrome-border: #202819;
+}
+
+/* Abyss — deep sea blue, and the main action in clear sky blue. */
+.abyss {
+  --background: #0a1c28;
+  --foreground: #e4f1f8;
+  --card: #11293a;
+  --card-foreground: #e4f1f8;
+  --popover: #142d40;
+  --popover-foreground: #e4f1f8;
+  --primary: #7dd3fc;
+  --primary-foreground: #062030;
+  --secondary: #19334a;
+  --secondary-foreground: #e4f1f8;
+  --muted: #173046;
+  --muted-foreground: #9fbccd;
+  --accent: #1f3c55;
+  --accent-foreground: #e4f1f8;
+  --destructive: #e4f1f8;
+  --destructive-foreground: #062030;
+  --border: #2a4a63;
+  --input: #6c8aa0;
+  --ring: #7dd3fc;
+  --warning: #fbbf24;
+  --warning-marker: #fbbf24;
+  --warning-surface: #33301f;
+  --warning-border: #6b5326;
+  --chrome: #061420;
+  --chrome-border: #132a3b;
+}
+
+/* Espresso — dark roasted brown, with a plain cream main action. */
+.espresso {
+  --background: #1e1814;
+  --foreground: #f3ece6;
+  --card: #2a221d;
+  --card-foreground: #f3ece6;
+  --popover: #2e2520;
+  --popover-foreground: #f3ece6;
+  --primary: #e5e1dc;
+  --primary-foreground: #1e1814;
+  --secondary: #342b25;
+  --secondary-foreground: #f3ece6;
+  --muted: #322923;
+  --muted-foreground: #bfb2a7;
+  --accent: #3c322b;
+  --accent-foreground: #f3ece6;
+  --destructive: #f3ece6;
+  --destructive-foreground: #1e1814;
+  --border: #493d35;
+  --input: #8a7c71;
+  --ring: #e5e1dc;
+  --warning: #fbbf24;
+  --warning-marker: #fbbf24;
+  --warning-surface: #3b3020;
+  --warning-border: #6b5326;
+  --chrome: #16110e;
+  --chrome-border: #2a221d;
+}
+
+/* Fjord — arctic blue-grey, and the main action in frost blue. */
+.fjord {
+  --background: #2e3440;
+  --foreground: #eceff4;
+  --card: #3b4252;
+  --card-foreground: #eceff4;
+  --popover: #3f4657;
+  --popover-foreground: #eceff4;
+  --primary: #88c0d0;
+  --primary-foreground: #1f242d;
+  --secondary: #434c5e;
+  --secondary-foreground: #eceff4;
+  --muted: #434c5e;
+  --muted-foreground: #c3cad6;
+  --accent: #4c566a;
+  --accent-foreground: #eceff4;
+  --destructive: #eceff4;
+  --destructive-foreground: #1f242d;
+  --border: #556075;
+  --input: #8a94a8;
+  --ring: #88c0d0;
+  --warning: #fbbf24;
+  --warning-marker: #fbbf24;
+  --warning-surface: #4a4232;
+  --warning-border: #6b5326;
+  --chrome: #252a33;
+  --chrome-border: #343a47;
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --panel-gap: 0.75rem;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chrome: var(--chrome);
+  --color-chrome-border: var(--chrome-border);
+  --color-warning: var(--warning);
+  --color-warning-marker: var(--warning-marker);
+  --color-warning-surface: var(--warning-surface);
+  --color-warning-border: var(--warning-border);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 6px);
+  --radius-2xl: calc(var(--radius) + 12px);
+  --radius-3xl: calc(var(--radius) + 20px);
+
+  /* Elevation. There are no outlines: a card's edge is where its shadow
+   * starts. So the shadows are two layers — a tight one that draws the edge
+   * and a wide, soft one that lifts the card off the page — which is what
+   * makes it read as floating instead of printed on. */
+  --shadow-xs: 0 1px 2px 0 rgb(17 18 22 / 0.05), 0 2px 6px -2px rgb(17 18 22 / 0.05);
+  --shadow-sm: 0 1px 2px 0 rgb(17 18 22 / 0.04), 0 6px 18px -6px rgb(17 18 22 / 0.11);
+  --shadow-md: 0 2px 4px 0 rgb(17 18 22 / 0.04), 0 14px 34px -10px rgb(17 18 22 / 0.18);
+  --shadow-lg: 0 24px 56px -16px rgb(17 18 22 / 0.26), 0 8px 20px -8px rgb(17 18 22 / 0.12);
+
+  /* One timing for everything, so the interface moves as a single system.
+   * `spring` overshoots very slightly — enough that a press or a tick feels
+   * like it has weight, not so much that it looks bouncy. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  /* In dark mode the surfaces already step apart by tone, so shadows only
+   * muddy them. Depth there comes from the ramp, not from darkness. */
+  .dark,
+  .midnight,
+  .black,
+  .forest,
+  .plum,
+  .graphite,
+  .rosewood,
+  .lagoon,
+  .cosmos,
+  .dim,
+  .garnet,
+  .moss,
+  .abyss,
+  .espresso,
+  .fjord {
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.24);
+    --shadow-sm: 0 2px 5px -1px rgb(0 0 0 / 0.32);
+    --shadow-md: 0 10px 28px -8px rgb(0 0 0 / 0.48);
+    --shadow-lg: 0 28px 60px -18px rgb(0 0 0 / 0.62);
+  }
+
+  /*
+   * Arabic gets a face that has its glyphs, ahead of the Latin one so the
+   * Latin words inside an Arabic sentence still fall through to Geist.
+   *
+   * The theme is declared `inline`, so `font-sans` carries Geist by value
+   * rather than by variable and cannot be re-pointed from :root; this rule is
+   * unlayered and so wins over the utility. Both font variables are set on
+   * <body>, which is why it is scoped there.
+   */
+  :root[lang="ar"] body,
+  :root[lang="ar"] .font-sans {
+    font-family: var(--font-arabic), var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  }
+
+  /*
+   * No rubber band.
+   *
+   * Installed to a home screen there is no browser chrome to bounce against,
+   * so dragging past the top of a page swung the whole app down and showed a
+   * band of empty ground above the header — which reads as the layout being
+   * broken rather than as a gesture. It also takes pull-to-refresh with it,
+   * which a standalone app does not have anyway.
+   */
+  html {
+    overscroll-behavior-y: none;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    overscroll-behavior-y: none;
+    /* A phone browser reacts to a page that is wider than the screen by
+     * zooming the whole thing out until it fits, which makes every page look
+     * shrunken because of one stray element. Nothing here is meant to be read
+     * by scrolling sideways — the board and wide tables scroll inside their
+     * own containers — so anything that does escape is clipped instead.
+     * `clip` rather than `hidden`: `hidden` would make this a scroll
+     * container and break every `position: sticky` header inside it. */
+    overflow-x: clip;
+    /* Typographic baseline: compact but legible, tuned for dense task lists. */
+    font-feature-settings: "rlig" 1, "calt" 1;
+    line-height: 1.5;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Explicit hierarchy. Headings are a step larger and a step heavier than
+   * they were: the old scale topped out at 24px semibold, which left a page
+   * with no clear first thing to look at. */
+  h1 { @apply text-[1.5rem] font-bold tracking-[-0.02em] sm:text-[1.75rem]; line-height: 1.15; }
+  h2 { @apply text-lg font-semibold tracking-[-0.015em] sm:text-xl; line-height: 1.25; }
+  h3 { @apply text-[0.9375rem] font-semibold tracking-tight; line-height: 1.4; }
+
+  /* Keyboard focus is always visible; pointer focus never draws a ring.
+   * The ring is the foreground colour at 2px with a 2px offset, so it reads as
+   * a deliberate halo against any surface rather than a faint grey outline. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  /* Forms. Fields are rounded, and their text starts 16px in from the edge.
+   * A label above a field, and a hint or an error under it, start on that
+   * same line — so a form reads as one column of text, rather than labels
+   * and messages hanging out past the curve of the fields they belong to.
+   *
+   * Matched by shape, not by page: a label directly before a field, or
+   * before a wrapper that leads with one, up to two levels deep (the
+   * password field sits in a wrapper inside a wrapper, so its eye button and
+   * caps-lock warning can sit beside it); a label inside a row that sits
+   * directly before such a field (sign-in's password label shares its row
+   * with "Forgot password?"); and paragraphs after a field in its group. A
+   * field with a leading icon, such as search, has its text further in and is
+   * left alone. */
+  [data-slot="label"]:has(+ :is([data-slot="input"], [data-slot="textarea"], [data-slot="select-trigger"])),
+  [data-slot="label"]:has(+ * > :is([data-slot="input"], [data-slot="textarea"], [data-slot="select-trigger"]):first-child),
+  [data-slot="label"]:has(+ * > :first-child > :is([data-slot="input"], [data-slot="textarea"], [data-slot="select-trigger"]):first-child),
+  :has(+ :is([data-slot="input"], [data-slot="textarea"], [data-slot="select-trigger"])) > [data-slot="label"],
+  :has(+ * > :is([data-slot="input"], [data-slot="textarea"], [data-slot="select-trigger"]):first-child) > [data-slot="label"],
+  :has(+ * > :first-child > :is([data-slot="input"], [data-slot="textarea"], [data-slot="select-trigger"]):first-child) > [data-slot="label"],
+  :is([data-slot="input"], [data-slot="textarea"], [data-slot="select-trigger"]) ~ p,
+  :has(> :is([data-slot="input"], [data-slot="textarea"], [data-slot="select-trigger"]):first-child) ~ p,
+  :has(> :first-child > :is([data-slot="input"], [data-slot="textarea"], [data-slot="select-trigger"]):first-child) ~ p {
+    padding-inline-start: 1rem;
+  }
+
+  ::selection {
+    background: var(--foreground);
+    color: var(--background);
+  }
+
+  /* Numbers in tables and metrics should not jitter as they change. */
+  .tabular-nums,
+  th,
+  td {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer utilities {
+  /*
+   * Chrome, not text.
+   *
+   * A tap held a fraction too long on a navigation label selected the word, or
+   * raised iOS's copy-and-share sheet over a link, instead of going to the
+   * page. Neither is ever what somebody pressing "Today" wanted. `manipulation`
+   * drops the wait for a second tap, since nothing here zooms.
+   */
+  .chrome-touch {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    touch-action: manipulation;
+  }
+
+  /*
+   * A row of chips that scrolls sideways on a phone instead of wrapping.
+   *
+   * Eight filter chips wrapped to three rows at 390px — about 150px of the
+   * screen spent on a control bar before the list it controls. Sideways is
+   * how a phone shows a set of choices too wide for it, and it is one row at
+   * any count. From `sm` up there is room to wrap, and wrapping is easier to
+   * scan.
+   *
+   * Scrolling only. A strip at the edge of a page also wants to bleed into
+   * the page's padding, so a chip cut off at the right reads as "there is
+   * more" rather than as a layout mistake — but a strip inside a padded box
+   * wants to line up with the fields above it instead. That is the caller's
+   * business, not this rule's: `-mx-4 px-4 scroll-px-4 sm:mx-0 sm:px-0`.
+   */
+  .chip-strip {
+    display: flex;
+    gap: 0.375rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+  }
+  .chip-strip::-webkit-scrollbar {
+    display: none;
+  }
+  /* Chips keep their own width; the row scrolls rather than squeezing them. */
+  .chip-strip > * {
+    flex: none;
+    scroll-snap-align: start;
+  }
+
+  @media (min-width: 640px) {
+    .chip-strip {
+      flex-wrap: wrap;
+      overflow-x: visible;
+    }
+  }
+
+  /* Thin, unobtrusive scrollbars for the Kanban columns and comment threads. */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 3px;
+  }
+}
+
+@layer utilities {
+  /* Entrance for page content, so a route change resolves rather than snaps.
+   *
+   * `backwards`, never `forwards`/`both`: a transform animation that keeps
+   * filling after it ends leaves the element a containing block for fixed
+   * descendants, which threw the Kanban drag overlay hundreds of pixels off
+   * the cursor. The final keyframe matches the element's own resting style,
+   * so there is nothing to hold on to anyway. */
+  /* 0.32s was tuned for a first load, where it reads as the page arriving.
+   * It runs on every page change too, where it is 320ms of waiting added to
+   * a navigation that is now mostly instant — the animation had become the
+   * slowest part of switching pages. Shorter, and over a smaller distance. */
+  .animate-rise {
+    animation: rise 0.18s var(--ease-out) backwards;
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* ---------------------------------------------------------------------
+   * Interaction.
+   *
+   * The interface was static: things changed colour on hover and nothing
+   * else, which is the main reason it felt flat. These give a card weight —
+   * it rises towards the pointer and presses back down when clicked.
+   *
+   * `transform` only, never `top`/`margin`, so nothing reflows mid-hover.
+   * ------------------------------------------------------------------- */
+  .lift {
+    transition:
+      transform 0.18s var(--ease-out),
+      box-shadow 0.18s var(--ease-out),
+      background-color 0.18s var(--ease-out);
+  }
+  @media (hover: hover) {
+    .lift:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+  }
+  .lift:active {
+    transform: translateY(0);
+    transition-duration: 0.08s;
+  }
+
+  /* A press that answers back. Paired with a spring so the release overshoots
+   * a hair — the difference between "registered" and "alive". */
+  .press {
+    transition: transform 0.16s var(--ease-spring);
+  }
+  .press:active {
+    transform: scale(0.96);
+    transition-duration: 0.06s;
+  }
+
+  /* For a checkbox or a tick: pops in rather than appearing. */
+  .animate-pop {
+    animation: pop 0.22s var(--ease-spring);
+  }
+  @keyframes pop {
+    from {
+      opacity: 0;
+      transform: scale(0.6);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* A group that arrives one after another — the dashboard's tiles, a
+   * list's first rows — rather than all at once. Short steps, and only the
+   * first ten wait at all, so a long list is not kept waiting. */
+  .stagger > * {
+    animation: rise 0.28s var(--ease-out) backwards;
+  }
+  .stagger > :nth-child(2) { animation-delay: 30ms; }
+  .stagger > :nth-child(3) { animation-delay: 60ms; }
+  .stagger > :nth-child(4) { animation-delay: 90ms; }
+  .stagger > :nth-child(5) { animation-delay: 120ms; }
+  .stagger > :nth-child(6) { animation-delay: 150ms; }
+  .stagger > :nth-child(7) { animation-delay: 180ms; }
+  .stagger > :nth-child(8) { animation-delay: 210ms; }
+  .stagger > :nth-child(9) { animation-delay: 240ms; }
+  .stagger > :nth-child(n + 10) { animation-delay: 270ms; }
+
+  /* The page's light. A faint wash of the theme's own colour from the top
+   * corner of the page, so Ocean feels blue and Forest green before a single
+   * button is noticed — and the page has some atmosphere instead of a flat
+   * fill. Faint enough that nothing on it changes contrast. */
+  .ambient {
+    background-image:
+      radial-gradient(
+        60rem 22rem at 100% -6rem,
+        color-mix(in oklab, var(--primary) 9%, transparent),
+        transparent 70%
+      ),
+      radial-gradient(
+        40rem 18rem at 0% -8rem,
+        color-mix(in oklab, var(--primary) 5%, transparent),
+        transparent 70%
+      );
+    background-repeat: no-repeat;
+  }
+
+  /* Respect a user who has asked for less motion. */
+  @media (prefers-reduced-motion: reduce) {
+    .stagger > *,
+    .animate-rise,
+    .animate-pop {
+      animation: none;
+    }
+    /* Nothing moves for someone who asked for less motion; the colour and
+     * shadow changes still carry the state. */
+    .lift:hover,
+    .lift:active,
+    .press:active {
+      transform: none;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Touch input sizing
+ *
+ * iOS Safari zooms the page in when you focus a field whose text is smaller
+ * than 16px, and does not zoom back out afterwards — the cause of nearly every
+ * "the site zoomed in on my phone" report. The fields are `text-sm` (14px) by
+ * design on a pointer device, so the floor is applied only to coarse pointers.
+ *
+ * Deliberately outside `@layer`: unlayered rules beat layered ones, which is
+ * what lets this override the Tailwind utility on each field.
+ * ------------------------------------------------------------------------ */
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
+}

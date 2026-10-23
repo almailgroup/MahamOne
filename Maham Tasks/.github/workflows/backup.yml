@@ -1,0 +1,87 @@
+name: Weekly backup
+
+# A copy of the database each week, encrypted, kept as a workflow artifact
+# for thirty days. Does nothing until two repository secrets exist:
+#
+#   SUPABASE_DB_URL     the Session pooler connection string, from the
+#                       Supabase dashboard (Connect), with the database
+#                       password in it
+#   BACKUP_PASSPHRASE   a long passphrase you choose and keep in a password
+#                       manager; without it a backup cannot be opened
+#
+# The README's "Backups" section has the steps, how to open a backup, and how
+# to try a restore. Files attached to tasks live in Storage, not the database,
+# and are not in this copy.
+
+on:
+  schedule:
+    # Sunday 01:30 UTC, 04:30 in Kuwait: before the working week starts.
+    - cron: "30 1 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: Dump, encrypt, keep
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check it is set up
+        id: check
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ] || [ -z "$BACKUP_PASSPHRASE" ]; then
+            echo "::notice::Backups are not set up yet: add SUPABASE_DB_URL and BACKUP_PASSPHRASE as repository secrets (README, Backups)."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Supabase's own tool, which knows which of its schemas to leave out.
+      - uses: supabase/setup-cli@v1
+        if: steps.check.outputs.ready == 'true'
+        with:
+          version: latest
+
+      - name: Dump the roles, the schema and the data
+        if: steps.check.outputs.ready == 'true'
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          mkdir backup
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/roles.sql --role-only
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/schema.sql
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/data.sql --use-copy --data-only
+          ls -l backup
+
+      - name: Encrypt
+        if: steps.check.outputs.ready == 'true'
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          name="almail-$(date -u +%Y-%m-%d).tar.gz.gpg"
+          tar -czf - backup | gpg --batch --yes --pinentry-mode loopback \
+            --passphrase-fd 3 3<<<"$BACKUP_PASSPHRASE" \
+            --symmetric --cipher-algo AES256 --output "$name"
+          # Nothing readable is left on the runner, or in the artifact.
+          rm -rf backup
+          echo "NAME=$name" >> "$GITHUB_ENV"
+          ls -l "$name"
+
+      - uses: actions/upload-artifact@v4
+        if: steps.check.outputs.ready == 'true'
+        with:
+          name: ${{ env.NAME }}
+          path: ${{ env.NAME }}
+          retention-days: 30
+          if-no-files-found: error

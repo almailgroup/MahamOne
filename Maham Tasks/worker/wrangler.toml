@@ -1,0 +1,21 @@
+# The assistant's model, deployed separately from the portal.
+#
+#   npx wrangler secret put GEMINI_API_KEY
+#   npx wrangler secret put SHARED_SECRET
+#   npx wrangler deploy
+#
+# Secrets are never written here. `wrangler secret put` stores them encrypted
+# on Cloudflare; this file is committed.
+name = "almailgroup-task-management"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+[observability]
+# So `wrangler tail` has something to show when an answer does not come back.
+enabled = true
+
+[vars]
+# Not a secret, and the one thing most likely to need changing: model names
+# come and go, and the free tier only ever carries some of them. Override it
+# here, or with `wrangler secret put GEMINI_MODEL` if you would rather.
+GEMINI_MODEL = "gemini-2.5-flash"
