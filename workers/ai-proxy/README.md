@@ -9,18 +9,18 @@ Maham One app (in the browser, signed in)
    v
 This Worker (Cloudflare)
    - checks the sign-in with Supabase
-   - checks that the person is a member of the company (COMPANY_ID)
+   - only if COMPANY_ID is set: checks that the person is a member of one of its companies
    - checks the request (size, model, fields) and the per-person limit
    |  x-goog-api-key: <GEMINI_API_KEY, an encrypted Cloudflare secret>
    v
 Google Gemini API
 ```
 
-The app's AI assistant (**Settings → AI assistant** in Maham One, see [`docs/ai-assistant.md`](../../docs/ai-assistant.md)) sends its questions here. The Worker already running at `maham-ai-proxy` is the first version: to update it, see **"Updating the Worker that is already running"** in step 2 (paste the new `src/worker.js`, add `COMPANY_ID` and `DEFAULT_ANSWER_TOKENS`, deploy, test).
+The app's AI assistant (**Settings → AI assistant** in Maham One, see [`docs/ai-assistant.md`](../../docs/ai-assistant.md)) sends its questions here. The Worker already running at `maham-ai-proxy` is the first version: to update it, see **"Updating the Worker that is already running"** in step 2 (paste the new `src/worker.js`, deploy, test).
 
 Three things to know before you start:
 
-- **Only members of the company can use it.** The Worker refuses any request without a valid Maham One cloud sign-in, and then refuses anyone who is not a member of the one company named in `COMPANY_ID` (step 2.0). Anyone on the internet can create a Maham One account, so a sign-in alone is not enough; membership is what keeps strangers from spending the company's Gemini budget.
+- **Everyone signed in can use it, unless you limit it.** The Worker refuses any request without a valid Maham One cloud sign-in. With `COMPANY_ID` empty (as it is in `wrangler.toml`), every signed-in account may use it. Anyone on the internet can create a Maham One account, and Google bills the Gemini key's owner for every question, whoever asks it. To limit it later to the members of your own companies, set `COMPANY_ID` (step 2.0) and deploy again: no code change is needed.
 - **Not signed in, no AI.** A company kept on this device only (not signed in to the cloud) can't use AI.
 - **Do not send real company data until billing is on** (step 1.2). On Google's free tier, Google may use what is sent to improve its products and people at Google may read it. That is not acceptable for payroll, Civil IDs, salaries or IBANs.
 
@@ -78,9 +78,9 @@ A budget only warns you; a quota actually stops spending. Set both.
 
 ## Step 2. Deploy the Worker
 
-### 2.0 Find the company's cloud id (needed by both ways)
+### 2.0 Optional: find your companies' cloud ids
 
-The Worker serves only the members of one company, named by its cloud id (`COMPANY_ID`). It is not secret, but it must be exact. To find it:
+Only if you want to limit the AI to your own companies. With `COMPANY_ID` empty or left out, the Worker serves everyone signed in to Maham One, and you can skip this step. To serve only the members of your companies, set `COMPANY_ID` to a company's cloud id, or to several separated by commas. An id is not secret, but it must be exact. To find them:
 
 1. Sign in at [supabase.com/dashboard](https://supabase.com/dashboard) and open the Maham One project (`gagdyhintrxdkiqhahzh`).
 2. **Table Editor** → the `companies` table. Find the company by its `name` and copy its `id` (8 to 64 letters, digits, `-` or `_`).
@@ -91,9 +91,9 @@ The Worker serves only the members of one company, named by its cloud id (`COMPA
    select id, name from public.companies;
    ```
 
-   It lists every company kept in the cloud, by `id` and `name`, and changes nothing. Copy the `id` on the row of your company's `name`, exactly as it is (no quotes or spaces).
+   It lists every company kept in the cloud, by `id` and `name`, and changes nothing. Copy the `id` on the row of each of your companies' `name`, exactly as it is (no quotes or spaces).
 
-Until `COMPANY_ID` is set, the Worker refuses every AI request with `internal` ("The AI service is not set up yet"), so nobody can use it by mistake.
+With `COMPANY_ID` set, someone who isn't a member of any of those companies gets `forbidden`. If an id in it is mistyped, the Worker refuses every AI request with `internal` ("The AI service is not set up yet") rather than guess.
 
 Then pick **one** way. Both give you an address like `https://maham-ai-proxy.<your-subdomain>.workers.dev`.
 
@@ -111,7 +111,7 @@ Then pick **one** way. Both give you an address like `https://maham-ai-proxy.<yo
    | `ALLOWED_ORIGINS`          | `https://mahamone.com`                           |
    | `SUPABASE_URL`             | `https://gagdyhintrxdkiqhahzh.supabase.co`       |
    | `SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_KyVAkWtemw_XDnNK8ZKRpA_-5x4pk8d` |
-   | `COMPANY_ID`               | the company's cloud id from step 2.0             |
+   | `COMPANY_ID` (optional)    | leave it out, or the ids from step 2.0           |
    | `MAX_OUTPUT_TOKENS`        | `8192`                                           |
    | `DEFAULT_ANSWER_TOKENS`    | `2048`                                           |
    | `MAX_BODY_BYTES`           | `262144`                                         |
@@ -119,7 +119,7 @@ Then pick **one** way. Both give you an address like `https://maham-ai-proxy.<yo
    The publishable key is public by design (the app already contains it); it only names the Supabase project.
 
 5. Same page: **Add** → type **Secret** (not Text) → name `GEMINI_API_KEY` → paste the key from step 1.1 → **Deploy**. Once saved, a secret is encrypted and can't be read back by anyone, only replaced.
-6. **Settings** → **Bindings** → **Add binding**. If **Rate limiting** is offered, add it with variable name `AI_RATE_LIMITER`, limit `30`, period `60` seconds (namespace ID `1001` if asked). If the dashboard doesn't offer it, carry on: only the company's members can use the Worker anyway, but none of them is limited per minute by the Worker, so Google's quota from step 1.4 is the only ceiling. Way B adds the limit.
+6. **Settings** → **Bindings** → **Add binding**. If **Rate limiting** is offered, add it with variable name `AI_RATE_LIMITER`, limit `30`, period `60` seconds (namespace ID `1001` if asked). If the dashboard doesn't offer it, carry on: the Worker then limits nobody per minute, so Google's quota from step 1.4, if you set one, is the only ceiling. Way B adds the limit.
 7. **Settings** → **Runtime**: set the compatibility date to `2026-10-01` or later, and add the compatibility flag `enable_request_signal` if you can. It lets the Worker stop Google's work as soon as the app closes the connection. Optional.
 8. **Settings** → **Observability**: turn **Workers Logs** on. If there's a separate switch for invocation logs, turn that off: the Worker writes its own log line for every request.
 9. **Settings** → **Domains & Routes**: check that the `workers.dev` address is on and copy it.
@@ -129,27 +129,21 @@ If you change the code later, follow "Updating the Worker that is already runnin
 
 ### Updating the Worker that is already running (dashboard)
 
-For the Worker deployed with the first version of `src/worker.js` (way A). The new version serves only the members of your company and gives shorter answers unless the app asks for more. Your Gemini key and the other variables stay as they are.
+For the Worker deployed with the first version of `src/worker.js` (way A). The new version gives shorter answers unless the app asks for more and keeps the model's thinking cheap. Like the first version, it serves everyone signed in to Maham One unless you set `COMPANY_ID`. Your Gemini key and the other variables stay as they are.
 
-1. Find the company's cloud id (step 2.0): in Supabase, **SQL Editor** → **New query** → `select id, name from public.companies;` → **Run**, and copy the `id` of your company.
-2. Sign in at [dash.cloudflare.com](https://dash.cloudflare.com/) → **Workers & Pages** → `maham-ai-proxy` → **Edit code**. Delete everything in `worker.js`, paste the whole of the new [`src/worker.js`](src/worker.js) from this folder, and choose **Deploy**.
-3. Back on the Worker: **Settings** → **Variables and Secrets** → **Add**, type **Text**, for each of these two, then choose **Deploy**:
+1. Sign in at [dash.cloudflare.com](https://dash.cloudflare.com/) → **Workers & Pages** → `maham-ai-proxy` → **Edit code**. Delete everything in `worker.js`, paste the whole of the new [`src/worker.js`](src/worker.js) from this folder, and choose **Deploy**.
+2. Test `/health` (step 3.1): open `https://maham-ai-proxy.steep-band-c624.workers.dev/health` in a browser, or run `curl -i "$WORKER/health"`. Expect `200` and `{"ok":true,"model":"gemini-3.6-flash"}`.
+3. Then step 3.3 with your own sign-in: expect `200` and an answer.
 
-   | Variable name           | Value                                  |
-   | ----------------------- | -------------------------------------- |
-   | `COMPANY_ID`            | the `id` from step 1, exactly as it is |
-   | `DEFAULT_ANSWER_TOKENS` | `2048`                                 |
+No new variables are needed. `COMPANY_ID` is optional (without it, everyone signed in may use the AI), and so is `DEFAULT_ANSWER_TOKENS` (without it, the Worker uses 2048). Leave the variables already there as they are (`GEMINI_MODEL`, `ALLOWED_MODELS`, `ALLOWED_ORIGINS`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `MAX_OUTPUT_TOKENS` = `8192`, `MAX_BODY_BYTES`) and the `GEMINI_API_KEY` secret. If you added `COMPANY_ID` earlier and now want everyone signed in to use the AI, delete it on the same page and choose **Deploy**.
 
-   Leave the variables already there as they are (`GEMINI_MODEL`, `ALLOWED_MODELS`, `ALLOWED_ORIGINS`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `MAX_OUTPUT_TOKENS` = `8192`, `MAX_BODY_BYTES`) and the `GEMINI_API_KEY` secret. Between steps 2 and 3 the Worker answers every AI request with "The AI service is not set up yet": that is expected, and nobody's data is sent anywhere.
+To limit the AI to your own companies at any time, with no code change: **Settings** → **Variables and Secrets** → **Add**, type **Text**, name `COMPANY_ID`, value the id from step 2.0 (or several, separated by commas), then choose **Deploy**. A person who isn't a member of any of them then gets `403` and `"code":"forbidden"`. If you get `500` and "The AI service is not set up yet", an id is mistyped (an id is 8 to 64 letters, digits, `-` or `_`).
 
-4. Test `/health` (step 3.1): open `https://maham-ai-proxy.steep-band-c624.workers.dev/health` in a browser, or run `curl -i "$WORKER/health"`. Expect `200` and `{"ok":true,"model":"gemini-3.6-flash"}`.
-5. Then step 3.3 with your own sign-in: expect `200` and an answer. If you get `403` and `"code":"forbidden"`, the account isn't a member of the company, or `COMPANY_ID` isn't the exact `id` from step 1. If you get `500` and "The AI service is not set up yet", `COMPANY_ID` is empty or mistyped (an id is 8 to 64 letters, digits, `-` or `_`).
-
-With way B instead: put the `id` in `COMPANY_ID = ""` in `wrangler.toml` (`DEFAULT_ANSWER_TOKENS` is already there) and run `npx wrangler deploy`, then steps 4 and 5.
+With way B instead: run `npx wrangler deploy` (`wrangler.toml` already has `DEFAULT_ANSWER_TOKENS`; put ids in `COMPANY_ID = ""` only if you want to limit the AI), then steps 2 and 3.
 
 ### Way B: the command line (Wrangler)
 
-You need [Node.js 22](https://nodejs.org/) (the same version as the app). First open `wrangler.toml` in this folder and put the company's id from step 2.0 in `COMPANY_ID = ""`. Then, in a terminal, from the top of this repository:
+You need [Node.js 22](https://nodejs.org/) (the same version as the app). Only if you want to limit the AI to your own companies, first open `wrangler.toml` in this folder and put their ids from step 2.0 in `COMPANY_ID = ""` (several separated by commas); left empty, everyone signed in may use it. Then, in a terminal, from the top of this repository:
 
 ```sh
 cd workers/ai-proxy
@@ -175,7 +169,7 @@ This only works if `mahamone.com`'s DNS is managed by Cloudflare (the domain is 
 
 ### Optional: a second Worker for testing on a computer
 
-`wrangler.toml` also defines `maham-ai-proxy-dev`, which accepts requests from the app running at `http://localhost:5173`. Set its own `COMPANY_ID` under `[env.dev.vars]` to a test company's id, deploy it with `npx wrangler deploy --env dev` and give it its own key with `npx wrangler secret put GEMINI_API_KEY --env dev`. Use a separate key, and made-up data only.
+`wrangler.toml` also defines `maham-ai-proxy-dev`, which accepts requests from the app running at `http://localhost:5173`. Its own `COMPANY_ID` under `[env.dev.vars]` is empty too (everyone signed in); set it to a test company's id to allow only that company's members. Deploy it with `npx wrangler deploy --env dev` and give it its own key with `npx wrangler secret put GEMINI_API_KEY --env dev`. Use a separate key, and made-up data only.
 
 ---
 
@@ -220,7 +214,7 @@ curl.exe -i -X POST "$WORKER/v1/generate" -H "Content-Type: application/json" --
 
 Expect `401` and `"code":"unauthorized"`.
 
-**3.3 With your sign-in.** Copy your access token from the signed-in app (use an account that is a member of the company):
+**3.3 With your sign-in.** Copy your access token from the signed-in app (if `COMPANY_ID` is set, use an account that is a member of one of its companies):
 
 1. Open [mahamone.com](https://mahamone.com) in Chrome or Edge and sign in.
 2. Open the developer tools (**F12**, or **Cmd+Option+I** on a Mac) → **Application** tab → **Local Storage** → `https://mahamone.com` → the key `almailbooks.auth`. (In Firefox and Safari it's the **Storage** tab.)
@@ -248,7 +242,7 @@ $TOKEN = "paste-the-access-token-here"
 curl.exe -i -X POST "$WORKER/v1/generate" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data-binary "@hello.json"
 ```
 
-Expect `200` and Gemini's answer as JSON (the text is under `candidates[0].content.parts[0].text`). If you get `403` and `"code":"forbidden"`, the account isn't a member of the company in `COMPANY_ID`, or `COMPANY_ID` is wrong (step 2.0).
+Expect `200` and Gemini's answer as JSON (the text is under `candidates[0].content.parts[0].text`). If you get `403` and `"code":"forbidden"`, `COMPANY_ID` is set and the account isn't a member of any of its companies, or an id in it is wrong (step 2.0).
 
 The same with streaming, where the answer arrives in pieces as `data:` lines:
 
@@ -284,7 +278,7 @@ curl.exe -i -X OPTIONS "$WORKER/v1/generate" -H "Origin: https://mahamone.com" -
 curl.exe -i "$WORKER/health" -H "Origin: https://example.com"
 ```
 
-CORS only controls what web pages can do inside a browser. It is not a lock: tools like curl can send any `Origin`, or none. The sign-in and membership checks in 3.2 and 3.3 are what keep others out.
+CORS only controls what web pages can do inside a browser. It is not a lock: tools like curl can send any `Origin`, or none. The sign-in check in 3.2 and 3.3 (and, with `COMPANY_ID` set, the membership check) is what keeps others out.
 
 **3.5 Watch the logs** with `npx wrangler tail` (way B) or the Worker's **Logs** tab in the dashboard. Each request writes one line like:
 
@@ -307,7 +301,7 @@ CORS only controls what web pages can do inside a browser. It is not a lock: too
 
 ## Step 4. What to send back to us
 
-Only the Worker's address, for example `https://maham-ai-proxy.your-subdomain.workers.dev` (or `https://ai.mahamone.com`). It would also help to say which way you used (A or B), whether the rate limiting binding was added, that `COMPANY_ID` is set (no need to send it), and that billing is on.
+Only the Worker's address, for example `https://maham-ai-proxy.your-subdomain.workers.dev` (or `https://ai.mahamone.com`). It would also help to say which way you used (A or B), whether the rate limiting binding was added, whether `COMPANY_ID` is set (no need to send it), and that billing is on.
 
 **Never** send the Gemini key or your access token. We don't need either: the key stays in Cloudflare, and the app gets each person's token when they sign in.
 
@@ -340,7 +334,7 @@ Google renames and retires models often. When it retires the one in `GEMINI_MODE
 | `ALLOWED_ORIGINS`          | Variable              | The web addresses allowed by CORS, comma-separated and exact. `*` is not accepted.                                   |
 | `SUPABASE_URL`             | Variable              | The Supabase project people sign in with.                                                                            |
 | `SUPABASE_PUBLISHABLE_KEY` | Variable              | Its publishable key (public).                                                                                        |
-| `COMPANY_ID`               | Variable (required)   | The company whose members may use the Worker (step 2.0). Empty or wrong: every AI request is refused.                |
+| `COMPANY_ID`               | Variable (optional)   | Empty: everyone signed in may use it. One company's id, or several comma-separated (step 2.0): only their members.   |
 | `MAX_OUTPUT_TOKENS`        | Variable              | The longest answer, in tokens (Gemini counts its "thinking" in this too). Default 8192.                              |
 | `DEFAULT_ANSWER_TOKENS`    | Variable              | The longest answer when a request doesn't say (no `maxOutputTokens`), never above `MAX_OUTPUT_TOKENS`. Default 2048. |
 | `MAX_BODY_BYTES`           | Variable              | The largest request, in bytes. Default 262144 (256 KB). Raise it if the app needs to send pictures of receipts.      |
@@ -358,7 +352,7 @@ Every error is JSON like `{"error":{"code":"unauthorized","message":"Sign in to 
 | Code                | HTTP         | What it means                                                                                                                                                                            | What to do                                                                                                                          |
 | ------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `unauthorized`      | 401          | No sign-in token, or Supabase says it is expired or not valid.                                                                                                                           | Sign in again (the app refreshes tokens on its own). If everyone gets it, check `SUPABASE_URL`.                                     |
-| `forbidden`         | 403          | Signed in, but not a member of the company in `COMPANY_ID`.                                                                                                                              | Invite the person to the company in Maham One. If members get it too, check `COMPANY_ID` (step 2.0).                                |
+| `forbidden`         | 403          | Signed in, but `COMPANY_ID` is set and the person isn't a member of any of its companies.                                                                                                | Invite them to one of those companies, or remove `COMPANY_ID` to let everyone signed in. If members get it too, check the ids.      |
 | `forbidden_origin`  | 403          | The request came from a web page not in `ALLOWED_ORIGINS`.                                                                                                                               | Add the app's exact address (for example `https://mahamone.com`) to `ALLOWED_ORIGINS`.                                              |
 | `bad_request`       | 400          | The request isn't valid JSON, misses `contents`, holds a field or file type the Worker doesn't pass on (the message names it), or Google couldn't use it (its short reason is included). | A problem in the app's request; tell us the message.                                                                                |
 | `payload_too_large` | 413          | The request is bigger than `MAX_BODY_BYTES`.                                                                                                                                             | Send less, or raise `MAX_BODY_BYTES`.                                                                                               |
@@ -367,7 +361,7 @@ Every error is JSON like `{"error":{"code":"unauthorized","message":"Sign in to 
 | `upstream_error`    | 502 (or 503) | Google failed or refused: Google is down or overloaded, the key is wrong or restricted, billing, the model was retired, or Supabase is down.                                             | Try again. If it persists, check the log line (`upstream`, `googleStatus`, `reason`), the key (step 1), billing and `GEMINI_MODEL`. |
 | `upstream_timeout`  | 504          | Google (or Supabase) took too long: for `/v1/generate`, the whole answer took longer than `GENERATE_TIMEOUT_MS`.                                                                         | Try again; ask for a shorter answer, or use `/v1/stream` for long ones.                                                             |
 | `not_found`         | 404          | No such address or method. The routes are `GET /health`, `POST /v1/generate`, `POST /v1/stream`.                                                                                         | Check the address.                                                                                                                  |
-| `internal`          | 500          | The Worker isn't set up: the `GEMINI_API_KEY` secret is missing, `COMPANY_ID` is empty, or a variable is wrong. The log line names it (`problem`).                                       | Add the secret or fix the variable.                                                                                                 |
+| `internal`          | 500          | The Worker isn't set up: the `GEMINI_API_KEY` secret is missing, an id in `COMPANY_ID` is mistyped, or a variable is wrong. The log line names it (`problem`).                           | Add the secret or fix the variable.                                                                                                 |
 
 During a streamed answer, the HTTP status is already 200 when the answer starts. If Google fails after that, the stream ends with an event named `error` whose data is the same JSON:
 
@@ -380,7 +374,7 @@ data: {"error":{"code":"upstream_error","message":"The AI service stopped in the
 
 ## Who can use it, and the limits
 
-- **Only members of the company in `COMPANY_ID`**, signed in to the Maham One cloud, whatever their role. Someone who creates their own account (the app allows sign-ups), or who belongs only to another company, gets `forbidden`. The check asks Supabase with the person's own token, so the database's own rules decide; the Worker needs no Supabase admin key. The app adds the owner's switch (**Settings → AI assistant**) on top: nobody sees the assistant until the owner or an admin turns it on.
+- **Everyone signed in to the Maham One cloud, unless `COMPANY_ID` is set**, whatever their role. The app allows sign-ups, so with `COMPANY_ID` empty that includes anyone who creates an account. With `COMPANY_ID` set, only the members of its companies: someone who creates their own account, or who belongs only to another company, gets `forbidden`. That check asks Supabase with the person's own token, so the database's own rules decide; the Worker needs no Supabase admin key. The app adds a switch for each company (**Settings → AI assistant**) on top: nobody sees the assistant in a company until its owner or an admin turns it on. Someone who creates their own company is its owner, so the switch alone doesn't keep strangers out; `COMPANY_ID` does.
 - **Up to 30 requests a minute per person**, with the rate limiting binding. The limit is counted in each Cloudflare location separately, so it is a guard against runaway loops rather than an exact count. Google's quota (step 1.4) is the ceiling for everyone together.
 - **Not signed in, not served:** a company kept on this device only can't use AI.
 - **Size:** requests are at most 256 KB (`MAX_BODY_BYTES`), answers at most 8192 tokens (`MAX_OUTPUT_TOKENS`, thinking included), and always one answer per request. A request that doesn't say how long its answer may be gets 2048 tokens (`DEFAULT_ANSWER_TOKENS`).

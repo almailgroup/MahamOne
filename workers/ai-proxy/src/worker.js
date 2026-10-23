@@ -8,10 +8,13 @@
  * Supabase access token; the Worker checks the token, applies limits, and
  * calls Google with the key. The person's token is never sent to Google.
  *
- * Who may use it: only signed-in members of one company (COMPANY_ID). The app
- * lets anyone create an account, so being signed in is not enough: after
- * Supabase confirms the token, the Worker asks Supabase, with the person's own
- * token, whether they are a member of that company. Anyone else gets 403.
+ * Who may use it: everyone signed in to Maham One, unless COMPANY_ID is set.
+ * With COMPANY_ID empty or left out, any account Supabase confirms may use it.
+ * The app lets anyone create an account, so that is anyone who signs up, and
+ * Google bills the owner for all of them. With COMPANY_ID set to one company
+ * id, or several separated by commas, the Worker also asks Supabase, with the
+ * person's own token, whether they are a member of at least one of those
+ * companies. Anyone else gets 403.
  *
  * Routes
  *   GET  /health        No sign-in needed. Answers {ok: true, model}. Never secrets.
@@ -71,7 +74,8 @@
  * @property {string} [ALLOWED_ORIGINS] Comma-separated web origins allowed by CORS.
  * @property {string} [SUPABASE_URL] The Supabase project that signs people in.
  * @property {string} [SUPABASE_PUBLISHABLE_KEY] Its publishable key (public by design).
- * @property {string} [COMPANY_ID] The company whose members may use the service.
+ * @property {string} [COMPANY_ID] Optional. The company, or companies (comma-separated),
+ *   whose members may use the service. Empty or left out: everyone signed in may.
  * @property {string | number} [MAX_OUTPUT_TOKENS] Cap on generationConfig.maxOutputTokens.
  * @property {string | number} [DEFAULT_ANSWER_TOKENS] maxOutputTokens when a request gives none
  *   (still capped by MAX_OUTPUT_TOKENS).
@@ -128,7 +132,7 @@ const DEFAULT_STREAM_START_TIMEOUT_MS = 30_000;
 /** A stream may run as long as it keeps sending, with no pause longer than this. */
 const DEFAULT_STREAM_IDLE_TIMEOUT_MS = 60_000;
 
-/** For each call to Supabase (the sign-in check and the membership check). */
+/** For each call to Supabase (the sign-in check and, with COMPANY_ID, the membership check). */
 const AUTH_TIMEOUT_MS = 5_000;
 /** A checked token is trusted for at most this long, and never past its expiry. */
 const AUTH_CACHE_MS = 60_000;
@@ -277,9 +281,12 @@ class ProxyError extends Error {
 const badRequest = (message) => new ProxyError('bad_request', message);
 
 /**
- * Tokens that passed both checks (signed in, and a member of companyId), keyed
- * by the SHA-256 of the token: the token itself is never kept.
- * @type {Map<string, {userId: string, companyId: string, until: number}>}
+ * Tokens that passed the checks (signed in, and a member of one of the
+ * companies in COMPANY_ID when it names any), keyed by the SHA-256 of the
+ * token: the token itself is never kept. companies is the COMPANY_ID they
+ * were checked against, as config.companies has it ('' when open to everyone
+ * signed in), so a pass is never reused under another setting.
+ * @type {Map<string, {userId: string, companies: string, until: number}>}
  */
 const authCache = new Map();
 
@@ -342,6 +349,7 @@ export default {
 /** @param {Env} env */
 function readConfig(env) {
   const defaultModel = text(env.GEMINI_MODEL);
+  const companyIds = [...new Set(list(env.COMPANY_ID))];
   return {
     apiKey: text(env.GEMINI_API_KEY),
     defaultModel,
@@ -349,7 +357,11 @@ function readConfig(env) {
     origins: new Set(list(env.ALLOWED_ORIGINS).map(normalizeOrigin)),
     supabaseUrl: text(env.SUPABASE_URL).replace(/\/+$/, ''),
     supabaseKey: text(env.SUPABASE_PUBLISHABLE_KEY),
-    companyId: text(env.COMPANY_ID),
+    // COMPANY_ID as a list: spaces and empty items dropped, each id once.
+    // Empty: open to everyone signed in.
+    companyIds,
+    // The same list as one string, for the sign-in cache.
+    companies: companyIds.join(','),
     maxOutputTokens: positiveInt(env.MAX_OUTPUT_TOKENS, DEFAULT_MAX_OUTPUT_TOKENS),
     answerTokens: positiveInt(env.DEFAULT_ANSWER_TOKENS, DEFAULT_ANSWER_TOKENS),
     maxBodyBytes: positiveInt(env.MAX_BODY_BYTES, DEFAULT_MAX_BODY_BYTES),
@@ -403,10 +415,11 @@ function assertConfigured(config) {
   else if (!/^https:\/\/[a-z0-9.-]+(:\d+)?$/i.test(config.supabaseUrl))
     problem = 'SUPABASE_URL is not an https address';
   else if (!config.supabaseKey) problem = 'SUPABASE_PUBLISHABLE_KEY is not set';
-  // Without it anyone who creates an account could use the service, so the
-  // Worker refuses everyone until it is set.
-  else if (!COMPANY_ID.test(config.companyId))
-    problem = 'COMPANY_ID is missing or not a company id';
+  // COMPANY_ID is optional (empty: everyone signed in), but each item it holds
+  // must be a company id: a mistyped value is refused, never read as empty,
+  // which would let in everyone signed in.
+  else if (!config.companyIds.every((id) => COMPANY_ID.test(id)))
+    problem = 'COMPANY_ID is not a company id or a list of them';
   if (problem) {
     throw new ProxyError('internal', 'The AI service is not set up yet.', { log: { problem } });
   }
@@ -419,8 +432,9 @@ function assertConfigured(config) {
 // this Worker's answers, so other websites can't build on it in their
 // visitors' browsers. Anything that isn't a browser (curl, a script, a server)
 // can send any Origin header, or none, and CORS does nothing to stop it. The
-// real gate is the sign-in check in authenticate() and the membership check in
-// authorize() below, which every /v1 request must pass whatever its origin.
+// real gate is the sign-in check in authenticate() and, when COMPANY_ID is set,
+// the membership check in authorize() below, which every /v1 request must pass
+// whatever its origin.
 
 /**
  * @param {string | null} origin
@@ -498,8 +512,9 @@ async function handleAi(request, config, context) {
 /**
  * @typedef {object} SignedIn
  * @property {string} userId The Supabase user id.
- * @property {boolean} cached True when this token passed both checks (signed
- *   in, and a member of COMPANY_ID) less than a minute ago.
+ * @property {boolean} cached True when this token passed the checks for the
+ *   current COMPANY_ID (signed in, and a member of one of its companies when it
+ *   names any) less than a minute ago.
  * @property {string} token The access token, only for the membership check.
  * @property {string} cacheKey The SHA-256 of the token.
  * @property {number} until How long a positive result may be remembered.
@@ -524,7 +539,7 @@ async function authenticate(request, config) {
   const cacheKey = await sha256Hex(token);
 
   const cached = authCache.get(cacheKey);
-  if (cached && cached.until > Date.now() && cached.companyId === config.companyId) {
+  if (cached && cached.until > Date.now() && cached.companies === config.companies) {
     return { userId: cached.userId, cached: true, token, cacheKey, until: cached.until };
   }
   if (cached) authCache.delete(cacheKey);
@@ -564,22 +579,44 @@ async function authenticate(request, config) {
 }
 
 /**
- * Only members of the company in COMPANY_ID may use the service. The app lets
- * anyone create an account (and then a company of their own), so a valid
- * sign-in alone would let strangers spend the company's Gemini budget.
+ * With COMPANY_ID empty, everyone signed in may use the service, and nothing
+ * more is asked. With COMPANY_ID set, only members of at least one of its
+ * companies may. The app lets anyone create an account (and then a company of
+ * their own), so then a valid sign-in alone is not enough.
  *
  * The question goes to Supabase's REST API with the person's own token, so
  * the database's row-level security answers it: a member can read their
  * company's rows in company_members, and nobody else can. No service key is
- * needed. A positive answer is remembered together with the sign-in.
+ * needed. One request covers every company in the list. A positive answer
+ * (or, when open, the sign-in alone) is remembered together with the sign-in.
  * @param {SignedIn} user
  * @param {Config} config
  */
 async function authorize(user, config) {
   if (user.cached) return;
+  if (config.companyIds.length > 0) await checkMembership(user, config);
+  if (user.until > Date.now()) {
+    remember(user.cacheKey, {
+      userId: user.userId,
+      companies: config.companies,
+      until: user.until,
+    });
+  }
+}
+
+/**
+ * One company_members request for every company in COMPANY_ID: a row comes
+ * back only if the person is a member of at least one of them.
+ * @param {SignedIn} user
+ * @param {Config} config
+ */
+async function checkMembership(user, config) {
+  const ids = config.companyIds;
+  // Company ids are only letters, digits, "-" and "_" (checked in
+  // assertConfigured), so they are safe inside in.(...).
   const query = new URLSearchParams({
     select: 'role',
-    company_id: `eq.${config.companyId}`,
+    company_id: ids.length === 1 ? `eq.${ids[0]}` : `in.(${ids.join(',')})`,
     user_id: `eq.${user.userId}`,
     limit: '1',
   });
@@ -611,13 +648,6 @@ async function authorize(user, config) {
       'forbidden',
       'This account is not a member of the company that uses this AI service.',
     );
-  }
-  if (user.until > Date.now()) {
-    remember(user.cacheKey, {
-      userId: user.userId,
-      companyId: config.companyId,
-      until: user.until,
-    });
   }
 }
 
@@ -680,7 +710,7 @@ function tokenExpiry(token) {
 
 /**
  * @param {string} key
- * @param {{userId: string, companyId: string, until: number}} value
+ * @param {{userId: string, companies: string, until: number}} value
  */
 function remember(key, value) {
   if (authCache.size >= AUTH_CACHE_MAX_ENTRIES) {

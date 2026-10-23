@@ -36,7 +36,8 @@ export type AiErrorCode =
 
 const WORKER_CODES = new Set<string>([
   'unauthorized',
-  // Signed in, but not a member of the company the service is set up for (COMPANY_ID).
+  // Signed in, but not a member of any company in the Worker's COMPANY_ID (only
+  // when it is set: left empty, the Worker serves everyone signed in).
   'forbidden',
   'forbidden_origin',
   'bad_request',
@@ -200,7 +201,8 @@ export function aiErrorMessage(error: unknown): string {
       return t('Stopped');
     case 'internal':
     default:
-      // The Worker's settings aren't complete (its key or COMPANY_ID).
+      // The Worker's settings aren't complete or right (its key missing, or
+      // COMPANY_ID holding something that isn't a company id).
       if (isAiError(error) && error.code === 'internal' && notSetUp(error.detail)) {
         return t('The AI assistant is not set up yet. Ask the owner.');
       }

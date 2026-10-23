@@ -207,12 +207,14 @@ Cloudflare Worker at
 - accepts only signed-in people: each request carries the person's Supabase
   access token, which the Worker checks with Supabase (the app refreshes the
   token once when the Worker refuses it);
-- **serves only the members of one company** (its `COMPANY_ID` setting):
-  anyone can create a Maham One account, so being signed in is not enough.
-  The Worker asks Supabase, with the person's own sign-in, whether they are a
-  member of that company. Anyone else is refused, and the panel says "Your
-  account is not a member of the company the AI assistant is set up for. Ask
-  the owner.";
+- **serves everyone signed in, unless its `COMPANY_ID` setting is set**:
+  with it empty (as it is now), any Maham One account may use the assistant,
+  and anyone can create one, so Google bills the owner for whoever asks.
+  With `COMPANY_ID` set to one company's id, or several separated by commas,
+  the Worker also asks Supabase, with the person's own sign-in, whether they
+  are a member of at least one of those companies. Anyone else is refused,
+  and the panel says "Your account is not a member of the company the AI
+  assistant is set up for. Ask the owner.";
 - answers only the web address `https://mahamone.com` (so it works from the
   live app, not from a preview or a copy on another address);
 - limits how many questions each person asks a minute, and caps the length of
@@ -236,10 +238,10 @@ signed out or sign-in expired, an account that isn't a member of the
 company (the Worker's `forbidden`), any other refusal ("The AI assistant is
 not available for this account."), no internet, too many questions (with
 the wait in seconds), the service busy or slow, the service not set up yet
-("The AI assistant is not set up yet. Ask the owner.", when its key or
-`COMPANY_ID` is missing), an answer withheld. The Worker's own message
-(English) is never shown in the chat, and the message about the web address
-(mahamone.com) only when that is what the Worker said.
+("The AI assistant is not set up yet. Ask the owner.", when its key is
+missing or an id in `COMPANY_ID` is mistyped), an answer withheld. The
+Worker's own message (English) is never shown in the chat, and the message
+about the web address (mahamone.com) only when that is what the Worker said.
 
 The app already knows the codes the next version of the Worker is planned to
 send, when the server checks every request (plan R1): the assistant not
@@ -255,33 +257,40 @@ A Worker that needs it must answer this version with `update_required`.
 
 The Worker running today is the first version, which answers anyone signed
 in. The new version, in [`workers/ai-proxy/src/worker.js`](../workers/ai-proxy/src/worker.js),
-serves only your company's members, gives shorter answers and keeps the
-model's thinking cheap. To put it in place, in a few minutes:
+does the same unless you set `COMPANY_ID`, gives shorter answers and keeps
+the model's thinking cheap. To put it in place, in a few minutes:
 
-1. **Find your company's id.** In Supabase, open the project, then **SQL
-   Editor** → **New query**, paste `select id, name from public.companies;`
-   and press **Run**. Copy the `id` on the row with your company's name,
-   exactly as it is. (This only reads; it changes nothing.)
-2. **Paste the new code.** In the Cloudflare dashboard, open **Workers &
+1. **Paste the new code.** In the Cloudflare dashboard, open **Workers &
    Pages** → `maham-ai-proxy` → **Edit code**. Delete everything in
    `worker.js`, paste the whole of the new `src/worker.js`, and press
    **Deploy**.
-3. **Add two settings.** On the Worker, open **Settings** → **Variables and
-   Secrets** and **Add** each of these as type **Text**, then press
-   **Deploy**:
-   - `COMPANY_ID`: the id from step 1;
-   - `DEFAULT_ANSWER_TOKENS`: `2048`.
-
-   Leave everything else as it is, the `GEMINI_API_KEY` secret included.
-   Between steps 2 and 3 the assistant answers "The AI assistant is not set
-   up yet. Ask the owner.": that is expected, and nothing is sent anywhere.
-
-4. **Check it.** Open
+2. **Check it.** Open
    `https://maham-ai-proxy.steep-band-c624.workers.dev/health` in a browser:
    it should show `{"ok":true,"model":"gemini-3.6-flash"}`. Then, in the app,
    **Settings → AI assistant → Test the connection**, and ask the assistant
-   a question. If it says your account is not a member of the company, the
-   id in `COMPANY_ID` isn't exactly the one from step 1.
+   a question.
+
+No new settings are needed: leave everything as it is, the
+`GEMINI_API_KEY` secret included. `DEFAULT_ANSWER_TOKENS` is optional (the
+Worker uses 2048 without it), and so is `COMPANY_ID`. If you added
+`COMPANY_ID` earlier and now want everyone signed in to use the assistant,
+delete it under **Settings** → **Variables and Secrets** and press
+**Deploy**.
+
+**Only if you want to limit the assistant to your own companies**, at any
+time and with no code change:
+
+1. **Find the ids.** In Supabase, open the project, then **SQL Editor** →
+   **New query**, paste `select id, name from public.companies;` and press
+   **Run**. Copy the `id` on the row of each of your companies, exactly as
+   it is. (This only reads; it changes nothing.)
+2. **Add the setting.** On the Worker, open **Settings** → **Variables and
+   Secrets**, **Add** `COMPANY_ID` as type **Text** with the id (several
+   separated by commas), and press **Deploy**.
+3. **Check it** as above. If it says your account is not a member of the
+   company, an id in `COMPANY_ID` isn't exactly the one from Supabase, or
+   your account isn't a member of any of those companies. If it says the
+   assistant is not set up yet, an id is mistyped.
 
 The Worker's [README](../workers/ai-proxy/README.md) has the same steps
 ("Updating the Worker that is already running"), the command-line way, and

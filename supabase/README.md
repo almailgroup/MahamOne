@@ -879,8 +879,9 @@ own check before it syncs), so the app works the same either way.
   again after any earlier file that defines them is (the table in "Scripts
   by phase"); the health check names it then.
 - The AI service (the Cloudflare Worker, `workers/ai-proxy`) doesn't read
-  the switch: it answers the members of the one company it is set up for
-  (`COMPANY_ID`), and the app shows the assistant only with the switch on.
+  the switch: it answers everyone signed in, or, when its `COMPANY_ID` is
+  set, only the members of the companies it names, and the app shows the
+  assistant only with the switch on.
 - Tests: `src/cloud/ai-assistant-sql.test.ts` (the guard, the file run twice
   after every earlier one, `records_guard` as the latest earlier one with
   only the rule added, `server_features()`, the owner, admins limited or
