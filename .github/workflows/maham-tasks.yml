@@ -1,0 +1,149 @@
+name: Maham Tasks
+
+# The checks of Maham Tasks (the folder "Maham Tasks", its own Next.js app):
+# the same jobs as its own CI (Maham Tasks/.github/workflows/ci.yml, which
+# GitHub only runs at the root of a repository), run in that folder. Only
+# pushes that change Maham Tasks start it.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Maham Tasks/**'
+      - '.github/workflows/maham-tasks.yml'
+  workflow_dispatch:
+
+concurrency:
+  # A newer push supersedes an in-flight run on the same branch.
+  group: maham-tasks-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: Maham Tasks
+
+jobs:
+  check:
+    name: Types, lint, unit tests, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Maham Tasks/package-lock.json
+
+      - run: npm ci
+
+      - name: Types
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+        env:
+          # The build only needs these to exist; nothing is contacted at build
+          # time, and the real values live in the Vercel project.
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+
+      # Keeping the generated bundle in the repo is only safe if it is checked.
+      # A migration added without re-running db:bundle would otherwise ship a
+      # setup.sql that silently lacks it.
+      - name: setup.sql is in sync with the migrations
+        run: |
+          npm run db:bundle
+          git diff --exit-code supabase/setup.sql \
+            || (echo "::error::supabase/setup.sql is stale — run 'npm run db:bundle' and commit the result." && exit 1)
+
+  rls:
+    name: Row Level Security
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGURL: postgresql://postgres:postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+
+      # The privacy rules live entirely in the policies, where no amount of
+      # testing the UI can reach them. They are checked here against a real
+      # PostgreSQL, built from setup.sql exactly as a fresh deployment would
+      # build it, as several different people.
+      #
+      # Every file in supabase/tests/, found by glob rather than named. Listed
+      # by name, this job ran two of them: eight suites arrived with their
+      # migrations and were never wired in, so they were green by never being
+      # asked. A glob cannot forget the next one.
+      #
+      # Each suite gets its own database — they insert their own fixtures, and
+      # one must not inherit another's.
+      - name: Policy and trigger suites
+        run: |
+          shopt -s nullglob
+          status=0
+          for suite in supabase/tests/*.sql; do
+            case "$(basename "$suite")" in shim.sql) continue ;; esac
+            echo "::group::$(basename "$suite")"
+            db="t_$(basename "$suite" .sql | tr -dc 'a-z0-9')"
+            psql "$PGURL" -v ON_ERROR_STOP=1 -q -c "drop database if exists $db"
+            psql "$PGURL" -v ON_ERROR_STOP=1 -q -c "create database $db"
+            suite_url="${PGURL%/*}/$db"
+            psql "$suite_url" -v ON_ERROR_STOP=1 -q -f supabase/tests/shim.sql
+            psql "$suite_url" -v ON_ERROR_STOP=1 -q -f supabase/setup.sql
+            if psql "$suite_url" -v ON_ERROR_STOP=1 -q -f "$suite"; then
+              echo "ok"
+            else
+              echo "::error::$(basename "$suite") failed"
+              status=1
+            fi
+            echo "::endgroup::"
+          done
+          exit $status
+
+  e2e:
+    name: End-to-end
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Maham Tasks/package-lock.json
+
+      - run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      # No Supabase variables here. playwright.config.ts builds the app itself
+      # and points it at tests/mock/supabase.mjs when they are unset; setting
+      # them to a placeholder project sent every signed-in spec there instead,
+      # where each waited out its timeout and failed.
+      - name: Playwright
+        run: npm run test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: Maham Tasks/playwright-report/
+          retention-days: 7
