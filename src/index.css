@@ -1,4 +1,7 @@
 @import 'tailwindcss';
+/* Maham Tasks is its own app, with its own styles: its files are not scanned
+   for this app's classes. */
+@source not '../Maham Tasks';
 @import '@fontsource-variable/inter';
 /* Arabic letters come from IBM Plex Sans Arabic; the browser only downloads it
    when a page shows Arabic text. */

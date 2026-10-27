@@ -104,10 +104,14 @@ async function fakeFetch(input, init = {}) {
     const user = users.get(token);
     if (!user?.id) return Response.json({ code: 'PGRST301', message: 'JWT' }, { status: 401 });
     const query = new URL(url).searchParams;
-    const company = (query.get('company_id') ?? '').replace(/^eq\./, '');
+    // company_id=eq.<id>, or in.(<id>,<id>) for several.
+    const filter = query.get('company_id') ?? '';
+    const list = /^in\.\((.*)\)$/.exec(filter);
+    const companies = list ? list[1].split(',') : [filter.replace(/^eq\./, '')];
     const member = (query.get('user_id') ?? '').replace(/^eq\./, '');
-    const visible =
-      members.has(`${company} ${user.id}`) && members.has(`${company} ${member}`) ? 1 : 0;
+    const visible = companies.some(
+      (company) => members.has(`${company} ${user.id}`) && members.has(`${company} ${member}`),
+    );
     return Response.json(visible ? [{ role: 'staff' }] : []);
   }
   if (url.startsWith(GEMINI)) return gemini(call);
@@ -665,7 +669,8 @@ describe('company membership (COMPANY_ID)', () => {
     expect(geminiCalls()).toHaveLength(0);
   });
 
-  it.each([undefined, '', 'short', 'has spaces in it', 'x'.repeat(65), 'a/../../b-c'])(
+  // An empty COMPANY_ID is no longer refused: see "open to everyone signed in" below.
+  it.each(['short', 'has spaces in it', 'x'.repeat(65), 'a/../../b-c'])(
     'refuses everyone when COMPANY_ID is %j, without asking anyone',
     async (companyId) => {
       const response = await send('/v1/generate', { env: makeEnv({ COMPANY_ID: companyId }) });
@@ -754,6 +759,313 @@ describe('company membership (COMPANY_ID)', () => {
     const response = await send('/v1/generate');
     expect(response.status).toBe(401);
     expect(memberCalls()).toHaveLength(0);
+  });
+});
+
+describe('several companies (COMPANY_ID a list)', () => {
+  const OTHER = 'other-company-0001';
+  const THIRD = 'third-company-01';
+
+  it('serves a member of the second company, with one in.(...) request', async () => {
+    members = new Set([`${COMPANY} ${USER_1}`]);
+    const response = await send('/v1/generate', {
+      env: makeEnv({ COMPANY_ID: `${OTHER},${COMPANY}` }),
+    });
+    expect(response.status).toBe(200);
+    expect(geminiCalls()).toHaveLength(1);
+    const [check] = memberCalls();
+    expect(memberCalls()).toHaveLength(1);
+    const url = new URL(check.url);
+    expect(url.pathname).toBe('/rest/v1/company_members');
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      select: 'role',
+      company_id: `in.(${OTHER},${COMPANY})`,
+      user_id: `eq.${USER_1}`,
+      limit: '1',
+    });
+    expect(check.headers.get('Authorization')).toBe(`Bearer ${TOKEN}`);
+  });
+
+  it('refuses an account that is a member of none of them, with 403 forbidden', async () => {
+    members = new Set([`${THIRD} ${USER_1}`]);
+    for (const path of ['/v1/generate', '/v1/stream']) {
+      const response = await send(path, { env: makeEnv({ COMPANY_ID: `${COMPANY}, ${OTHER}` }) });
+      expect(response.status).toBe(403);
+      expect(await errorOf(response)).toEqual({
+        code: 'forbidden',
+        message: 'This account is not a member of the company that uses this AI service.',
+        status: 403,
+      });
+    }
+    expect(geminiCalls()).toHaveLength(0);
+    expect(testing.authCache.size).toBe(0);
+  });
+
+  it('ignores spaces around each id, empty items and repeats', async () => {
+    members = new Set([`${OTHER} ${USER_1}`]);
+    const env = makeEnv({ COMPANY_ID: ` ${COMPANY} ,, ${OTHER} , ${COMPANY} ,` });
+    expect((await send('/v1/generate', { env })).status).toBe(200);
+    const query = new URL(memberCalls()[0].url).searchParams;
+    expect(query.get('company_id')).toBe(`in.(${COMPANY},${OTHER})`);
+  });
+
+  it('asks with eq. when the list holds one id, with spaces or repeated', async () => {
+    for (const companyId of [` ${COMPANY} `, `${COMPANY},${COMPANY}`, `,${COMPANY},`]) {
+      testing.authCache.clear();
+      calls = [];
+      expect((await send('/v1/generate', { env: makeEnv({ COMPANY_ID: companyId }) })).status).toBe(
+        200,
+      );
+      const query = new URL(memberCalls()[0].url).searchParams;
+      expect(query.get('company_id')).toBe(`eq.${COMPANY}`);
+    }
+  });
+
+  it.each([
+    `${COMPANY},short`,
+    `${COMPANY}, has spaces`,
+    `${COMPANY};${OTHER}`,
+    `${OTHER},a/../../b-c`,
+    `${COMPANY},${'x'.repeat(65)}`,
+    `${COMPANY},${OTHER})`,
+  ])('refuses everyone when an item of COMPANY_ID %j is not a company id', async (companyId) => {
+    const response = await send('/v1/generate', { env: makeEnv({ COMPANY_ID: companyId }) });
+    expect(response.status).toBe(500);
+    expect(await errorOf(response)).toEqual({
+      code: 'internal',
+      message: 'The AI service is not set up yet.',
+      status: 500,
+    });
+    expect(calls).toHaveLength(0);
+    expect(logLines()[0].problem).toBe('COMPANY_ID is not a company id or a list of them');
+  });
+
+  // An id deleted from the list with its comma left behind: refused, not
+  // read as empty (which would serve everyone signed in).
+  it.each([',', ',,,', ' , , ', ' ,'])(
+    'refuses everyone when COMPANY_ID %j holds only commas, without asking anyone',
+    async (companyId) => {
+      for (const path of ['/v1/generate', '/v1/stream']) {
+        const response = await send(path, { env: makeEnv({ COMPANY_ID: companyId }) });
+        expect(response.status).toBe(500);
+        expect(await errorOf(response)).toEqual({
+          code: 'internal',
+          message: 'The AI service is not set up yet.',
+          status: 500,
+        });
+      }
+      expect(calls).toHaveLength(0);
+      expect(logLines().map((line) => line.problem)).toEqual([
+        'COMPANY_ID is not a company id or a list of them',
+        'COMPANY_ID is not a company id or a list of them',
+      ]);
+    },
+  );
+
+  it('logs no company id', async () => {
+    members = new Set([`${OTHER} ${USER_1}`]);
+    await send('/v1/generate', { env: makeEnv({ COMPANY_ID: `${COMPANY},${OTHER}` }) });
+    await send('/v1/generate', { env: makeEnv({ COMPANY_ID: `${THIRD},${COMPANY}` }) });
+    const all = logs.join('\n');
+    for (const id of [COMPANY, OTHER, THIRD]) expect(all).not.toContain(id);
+  });
+});
+
+describe('open to everyone signed in (COMPANY_ID empty)', () => {
+  const STRANGER = 'a5c8f4e2-0b7d-4e1a-9c3f-2d6b8e0f1a4c';
+  const open = (overrides = {}) => makeEnv({ COMPANY_ID: '', ...overrides });
+  let stranger;
+  beforeEach(() => {
+    // An account that belongs to no company at all.
+    stranger = jwt({ sub: STRANGER, exp: nowSeconds() + 3600 });
+    users.set(stranger, { id: STRANGER, aud: 'authenticated', is_anonymous: false });
+    members = new Set();
+  });
+
+  it.each([
+    ['empty', ''],
+    ['left out', undefined],
+    ['only spaces', '   '],
+  ])(
+    'serves any signed-in account when COMPANY_ID is %s, without a membership check',
+    async (_, companyId) => {
+      const env = makeEnv({ COMPANY_ID: companyId });
+      const response = await send('/v1/generate', { token: stranger, env });
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual(geminiAnswer());
+      gemini = (call) => sseResponse(STREAM_EVENTS, call);
+      const stream = await send('/v1/stream', { token: stranger, env });
+      expect(stream.status).toBe(200);
+      expect((await chunksOf(stream)).join('')).toContain('three');
+      expect(memberCalls()).toHaveLength(0);
+      expect(authCalls()).toHaveLength(1);
+      expect(geminiCalls()).toHaveLength(2);
+      expect(logLines().map((line) => line.status)).toEqual([200, 200]);
+      expect(logLines().every((line) => line.problem === undefined)).toBe(true);
+      expect(logs.join('\n')).not.toContain(STRANGER);
+    },
+  );
+
+  it('serves a member of a company too, without asking about it', async () => {
+    members = new Set([`${COMPANY} ${USER_1}`]);
+    expect((await send('/v1/generate', { env: open() })).status).toBe(200);
+    expect(supabaseCalls().map((call) => new URL(call.url).pathname)).toEqual(['/auth/v1/user']);
+  });
+
+  it('still refuses a request without a token, without asking Supabase', async () => {
+    const response = await send('/v1/generate', { token: null, env: open() });
+    expect(response.status).toBe(401);
+    expect((await errorOf(response)).code).toBe('unauthorized');
+    expect(calls).toHaveLength(0);
+  });
+
+  it('still refuses a token Supabase rejects, and anonymous users', async () => {
+    const bad = jwt({ sub: USER_2, exp: nowSeconds() + 3600 });
+    const anonymous = jwt({ sub: USER_2, exp: nowSeconds() + 3600 });
+    users.set(anonymous, { id: USER_2, is_anonymous: true });
+    for (const token of [bad, anonymous]) {
+      const response = await send('/v1/generate', { token, env: open() });
+      expect(response.status).toBe(401);
+      expect((await errorOf(response)).code).toBe('unauthorized');
+    }
+    expect(memberCalls()).toHaveLength(0);
+    expect(geminiCalls()).toHaveLength(0);
+    expect(testing.authCache.size).toBe(0);
+  });
+
+  it('keeps CORS as it is', async () => {
+    const evil = await send('/v1/generate', {
+      token: stranger,
+      origin: 'https://evil.example',
+      env: open(),
+    });
+    expect(evil.status).toBe(403);
+    expect(evil.headers.get('Access-Control-Allow-Origin')).toBeNull();
+    expect((await errorOf(evil)).code).toBe('forbidden_origin');
+    expect(calls).toHaveLength(0);
+    const app = await send('/v1/generate', { token: stranger, env: open() });
+    expect(app.headers.get('Access-Control-Allow-Origin')).toBe(APP);
+  });
+
+  it('keeps the allowlists, the caps and the body limit as they are', async () => {
+    const env = open();
+    const model = await send('/v1/generate', {
+      token: stranger,
+      env,
+      body: { ...question, model: 'gemini-1.5-pro' },
+    });
+    expect((await errorOf(model)).code).toBe('model_not_allowed');
+    const file = await send('/v1/generate', {
+      token: stranger,
+      env,
+      body: {
+        contents: [{ role: 'user', parts: [{ fileData: { fileUri: 'https://x.example/a' } }] }],
+      },
+    });
+    expect((await errorOf(file)).code).toBe('bad_request');
+    const snake = await send('/v1/generate', {
+      token: stranger,
+      env,
+      body: { ...question, generationConfig: { max_output_tokens: 99_999 } },
+    });
+    expect((await errorOf(snake)).code).toBe('bad_request');
+    const large = await send('/v1/generate', {
+      token: stranger,
+      env: open({ MAX_BODY_BYTES: '1000' }),
+      headers: { 'Content-Length': '5000' },
+    });
+    expect((await errorOf(large)).code).toBe('payload_too_large');
+    expect(geminiCalls()).toHaveLength(0);
+
+    await send('/v1/generate', {
+      token: stranger,
+      env,
+      body: {
+        ...question,
+        generationConfig: {
+          maxOutputTokens: 99_999,
+          candidateCount: 4,
+          thinkingConfig: { thinkingLevel: 'high' },
+        },
+      },
+    });
+    expect(geminiBody().generationConfig).toEqual({
+      maxOutputTokens: 1024,
+      candidateCount: 1,
+      thinkingConfig: { thinkingLevel: 'low' },
+    });
+  });
+
+  it('keeps the per-user rate limit when the binding is there', async () => {
+    const limit = vi.fn(async () => ({ success: false }));
+    const response = await send('/v1/generate', {
+      token: stranger,
+      env: open({ AI_RATE_LIMITER: { limit } }),
+    });
+    expect(response.status).toBe(429);
+    expect(limit).toHaveBeenCalledWith({ key: STRANGER });
+    expect(geminiCalls()).toHaveLength(0);
+  });
+
+  it('remembers a sign-in for repeated requests, as with a company', async () => {
+    expect((await send('/v1/generate', { token: stranger, env: open() })).status).toBe(200);
+    expect((await send('/v1/generate', { token: stranger, env: open() })).status).toBe(200);
+    expect(authCalls()).toHaveLength(1);
+    expect(memberCalls()).toHaveLength(0);
+    expect(logLines().map((line) => line.auth)).toEqual(['checked', 'cache']);
+  });
+});
+
+describe('the sign-in cache when COMPANY_ID changes', () => {
+  const OTHER = 'other-company-0001';
+  const THIRD = 'third-company-01';
+
+  it('does not carry a pass from open to one company', async () => {
+    members = new Set();
+    expect((await send('/v1/generate', { env: makeEnv({ COMPANY_ID: '' }) })).status).toBe(200);
+    expect(testing.authCache.size).toBe(1);
+    const response = await send('/v1/generate', { env: makeEnv({ COMPANY_ID: COMPANY }) });
+    expect(response.status).toBe(403);
+    expect(authCalls()).toHaveLength(2);
+    expect(memberCalls()).toHaveLength(1);
+  });
+
+  it('does not carry a pass from open to a list', async () => {
+    members = new Set();
+    await send('/v1/generate', { env: makeEnv({ COMPANY_ID: undefined }) });
+    const response = await send('/v1/generate', {
+      env: makeEnv({ COMPANY_ID: `${COMPANY},${OTHER}` }),
+    });
+    expect(response.status).toBe(403);
+    expect(memberCalls()).toHaveLength(1);
+  });
+
+  it('does not carry a pass from one list to another', async () => {
+    members = new Set([`${OTHER} ${USER_1}`]);
+    expect(
+      (await send('/v1/generate', { env: makeEnv({ COMPANY_ID: `${COMPANY},${OTHER}` }) })).status,
+    ).toBe(200);
+    const response = await send('/v1/generate', {
+      env: makeEnv({ COMPANY_ID: `${COMPANY},${THIRD}` }),
+    });
+    expect(response.status).toBe(403);
+    expect(memberCalls()).toHaveLength(2);
+  });
+
+  it('checks the sign-in again from a company to open', async () => {
+    expect((await send('/v1/generate')).status).toBe(200);
+    expect((await send('/v1/generate', { env: makeEnv({ COMPANY_ID: '' }) })).status).toBe(200);
+    expect(authCalls()).toHaveLength(2);
+    expect(memberCalls()).toHaveLength(1);
+    expect(logLines().map((line) => line.auth)).toEqual(['checked', 'checked']);
+  });
+
+  it('keeps using a pass while COMPANY_ID stays the same', async () => {
+    const env = makeEnv({ COMPANY_ID: `${OTHER}, ${COMPANY}` });
+    await send('/v1/generate', { env });
+    await send('/v1/generate', { env: makeEnv({ COMPANY_ID: `${OTHER},${COMPANY}` }) });
+    expect(authCalls()).toHaveLength(1);
+    expect(memberCalls()).toHaveLength(1);
   });
 });
 

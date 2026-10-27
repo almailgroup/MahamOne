@@ -40,10 +40,10 @@ ALLOWED_ORIGINS = "https://mahamone.com"
 # The publishable key is public by design: it only names the project.
 SUPABASE_URL = "https://gagdyhintrxdkiqhahzh.supabase.co"
 SUPABASE_PUBLISHABLE_KEY = "sb_publishable_KyVAkWtemw_XDnNK8ZKRpA_-5x4pk8d"
-# REQUIRED. The company whose members may use the AI service: its cloud id
-# (README step 2.0 shows how to find it). Anyone can create an account in the
-# app, so a sign-in alone is not enough. While this is empty the Worker
-# refuses every AI request ("The AI service is not set up yet").
+# Optional. Empty: everyone signed in to Maham One may use the AI. Anyone can
+# create an account in the app, so Google bills the owner for whoever uses it.
+# To allow only the members of your own companies, put one company's cloud id
+# here, or several separated by commas (README step 2.0 shows how to find them).
 COMPANY_ID = ""
 # The longest answer, in tokens (Gemini counts its thinking in this too).
 MAX_OUTPUT_TOKENS = "8192"
@@ -89,7 +89,9 @@ ALLOWED_MODELS = "gemini-3.6-flash"
 ALLOWED_ORIGINS = "http://localhost:5173,http://127.0.0.1:5173"
 SUPABASE_URL = "https://gagdyhintrxdkiqhahzh.supabase.co"
 SUPABASE_PUBLISHABLE_KEY = "sb_publishable_KyVAkWtemw_XDnNK8ZKRpA_-5x4pk8d"
-# A test company's id, so the dev Worker never serves the real company's people.
+# Optional, as above. Empty: everyone signed in may use the dev Worker. Set it
+# to a test company's id (or several, separated by commas) to allow only their
+# members.
 COMPANY_ID = ""
 MAX_OUTPUT_TOKENS = "8192"
 DEFAULT_ANSWER_TOKENS = "2048"

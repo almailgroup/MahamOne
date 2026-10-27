@@ -299,6 +299,9 @@ function subcontractor(books: DemoBooks, tl: Timeline) {
         { vendorReference: `AST-${String(310 + n * 27)}` },
       );
     });
+    // The last stage is still owed, whatever day the demo is loaded: paying it
+    // on the 27th left no open bill (and empty payables) until the month ended.
+    if (n === stages.length - 1) return;
     const paid = cal.workdayOf(m + 1, 27);
     tl.at(paid, `subcontractor paid ${n + 1}`, async () => {
       await books.pay(bill, { date: paid, method: 'bank_transfer', reference: 'NBK TRF' });

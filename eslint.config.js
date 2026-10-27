@@ -15,6 +15,8 @@ export default tseslint.config(
       // Wrangler's local state and dry-run output in workers/*.
       'workers/*/.wrangler',
       'workers/*/dist-check',
+      // Maham Tasks is its own app, with its own tools and settings.
+      'Maham Tasks',
     ],
   },
   {
