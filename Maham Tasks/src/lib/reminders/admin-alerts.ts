@@ -40,8 +40,8 @@ export function alertText(digest: AlertDigest, site: string): string | null {
     minute: "2-digit",
   });
 
-  const english = [`Almailgroup Task Portal — something needs a look (since ${since}).`];
-  const arabic = ["بوابة مهام Almailgroup — هناك ما يحتاج إلى نظرة."];
+  const english = [`Maham Tasks — something needs a look (since ${since}).`];
+  const arabic = ["مهام تاسكس — هناك ما يحتاج إلى نظرة."];
 
   if (digest.faults > 0) {
     english.push(`${plural(digest.faults, "fault", "faults")}:`);

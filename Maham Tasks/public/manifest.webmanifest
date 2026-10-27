@@ -1,7 +1,7 @@
 {
-  "name": "Almailgroup Task Management Portal",
-  "short_name": "Almailgroup",
-  "description": "Plan, assign and track work across Almailgroup projects — boards, daily lists and reminders.",
+  "name": "Maham Tasks",
+  "short_name": "Maham Tasks",
+  "description": "Plan, assign and track work — boards, daily lists and reminders.",
   "start_url": "/dashboard",
   "display": "standalone",
   "orientation": "portrait-primary",

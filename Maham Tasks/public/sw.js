@@ -14,7 +14,7 @@
  *
  * Bumping CACHE retires everything from the previous one on activate.
  */
-const CACHE = "almail-v2";
+const CACHE = "almail-v3";
 const OFFLINE_URL = "/offline";
 
 /** Immutable, content-hashed, and safe to serve to anybody. */
@@ -123,7 +123,7 @@ self.addEventListener("push", (event) => {
     payload = { body: event.data ? event.data.text() : "" };
   }
 
-  const title = payload.title || "Almailgroup";
+  const title = payload.title || "Maham Tasks";
   const options = {
     body: payload.body || "",
     icon: "/icon-192.png",

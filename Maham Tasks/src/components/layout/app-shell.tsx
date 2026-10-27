@@ -260,7 +260,7 @@ export function AppShell({
             className="group flex items-center gap-2.5 rounded-full transition-opacity hover:opacity-80"
           >
             <span className="flex size-7 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
-              A
+              M
             </span>
             <span className="flex flex-col leading-none">
               <span className="text-sm font-semibold tracking-tight">

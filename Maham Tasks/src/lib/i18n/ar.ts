@@ -10,8 +10,8 @@ import type { Dictionary } from "./index";
  */
 export const ar: Dictionary = {
   // ---- shell ---------------------------------------------------------------
-  "shell.brand": "المجموعة الأهلية",
-  "shell.tagline": "بوابة المهام",
+  "shell.brand": "مهام تاسكس",
+  "shell.tagline": "مهام ون",
   "shell.skip": "الانتقال إلى المحتوى",
   "shell.language": "اللغة",
   "shell.search": "بحث",
@@ -59,7 +59,7 @@ export const ar: Dictionary = {
   "nav.noProjects": "لا توجد مشاريع بعد.",
   "nav.createFirstProject": "أنشئ مشروعك الأول للبدء.",
   "nav.selectProject": "اختر مشروعاً",
-  "nav.assistant": "Almail AI",
+  "nav.assistant": "Maham AI",
   "nav.assistantHint": "اسأل عن مهامك",
 
   // ---- command palette --------------------------------------------------------
@@ -225,7 +225,7 @@ export const ar: Dictionary = {
 
   // ---- sign in, sign up, passwords ------------------------------------------------------
   "auth.login.title": "تسجيل الدخول",
-  "auth.login.subtitle": "ادخل إلى مساحة عمل المجموعة الأهلية.",
+  "auth.login.subtitle": "ادخل إلى مساحة عمل مهام تاسكس.",
   "auth.login.prompt": "ليس لديك حساب بعد؟ اطلب من المسؤول إضافتك.",
   "auth.forgot.title": "إعادة تعيين كلمة المرور",
   "auth.forgot.subtitle": "سنرسل إليك رابطاً عبر البريد الإلكتروني لتعيين كلمة مرور جديدة.",
@@ -264,7 +264,7 @@ export const ar: Dictionary = {
 
   // ---- landing page -------------------------------------------------------------------
   "landing.title": "بوابة إدارة المهام",
-  "landing.blurb": "المشاريع والمهام والتعاون الفوري لفرق المجموعة الأهلية — مبنية على Next.js وSupabase بواجهة أحادية اللون عن قصد.",
+  "landing.blurb": "المشاريع والمهام والتعاون الفوري لفرقك — مبنية على Next.js وSupabase بواجهة أحادية اللون عن قصد.",
   "landing.taskStatus": "حالات المهام",
   "landing.priorityScale": "سلّم الأولويات",
   "landing.setup": "الإعداد",
@@ -779,15 +779,15 @@ export const ar: Dictionary = {
   "assistant.starter.summary": "أعطني ملخص الحالة",
   "assistant.subtitle": "إجابات من المهام التي يمكنك رؤيتها",
   "assistant.clear": "مسح المحادثة",
-  "assistant.close": "إغلاق Almail AI",
+  "assistant.close": "إغلاق Maham AI",
   "assistant.backToNav": "العودة إلى القائمة",
   "assistant.placeholder": "اسأل عن مهامك…",
-  "assistant.ask": "اسأل Almail AI",
+  "assistant.ask": "اسأل Maham AI",
   "assistant.send": "إرسال",
   "assistant.welcome": "اسألني عن وضع العمل. أقرأ اللوحة نفسها التي تراها، لذا لا أخبرك إلا عن المهام التي لديك صلاحية الوصول إليها.",
   "assistant.youAsked": "سألت: ",
-  "assistant.answered": "أجاب Almail AI: ",
-  "assistant.thinking": "Almail AI يجيب الآن",
+  "assistant.answered": "أجاب Maham AI: ",
+  "assistant.thinking": "Maham AI يجيب الآن",
   "assistant.unreachable": "تعذّر الوصول إلى الخادم. تحقق من اتصالك واسألني مرة أخرى.",
   "brain.noTasks": "لا توجد مهام يمكنني رؤيتها بعد. عندما يُسند إليك عمل سيظهر هنا ويمكنني متابعته.",
   "brain.nothingOverdue": "لا شيء متأخر. كل مهمة لها تاريخ استحقاق ما زالت ضمن موعدها.",
@@ -849,7 +849,7 @@ export const ar: Dictionary = {
   "brain.noDueDateCount_few": "{n} مهام مفتوحة بلا تاريخ استحقاق.",
   "brain.noDueDateCount_many": "{n} مهمة مفتوحة بلا تاريخ استحقاق.",
   "brain.noDueDateCount_other": "{n} مهمة مفتوحة بلا تاريخ استحقاق.",
-  "brain.help": "أنا Almail AI، مساعد هذه البوابة. أرى تماماً المهام التي تراها — لا أكثر.\n\nاسألني أشياء مثل:\n• {q1}\n• {q2}\n• {q3}\n• {q4}\n• {q5}\n\nأي سؤال أكثر انفتاحاً يحتاج إلى نموذجي اللغوي، وهو غير متصل بعد.",
+  "brain.help": "أنا Maham AI، مساعد هذه البوابة. أرى تماماً المهام التي تراها — لا أكثر.\n\nاسألني أشياء مثل:\n• {q1}\n• {q2}\n• {q3}\n• {q4}\n• {q5}\n\nأي سؤال أكثر انفتاحاً يحتاج إلى نموذجي اللغوي، وهو غير متصل بعد.",
   "brain.fallback": "لا أستطيع الإجابة عن هذا بعد — نموذجي اللغوي غير متصل، لذا أتعامل حالياً مع أسئلة المتابعة التي يمكنني عدّها من اللوحة فقط.\n\nجرّب: ما المتأخر، ما المستحق اليوم، على ماذا أعمل تالياً، ما الذي قيد المراجعة، أو ملخص الحالة.",
   "brain.noDueDate": "بدون تاريخ استحقاق",
   "brain.due": "تستحق {date}",
@@ -964,7 +964,7 @@ export const ar: Dictionary = {
   "auth.serviceDown": "خدمة تسجيل الدخول لا تستجيب حالياً. لا خطأ في بياناتك — انتظر لحظة وحاول مرة أخرى.",
   "action.noPermissionReschedule": "ليست لديك صلاحية إعادة جدولة هذه المهمة.",
 
-  "brain.helpOffline": "أنا Almail AI، مساعد هذه البوابة. أرى تماماً المهام التي تراها — لا أكثر.\n\nاسألني أشياء مثل:\n• {q1}\n• {q2}\n• {q3}\n• {q4}\n• {q5}\n\nتعذّر الوصول إلى نموذجي اللغوي الآن، لذا سينتظر أي سؤال أكثر انفتاحاً لحظة.",
+  "brain.helpOffline": "أنا Maham AI، مساعد هذه البوابة. أرى تماماً المهام التي تراها — لا أكثر.\n\nاسألني أشياء مثل:\n• {q1}\n• {q2}\n• {q3}\n• {q4}\n• {q5}\n\nتعذّر الوصول إلى نموذجي اللغوي الآن، لذا سينتظر أي سؤال أكثر انفتاحاً لحظة.",
   "brain.fallbackOffline": "تعذّر الوصول إلى نموذجي اللغوي الآن، لذا لا يمكنني الإجابة إلا عمّا أستطيع عدّه من اللوحة.\n\nجرّب: ما المتأخر، ما المستحق اليوم، على ماذا أعمل تالياً، ما الذي قيد المراجعة، أو ملخص الحالة — أو اسألني مرة أخرى بعد قليل.",
 
   // ---- what the assistant proposes -------------------------------------------------------
@@ -1167,7 +1167,7 @@ export const ar: Dictionary = {
   "cal.holiday": "عطلة: {name}",
   // ---- two-step sign-in -----------------------------------------------------------------
   "auth.twoStep.title": "أدخل الرمز",
-  "auth.twoStep.subtitle": "افتح تطبيق المصادقة واكتب الرمز المكوّن من ستة أرقام الظاهر لـ Almailgroup.",
+  "auth.twoStep.subtitle": "افتح تطبيق المصادقة واكتب الرمز المكوّن من ستة أرقام الظاهر لـ Maham Tasks (باسم Almailgroup إن أعددته قبل تغيير الاسم).",
   "auth.twoStep.code": "رمز من ستة أرقام",
   "auth.twoStep.confirm": "تأكيد",
   "auth.twoStep.lostPhone": "لا يمكنك الوصول إلى هاتفك؟ اطلب المساعدة من مدير النظام، أو",

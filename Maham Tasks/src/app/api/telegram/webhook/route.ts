@@ -32,8 +32,8 @@ type TelegramUpdate = {
 };
 
 const LINK_FIRST =
-  "Open your profile in the Almailgroup Task Portal, choose Telegram reminders, and send me the code it shows.\n\n" +
-  "افتح ملفك الشخصي في بوابة مهام Almailgroup، واختر تذكيرات تيليجرام، وأرسل لي الرمز الذي يظهر.";
+  "Open your profile in Maham Tasks, choose Telegram reminders, and send me the code it shows.\n\n" +
+  "افتح ملفك الشخصي في مهام تاسكس، واختر تذكيرات تيليجرام، وأرسل لي الرمز الذي يظهر.";
 
 const HELP =
   "Send me anything to add it to your list. The first line is the title; anything after it is the detail.\n" +

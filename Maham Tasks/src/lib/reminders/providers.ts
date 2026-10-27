@@ -16,7 +16,7 @@ import type { DeliveryResult, QueuedReminder } from "./types";
  * cannot stop the rest of the queue from going out.
  */
 
-const APP_NAME = "Almailgroup Task Portal";
+const APP_NAME = "Maham Tasks";
 
 function appUrl(): string {
   return process.env.NEXT_PUBLIC_SITE_URL ?? "";
@@ -240,7 +240,7 @@ async function sendPush(reminder: QueuedReminder): Promise<DeliveryResult> {
         keys: { p256dh: device.data.p256dh, auth: device.data.auth },
       },
       JSON.stringify({
-        title: reminder.subject ?? "Almailgroup",
+        title: reminder.subject ?? "Maham Tasks",
         body: reminder.body,
         // Straight to the thing it is about, or to the day's work.
         url: reminder.task_id ? `/tasks?filter=all&task=${reminder.task_id}` : "/today",

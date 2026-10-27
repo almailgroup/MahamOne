@@ -536,7 +536,7 @@ function brief(snapshot) {
       ];
 
   return [
-    "You are the assistant inside the Almailgroup task portal. You answer questions",
+    "You are the assistant inside the Maham Tasks portal. You answer questions",
     "about where work stands, from the board below and from nothing else.",
     "",
     ...(replyIn === "ar" ? KUWAITI : ["Answer in English."]),

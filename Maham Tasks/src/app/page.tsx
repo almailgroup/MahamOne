@@ -37,7 +37,7 @@ export default async function Home() {
         <div className="mx-auto flex h-14 w-full max-w-5xl items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-2.5">
             <div className="flex size-6 items-center justify-center rounded bg-primary text-[10px] font-bold text-primary-foreground">
-              A
+              M
             </div>
             <span className="text-sm font-medium tracking-tight">
               {t("shell.brand")}

@@ -7,8 +7,8 @@
  */
 export const en = {
   // ---- shell ---------------------------------------------------------------
-  "shell.brand": "Almailgroup",
-  "shell.tagline": "Task Portal",
+  "shell.brand": "Maham Tasks",
+  "shell.tagline": "Maham One",
   "shell.skip": "Skip to content",
   "shell.language": "Language",
   "shell.search": "Search",
@@ -56,7 +56,7 @@ export const en = {
   "nav.noProjects": "No projects yet.",
   "nav.createFirstProject": "Create your first project to get started.",
   "nav.selectProject": "Select project",
-  "nav.assistant": "Almail AI",
+  "nav.assistant": "Maham AI",
   "nav.assistantHint": "Ask about your tasks",
 
   // ---- command palette --------------------------------------------------------
@@ -214,7 +214,7 @@ export const en = {
 
   // ---- sign in, sign up, passwords ------------------------------------------------------
   "auth.login.title": "Sign in",
-  "auth.login.subtitle": "Access your Almailgroup workspace.",
+  "auth.login.subtitle": "Access your Maham Tasks workspace.",
   "auth.login.prompt": "No account yet? Ask your admin to add you.",
   "auth.forgot.title": "Reset your password",
   "auth.forgot.subtitle": "We will email you a link to set a new one.",
@@ -253,7 +253,7 @@ export const en = {
 
   // ---- landing page -------------------------------------------------------------------
   "landing.title": "Task Management Portal",
-  "landing.blurb": "Projects, tasks and real-time collaboration for Almailgroup teams — built on Next.js, Supabase and a deliberately monochrome interface.",
+  "landing.blurb": "Projects, tasks and real-time collaboration for your teams — built on Next.js, Supabase and a deliberately monochrome interface.",
   "landing.taskStatus": "Task status",
   "landing.priorityScale": "Priority scale",
   "landing.setup": "Setup",
@@ -728,15 +728,15 @@ export const en = {
   "assistant.starter.summary": "Give me a status summary",
   "assistant.subtitle": "Answers from the tasks you can see",
   "assistant.clear": "Clear conversation",
-  "assistant.close": "Close Almail AI",
+  "assistant.close": "Close Maham AI",
   "assistant.backToNav": "Back to navigation",
   "assistant.placeholder": "Ask about your tasks…",
-  "assistant.ask": "Ask Almail AI",
+  "assistant.ask": "Ask Maham AI",
   "assistant.send": "Send",
   "assistant.welcome": "Ask me where the work stands. I read the same board you do, so I can only tell you about tasks you already have access to.",
   "assistant.youAsked": "You asked: ",
-  "assistant.answered": "Almail AI answered: ",
-  "assistant.thinking": "Almail AI is thinking",
+  "assistant.answered": "Maham AI answered: ",
+  "assistant.thinking": "Maham AI is thinking",
   "assistant.unreachable": "I could not reach the server. Check your connection and ask me again.",
   "brain.noTasks": "There are no tasks I can see yet. Once work is assigned to you it will show up here and I can track it.",
   "brain.nothingOverdue": "Nothing is overdue. Every task with a due date is still inside it.",
@@ -766,7 +766,7 @@ export const en = {
   "brain.noAssigneeCount_other": "{n} open tasks have no assignee.",
   "brain.noDueDateCount_one": "{n} open task has no due date.",
   "brain.noDueDateCount_other": "{n} open tasks have no due date.",
-  "brain.help": "I am Almail AI, the assistant for this portal. I can see exactly the tasks you can see — no more.\n\nAsk me things like:\n• {q1}\n• {q2}\n• {q3}\n• {q4}\n• {q5}\n\nAnything more open-ended needs my language model, which is not connected yet.",
+  "brain.help": "I am Maham AI, the assistant for this portal. I can see exactly the tasks you can see — no more.\n\nAsk me things like:\n• {q1}\n• {q2}\n• {q3}\n• {q4}\n• {q5}\n\nAnything more open-ended needs my language model, which is not connected yet.",
   "brain.fallback": "I cannot answer that one yet — my language model is not connected, so for now I only handle the tracking questions I can count from the board.\n\nTry: what is overdue, what is due today, what should I work on next, what is in review, or a status summary.",
   "brain.noDueDate": "no due date",
   "brain.due": "due {date}",
@@ -883,7 +883,7 @@ export const en = {
 
   // Said when the model is wired up but did not answer this time — as opposed
   // to brain.fallback, which is for a workspace that never connected one.
-  "brain.helpOffline": "I am Almail AI, the assistant for this portal. I can see exactly the tasks you can see — no more.\n\nAsk me things like:\n• {q1}\n• {q2}\n• {q3}\n• {q4}\n• {q5}\n\nI could not reach my language model just now, so anything more open-ended will have to wait a moment.",
+  "brain.helpOffline": "I am Maham AI, the assistant for this portal. I can see exactly the tasks you can see — no more.\n\nAsk me things like:\n• {q1}\n• {q2}\n• {q3}\n• {q4}\n• {q5}\n\nI could not reach my language model just now, so anything more open-ended will have to wait a moment.",
   "brain.fallbackOffline": "I could not reach my language model just now, so I can only answer what I can count from the board.\n\nTry: what is overdue, what is due today, what should I work on next, what is in review, or a status summary — or ask me again in a moment.",
 
   // ---- what the assistant proposes -------------------------------------------------------
@@ -1075,7 +1075,7 @@ export const en = {
   "cal.holiday": "Holiday: {name}",
   // ---- two-step sign-in -----------------------------------------------------------------
   "auth.twoStep.title": "Enter your code",
-  "auth.twoStep.subtitle": "Open your authenticator app and type the six-digit code it shows for Almailgroup.",
+  "auth.twoStep.subtitle": "Open your authenticator app and type the six-digit code it shows for Maham Tasks (named Almailgroup if you set it up before the name changed).",
   "auth.twoStep.code": "Six-digit code",
   "auth.twoStep.confirm": "Confirm",
   "auth.twoStep.lostPhone": "No access to your phone? Ask an admin, or",

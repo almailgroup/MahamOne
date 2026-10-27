@@ -64,7 +64,7 @@ export function TwoStepSettings({ isAdmin }: { isAdmin: boolean }) {
     const { data, error: enrollError } = await supabase.auth.mfa.enroll({
       factorType: "totp",
       friendlyName: "Authenticator app",
-      issuer: "Almailgroup",
+      issuer: "Maham Tasks",
     });
     setPending(false);
 

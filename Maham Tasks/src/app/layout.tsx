@@ -54,17 +54,17 @@ const notoArabic = localFont({
 
 export const metadata: Metadata = {
   title: {
-    default: "Almailgroup Task Management Portal",
-    template: "%s · Almailgroup",
+    default: "Maham Tasks",
+    template: "%s · Maham Tasks",
   },
   description:
-    "Plan, assign and track work across Almailgroup projects — projects, tasks, Kanban boards and real-time collaboration.",
-  applicationName: "Almailgroup Task Management Portal",
+    "Plan, assign and track work — projects, tasks, Kanban boards and real-time collaboration.",
+  applicationName: "Maham Tasks",
   /**
    * Installed to a home screen on iOS.
    *
    * `title` is the name under the icon, and without it iOS uses the page
-   * title — "Today · Almailgroup" or whichever page happened to be open when
+   * title — "Today · Maham Tasks" or whichever page happened to be open when
    * it was added. `default` keeps the status bar opaque and the web view
    * below it, which is what the safe-area padding elsewhere is measured
    * against; `black-translucent` would put the page under the clock and is a
@@ -72,7 +72,7 @@ export const metadata: Metadata = {
    */
   appleWebApp: {
     capable: true,
-    title: "Almailgroup",
+    title: "Maham Tasks",
     statusBarStyle: "default",
   },
 };

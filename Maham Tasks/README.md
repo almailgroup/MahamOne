@@ -1,6 +1,6 @@
-# Almailgroup Task Management Portal
+# Maham Tasks
 
-Projects, tasks and real-time collaboration for Almailgroup teams. Built with
+Projects, tasks and real-time collaboration for your teams, part of Maham One. Built with
 Next.js (App Router), TypeScript, Tailwind CSS, Supabase and a deliberately
 monochrome interface.
 
@@ -388,7 +388,7 @@ Both hand back:
   and the database helpers return their messages as keys, so one action
   serves every language and the client shows it in the reader's.
 
-Almail AI answers in the language it is asked in, and understands the
+Maham AI answers in the language it is asked in, and understands the
 tracking questions in both.
 
 To add a language: add its code to `LOCALES`, a dictionary file typed as
@@ -1100,7 +1100,7 @@ push; loosening a policy fails the build with the rule that moved.
 Ticking an item bumps the parent note's `updated_at` through a trigger, so a
 list you are working through floats to the top of the sidebar.
 
-## Almail AI
+## Maham AI
 
 The in-app assistant, reached from the button above the clock at the foot of
 the sidebar. It answers questions about where work stands: what is overdue,
