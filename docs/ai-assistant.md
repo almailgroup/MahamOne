@@ -208,8 +208,9 @@ Cloudflare Worker at
   access token, which the Worker checks with Supabase (the app refreshes the
   token once when the Worker refuses it);
 - **serves everyone signed in, unless its `COMPANY_ID` setting is set**:
-  with it empty (as it is now), any Maham One account may use the assistant,
-  and anyone can create one, so Google bills the owner for whoever asks.
+  with it empty or left out (as in the Worker's `wrangler.toml`), any Maham
+  One account may use the assistant, and anyone can create one, so Google
+  bills the owner for whoever asks.
   With `COMPANY_ID` set to one company's id, or several separated by commas,
   the Worker also asks Supabase, with the person's own sign-in, whether they
   are a member of at least one of those companies. Anyone else is refused,
@@ -217,8 +218,10 @@ Cloudflare Worker at
   assistant is set up for. Ask the owner.";
 - answers only the web address `https://mahamone.com` (so it works from the
   live app, not from a preview or a copy on another address);
-- limits how many questions each person asks a minute, and caps the length of
-  answers (2,048 tokens unless the app asks for more, never more than 8,192)
+- limits how many questions each person asks a minute (only with its rate
+  limiting binding, which a Worker set up in the Cloudflare dashboard often
+  doesn't have), and caps the length of answers (2,048 tokens unless the app
+  asks for more, never more than 8,192)
   and the model's thinking (the "low" level unless a request asks for less;
   a higher level is sent as "low", and a thinking budget is at most 1,024
   tokens);
@@ -264,18 +267,21 @@ the model's thinking cheap. To put it in place, in a few minutes:
    Pages** → `maham-ai-proxy` → **Edit code**. Delete everything in
    `worker.js`, paste the whole of the new `src/worker.js`, and press
    **Deploy**.
-2. **Check it.** Open
+2. **Delete `COMPANY_ID` if it is there.** On the same Worker, open
+   **Settings** → **Variables and Secrets**. Earlier versions of these steps
+   asked you to add `COMPANY_ID`, and while it is there only the members of
+   its companies can use the assistant. If it is listed, delete it and press
+   **Deploy**. If it isn't, there is nothing to do.
+3. **Check it.** Open
    `https://maham-ai-proxy.steep-band-c624.workers.dev/health` in a browser:
    it should show `{"ok":true,"model":"gemini-3.6-flash"}`. Then, in the app,
    **Settings → AI assistant → Test the connection**, and ask the assistant
-   a question.
+   a question. If it says your account is not a member of the company,
+   `COMPANY_ID` is still set (step 2).
 
-No new settings are needed: leave everything as it is, the
+No new settings are needed: leave everything else as it is, the
 `GEMINI_API_KEY` secret included. `DEFAULT_ANSWER_TOKENS` is optional (the
-Worker uses 2048 without it), and so is `COMPANY_ID`. If you added
-`COMPANY_ID` earlier and now want everyone signed in to use the assistant,
-delete it under **Settings** → **Variables and Secrets** and press
-**Deploy**.
+Worker uses 2048 without it), and so is `COMPANY_ID`.
 
 **Only if you want to limit the assistant to your own companies**, at any
 time and with no code change:

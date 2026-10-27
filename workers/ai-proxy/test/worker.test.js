@@ -840,6 +840,28 @@ describe('several companies (COMPANY_ID a list)', () => {
     expect(logLines()[0].problem).toBe('COMPANY_ID is not a company id or a list of them');
   });
 
+  // An id deleted from the list with its comma left behind: refused, not
+  // read as empty (which would serve everyone signed in).
+  it.each([',', ',,,', ' , , ', ' ,'])(
+    'refuses everyone when COMPANY_ID %j holds only commas, without asking anyone',
+    async (companyId) => {
+      for (const path of ['/v1/generate', '/v1/stream']) {
+        const response = await send(path, { env: makeEnv({ COMPANY_ID: companyId }) });
+        expect(response.status).toBe(500);
+        expect(await errorOf(response)).toEqual({
+          code: 'internal',
+          message: 'The AI service is not set up yet.',
+          status: 500,
+        });
+      }
+      expect(calls).toHaveLength(0);
+      expect(logLines().map((line) => line.problem)).toEqual([
+        'COMPANY_ID is not a company id or a list of them',
+        'COMPANY_ID is not a company id or a list of them',
+      ]);
+    },
+  );
+
   it('logs no company id', async () => {
     members = new Set([`${OTHER} ${USER_1}`]);
     await send('/v1/generate', { env: makeEnv({ COMPANY_ID: `${COMPANY},${OTHER}` }) });

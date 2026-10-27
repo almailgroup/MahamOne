@@ -360,6 +360,9 @@ function readConfig(env) {
     // COMPANY_ID as a list: spaces and empty items dropped, each id once.
     // Empty: open to everyone signed in.
     companyIds,
+    // COMPANY_ID holds more than spaces, so a value of only commas is refused
+    // rather than read as empty.
+    companyIdGiven: text(env.COMPANY_ID) !== '',
     // The same list as one string, for the sign-in cache.
     companies: companyIds.join(','),
     maxOutputTokens: positiveInt(env.MAX_OUTPUT_TOKENS, DEFAULT_MAX_OUTPUT_TOKENS),
@@ -415,10 +418,14 @@ function assertConfigured(config) {
   else if (!/^https:\/\/[a-z0-9.-]+(:\d+)?$/i.test(config.supabaseUrl))
     problem = 'SUPABASE_URL is not an https address';
   else if (!config.supabaseKey) problem = 'SUPABASE_PUBLISHABLE_KEY is not set';
-  // COMPANY_ID is optional (empty: everyone signed in), but each item it holds
-  // must be a company id: a mistyped value is refused, never read as empty,
-  // which would let in everyone signed in.
-  else if (!config.companyIds.every((id) => COMPANY_ID.test(id)))
+  // COMPANY_ID is optional (empty or only spaces: everyone signed in), but
+  // each item it holds must be a company id: a mistyped value, or one of only
+  // commas, is refused, never read as empty, which would let in everyone
+  // signed in.
+  else if (
+    (config.companyIdGiven && config.companyIds.length === 0) ||
+    !config.companyIds.every((id) => COMPANY_ID.test(id))
+  )
     problem = 'COMPANY_ID is not a company id or a list of them';
   if (problem) {
     throw new ProxyError('internal', 'The AI service is not set up yet.', { log: { problem } });
@@ -494,8 +501,9 @@ async function handleAi(request, config, context) {
   const user = await authenticate(request, config);
   context.entry.user = await hashUserId(user.userId);
   context.entry.auth = user.cached ? 'cache' : 'checked';
-  // Before the membership check, so an account outside the company can't
-  // make the Worker call Supabase more than the limit allows either.
+  // Before the membership check (when COMPANY_ID is set), so an account
+  // outside its companies can't make the Worker call Supabase more than the
+  // limit allows either.
   await enforceRateLimit(config.limiter, user.userId);
   await authorize(user, config);
   const input = await readJsonBody(request, config.maxBodyBytes);
