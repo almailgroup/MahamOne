@@ -51,6 +51,17 @@ export interface CloudCompany {
   members: number;
 }
 
+/** An employee items can be issued to, as stock_issue_recipients gives them. */
+export interface IssueRecipientRow {
+  id: string;
+  number: string;
+  name: string;
+  nameAr: string;
+  jobTitle: string;
+  jobTitleAr: string;
+  department: string;
+}
+
 export interface TeamMember {
   userId: string;
   fullName: string;
@@ -305,6 +316,13 @@ export interface CloudApi {
    */
   beginDeleteCompany(companyId: string): Promise<boolean>;
   companyTeam(companyId: string): Promise<TeamMember[]>;
+  /**
+   * Who items can be issued to: the current employees' number, name, job
+   * title and department (public.stock_issue_recipients, once the server has
+   * 'stock_issues'), for whoever looks after a sub-warehouse. Nothing else of
+   * People.
+   */
+  stockIssueRecipients(companyId: string): Promise<IssueRecipientRow[]>;
   createInvite(companyId: string, email: string, role: MemberRole): Promise<Invite>;
   listInvites(companyId: string): Promise<Invite[]>;
   revokeInvite(inviteId: string): Promise<void>;

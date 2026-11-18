@@ -64,7 +64,14 @@ export type ServerFeature =
    * waits for it: until it runs the device keeps the switch for them, so
    * the app works the same either way.
    */
-  | 'ai_assistant';
+  | 'ai_assistant'
+  /**
+   * 20261210000000_warehouse_issues.sql: sub-warehouses with the person who
+   * looks after them, and items issued to employees, confirmed by an
+   * approver. Until it runs, the cloud has neither and the app offers them
+   * only for companies kept on this device.
+   */
+  | 'stock_issues';
 
 /**
  * Whether a company may use a feature: always when it is kept on this

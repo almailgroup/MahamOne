@@ -47,6 +47,7 @@ export function StockLineHint({
   lines,
   use,
   onWarehouseChange,
+  subWarehouses = true,
 }: {
   inventory: InventoryData;
   line: LineItem;
@@ -54,12 +55,19 @@ export function StockLineHint({
   lines: LineItem[];
   use: StockUse;
   onWarehouseChange: (warehouseId: ID | null) => void;
+  /** Whether lines may use sub-warehouses (see useWarehouseAccess). */
+  subWarehouses?: boolean;
 }) {
   const fmt = useFormat();
   const product = inventory.stockItems.find((p) => p.id === line.productId);
   if (!product) return null;
-  const warehouses = inventory.warehouses.filter((w) => !w.archived);
   const warehouseId = lineWarehouse(inventory, line);
+  // A sub-warehouse's stock moves on a document only for the owner, an
+  // admin or an accountant (the cloud refuses anyone else); the line's own
+  // warehouse stays in the list.
+  const warehouses = inventory.warehouses.filter(
+    (w) => !w.archived && (subWarehouses || !w.parentId || w.id === warehouseId),
+  );
   const available = availableFor(inventory, line, warehouseId);
   const requested = lines
     .filter(

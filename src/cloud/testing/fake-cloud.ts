@@ -25,6 +25,13 @@ import {
   companyBooksChanged,
   canWriteRecord,
   chequeChangeNeedsApprover,
+  entryInSubWarehouse,
+  issuerName,
+  issuesFromWarehouse,
+  subWarehouseLines,
+  managesWarehouses,
+  warehouseRuled,
+  warehouseWriteRefusal,
   deleteKeptBy,
   documentChangeNeedsApproval,
   getsChangeFeed,
@@ -666,6 +673,33 @@ export class FakeCloud {
         return true;
       },
 
+      stockIssueRecipients: async (company) => {
+        guard('stockIssueRecipients');
+        const role = member(company);
+        // As public.stock_issue_recipients, once the server has the file.
+        if (!this.features.includes('stock_issues')) throw fail('server_outdated');
+        const keeps = [...this.records.values()].some(
+          (r) =>
+            r.company === company &&
+            r.tbl === 'warehouses' &&
+            Boolean(r.data.parentId) &&
+            issuesFromWarehouse(role, user, r.data),
+        );
+        if (!managesWarehouses(role) && !keeps) throw fail('permission');
+        return [...this.records.values()]
+          .filter((r) => r.company === company && r.tbl === 'employees' && r.data.status !== 'left')
+          .map((r) => ({
+            id: String(r.data.id ?? ''),
+            number: String(r.data.number ?? ''),
+            name: String(r.data.name ?? ''),
+            nameAr: String(r.data.nameAr ?? ''),
+            jobTitle: String(r.data.jobTitle ?? ''),
+            jobTitleAr: String(r.data.jobTitleAr ?? ''),
+            department: String(r.data.department ?? ''),
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name));
+      },
+
       companyTeam: async (company): Promise<TeamMember[]> => {
         guard('companyTeam');
         member(company);
@@ -1049,6 +1083,36 @@ export class FakeCloud {
         return kept;
       }
     }
+    // Sub-warehouses and items issued, once the server has
+    // 20261210000000_warehouse_issues.sql.
+    if (this.features.includes('stock_issues')) {
+      const refusal = warehouseWriteRefusal(
+        { role, userId: user, approver: this.approver(company, user) },
+        tbl,
+        old,
+        data,
+        (id) => this.record(company, 'warehouses', id),
+      );
+      if (refusal) throw fail('permission');
+      if (tbl === 'approvals' && !old && data.kind === 'stock_issue') {
+        // Asked for by whoever sends it, as the one who issued the items:
+        // named as the warehouse's keeper when it is theirs.
+        const asked = data.after as Record<string, unknown> | null;
+        const named = issuerName(
+          user,
+          this.record(company, 'warehouses', String(asked?.warehouseId ?? '')),
+        );
+        const { requestedByName: _name, ...request } = data;
+        data = named ? { ...request, requestedByName: named } : request;
+        if (asked && typeof asked === 'object') {
+          const { issuedByName: _issuer, ...issue } = asked;
+          data = {
+            ...data,
+            after: { ...issue, issuedBy: user, ...(named ? { issuedByName: named } : {}) },
+          };
+        }
+      }
+    }
     if (tbl === 'companies' && this.features.includes('super_admin')) {
       // The books' settings, for a member the owner made Maham Books view only for.
       const books = appLimit(role, this.permissionsOf(company, user), 'books');
@@ -1179,7 +1243,26 @@ export class FakeCloud {
         // The letters switch, deleted by the owner or an admin only.
         (this.features.includes('employee_letters') &&
           change.tbl === 'peopleSettings' &&
-          peopleSettingsKept(role, visibleOld.data))
+          peopleSettingsKept(role, visibleOld.data)) ||
+        // Items issued are never deleted; a sub-warehouse and its stock
+        // entries only by those who manage warehouses.
+        (this.features.includes('stock_issues') &&
+          (change.tbl === 'stockIssues' ||
+            // The movements of items issued, while the issue stands.
+            (change.tbl === 'stockMovements' &&
+              visibleOld.data.sourceType === 'issue' &&
+              this.record(company, 'stockIssues', String(visibleOld.data.sourceId ?? ''))
+                ?.status === 'posted') ||
+            (!managesWarehouses(role) &&
+              ((change.tbl === 'warehouses' && warehouseRuled(visibleOld.data)) ||
+                (change.tbl === 'stockEntries' &&
+                  entryInSubWarehouse(visibleOld.data, (id) =>
+                    this.record(company, 'warehouses', id),
+                  )) ||
+                (change.tbl === 'documents' &&
+                  subWarehouseLines(visibleOld.data, (id) =>
+                    this.record(company, 'warehouses', id),
+                  ) !== '[]')))))
       ) {
         throw fail('permission');
       }
@@ -1211,6 +1294,10 @@ export class FakeCloud {
     // A kind of record the server doesn't take before
     // 20261207000000_staffing_costings.sql (records_tbl_check).
     if (change.tbl === 'staffingCostings' && !this.features.includes('staffing_costings')) {
+      throw fail('invalid');
+    }
+    // Nor items issued before 20261210000000_warehouse_issues.sql.
+    if (change.tbl === 'stockIssues' && !this.features.includes('stock_issues')) {
       throw fail('invalid');
     }
     if (change.tbl === 'companies' && role === 'staff') {

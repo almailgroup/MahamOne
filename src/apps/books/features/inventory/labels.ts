@@ -52,6 +52,7 @@ export const MOVEMENT_LABELS: Record<StockSourceType, string> = {
   opening: msg('Opening stock'),
   transfer: msg('Stock transfer'),
   landed_cost: msg('Landed cost'),
+  issue: msg('Items issued'),
 };
 
 const DOCUMENT_ROUTES: Partial<Record<StockSourceType, string>> = {
@@ -64,6 +65,7 @@ const DOCUMENT_ROUTES: Partial<Record<StockSourceType, string>> = {
 /** Page showing what a movement came from. */
 export function movementLink(m: Pick<StockMovement, 'sourceType' | 'sourceId'>): string {
   if (m.sourceType === 'landed_cost') return `/inventory/landed-costs/${m.sourceId}`;
+  if (m.sourceType === 'issue') return `/inventory/issues/${m.sourceId}`;
   const route = DOCUMENT_ROUTES[m.sourceType];
   return route ? `${route}/${m.sourceId}` : `/inventory/entries/${m.sourceId}`;
 }

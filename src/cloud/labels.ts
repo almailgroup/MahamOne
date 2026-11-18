@@ -42,6 +42,7 @@ export const RECORD_LABELS: Record<DataTable, string> = {
   letterTemplates: msg('Letter template'),
   employeeLetters: msg('Employee letter'),
   staffingCostings: msg('Manpower costing'),
+  stockIssues: msg('Items issued'),
 };
 
 /** Why a change was refused, for the list of sync problems. */

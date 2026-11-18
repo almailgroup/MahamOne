@@ -20,7 +20,8 @@ export const SOURCE_RANK: Record<StockSourceType, number> = {
   transfer: 4,
   invoice: 5,
   vendor_credit: 6,
-  adjustment: 7,
+  issue: 7,
+  adjustment: 8,
 };
 
 export type CostingMovement = Pick<

@@ -253,6 +253,15 @@ const LETTER_LOG: Record<keyof typeof LOG, string> = {
   expired: msg('Approval request for a letter expired'),
 };
 
+/** The same for items issued to employees: an approver confirms them. */
+const ISSUE_LOG: Record<keyof typeof LOG, string> = {
+  asked: msg('Items to issue to {name} sent for approval'),
+  cancelled: msg('Request to issue items to {name} cancelled'),
+  approved: msg('Items issued to {name} confirmed'),
+  rejected: msg('Items to issue to {name} not confirmed'),
+  expired: msg('Request to issue items to {name} expired'),
+};
+
 /** The contact a cheque request is about, as far as this device knows it. */
 async function chequeContact(request: ApprovalRequest): Promise<ID | null> {
   const after = (request.after ?? {}) as Record<string, unknown>;
@@ -286,6 +295,21 @@ export async function logRequest(request: ApprovalRequest, what: keyof typeof LO
       { text: LETTER_LOG[what] },
       { employeeId: about },
     );
+    return;
+  }
+  if (request.kind === 'stock_issue' && request.subjectTbl === 'stockIssues') {
+    // The request itself was logged when it was sent (issueStock).
+    if (what === 'asked') return;
+    const recipient = (request.after as { recipient?: { name?: unknown; nameAr?: unknown } } | null)
+      ?.recipient;
+    const name = typeof recipient?.name === 'string' ? recipient.name : '';
+    const nameAr =
+      typeof recipient?.nameAr === 'string' && recipient.nameAr ? recipient.nameAr : name;
+    await logActivity(request.companyId, 'stock', request.subjectId, `approval:${what}`, {
+      text: ISSUE_LOG[what],
+      vars: { name },
+      arabic: { name: nameAr },
+    });
     return;
   }
   if (request.subjectTbl === 'payments' || request.subjectTbl === 'securityCheques') {
@@ -621,6 +645,17 @@ export async function applyApproval(id: ID): Promise<void> {
     const done = await db.approvals.get(id);
     if (done?.status === 'approved') {
       await db.approvals.put({ ...done, status: 'applied', updatedAt: nowStamp() });
+    }
+    return;
+  }
+  if (request.kind === 'stock_issue' && request.subjectTbl === 'stockIssues') {
+    // Kept on this (the approver's) device, as it was sent; stock-issues.ts
+    // is imported here as it uses this module's requests.
+    const { applyStockIssueRequest } = await import('./stock-issues');
+    const resultId = await applyStockIssueRequest(request);
+    const done = await db.approvals.get(id);
+    if (done?.status === 'approved') {
+      await db.approvals.put({ ...done, status: 'applied', resultId, updatedAt: nowStamp() });
     }
     return;
   }

@@ -62,7 +62,9 @@ const VERSION_16 = {
 };
 
 /** The synced tables of version 16, as a link noted them when it pulled. */
-const V16_DATA_TABLES = DATA_TABLES.filter((name) => name !== 'staffingCostings');
+const V16_DATA_TABLES = DATA_TABLES.filter(
+  (name) => name !== 'staffingCostings' && name !== 'stockIssues',
+);
 
 let opened: InvoiceDatabase | null = null;
 
@@ -123,7 +125,7 @@ describe('version 16 → 17', () => {
     await version16Device();
     opened = new InvoiceDatabase(NAME);
     await opened.open();
-    expect(opened.verno).toBe(17);
+    expect(opened.verno).toBeGreaterThanOrEqual(17);
     expect(await opened.companies.get('co-1')).toMatchObject({ name: 'Test Guarding' });
     expect(await opened.documents.get('qt-1')).toMatchObject({ number: 'QT-0001' });
     expect(await opened.employeeLetters.count()).toBe(1);

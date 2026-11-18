@@ -311,6 +311,46 @@ function expiryText(event: ChangeEvent, format?: ChangeFormat): string {
   }
 }
 
+/**
+ * Who receives items issued, and what, from a change's summary (see
+ * issue_summary): "1 Trouser, 2 T-shirts" and "Mohammed Ahmed (Security
+ * Guard)".
+ */
+function issuedItems(s: Record<string, unknown>): { items: string; name: string } {
+  const ar = currentLanguage() === 'ar';
+  const items = (Array.isArray(s.items) ? (s.items as Record<string, unknown>[]) : [])
+    .map((i) => joined(String(i?.quantity ?? ''), (ar && str(i?.nameAr)) || str(i?.name)))
+    .filter(Boolean)
+    .join(ar ? '، ' : ', ');
+  const person = (ar && str(s.nameAr)) || str(s.name);
+  const title = (ar && str(s.jobTitleAr)) || str(s.jobTitle);
+  return { items, name: title ? `${person} (${title})` : person };
+}
+
+/** Items issued to an employee, asked for or kept, in words; null for any other change. */
+function issueText(event: ChangeEvent): string | null {
+  const s = event.summary;
+  const asked = event.tbl === 'approvals' && str(s.request) === 'stock_issue';
+  if (event.private || event.count > 1 || !(asked || event.tbl === 'stockIssues')) return null;
+  const { items, name } = issuedItems(s);
+  if (!name || !items) return null;
+  switch (str(s.what)) {
+    case 'requested':
+      return t('Issued {items} to {name}, waiting for approval', { items, name });
+    case 'approved':
+    case 'applied':
+      return t('Confirmed the items issued to {name}: {items}', { items, name });
+    case 'rejected':
+      return t('Turned down the items to issue to {name}: {items}', { items, name });
+    case 'cancelled':
+      return t('Took back the items to issue to {name}: {items}', { items, name });
+    case 'added':
+      return t('Recorded {items} issued to {name}', { items, name });
+    default:
+      return null;
+  }
+}
+
 /** A change in words, in the interface language. */
 export function describeChange(event: ChangeEvent, format?: ChangeFormat): ChangeLine {
   const actor = event.actorName.trim() || t('Someone in the team');
@@ -328,7 +368,7 @@ export function describeChange(event: ChangeEvent, format?: ChangeFormat): Chang
   if (event.kind === 'member') text = teamText(event);
   else if (event.count > 1) text = foldText(event);
   else if (event.tbl === 'companies') text = settingsText(event, format);
-  else text = actionText(event, str(event.summary.what), thing(event));
+  else text = issueText(event) ?? actionText(event, str(event.summary.what), thing(event));
   return {
     actor,
     text,

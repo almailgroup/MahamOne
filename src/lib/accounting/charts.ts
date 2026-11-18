@@ -482,6 +482,14 @@ export const ACCOUNT_SPECS = {
     'expense_direct_cost',
     /(inventory|stock) (adjustment|write)/i,
   ),
+  /** Uniforms and other stock handed to employees (see db/stock-issues.ts). */
+  issuedItems: spec(
+    '6240',
+    'Items issued to employees',
+    'مواد مصروفة للموظفين',
+    'expense',
+    /uniform|issued to (employees|staff)/i,
+  ),
 } satisfies Record<string, AccountSpec>;
 
 export type AccountSpecKey = keyof typeof ACCOUNT_SPECS;

@@ -1,5 +1,6 @@
 import {
   Boxes,
+  Shirt,
   ClipboardCheck,
   ClipboardList,
   House,
@@ -45,6 +46,13 @@ export const INVENTORY: SuiteApp = {
     },
     {
       kind: 'link',
+      to: '/inventory/issues',
+      label: msg('Issued items'),
+      icon: Shirt,
+      keywords: 'uniforms custody employees guards sub-warehouse',
+    },
+    {
+      kind: 'link',
       to: '/products',
       label: msg('Products & services'),
       icon: Package,
@@ -69,9 +77,16 @@ export const INVENTORY: SuiteApp = {
     { kind: 'link', to: '/delivery-notes', label: msg('Delivery notes'), icon: ClipboardList },
   ],
   footer: [{ to: '/settings', label: msg('Settings'), icon: Settings }],
-  create: [{ label: msg('Inventory'), column: 1, actions: [A.product, A.stock_adjustment] }],
+  create: [
+    {
+      label: msg('Inventory'),
+      column: 1,
+      actions: [A.product, A.stock_adjustment, A.stock_issue],
+    },
+  ],
   tools: [
     { to: '/inventory', label: msg('Stock and warehouses'), icon: Warehouse, keywords: 'stock' },
+    { to: '/inventory/issues', label: msg('Issued items'), icon: Shirt, keywords: 'uniforms' },
     { to: '/products', label: msg('Products & services'), icon: Package, keywords: 'items' },
     { to: '/inventory/count', label: msg('Stock count'), icon: ClipboardCheck },
     { to: '/purchase-orders', label: msg('Purchase orders'), icon: ShoppingCart, keywords: 'lpo' },

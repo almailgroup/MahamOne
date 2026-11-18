@@ -22,6 +22,7 @@ import {
   REASON_LABELS,
 } from '@/apps/books/features/inventory/labels';
 import { useInventory } from '@/apps/books/features/inventory/use-inventory';
+import { useWarehouseAccess } from '@/features/inventory/issues';
 import { DateField } from '@/components/ui/date-field';
 
 interface Row {
@@ -58,8 +59,10 @@ export default function StockEntryForm() {
     KINDS.includes(initialKind as StockEntryKind) ? (initialKind as StockEntryKind) : 'adjustment',
   );
   const [date, setDate] = useState(today());
-  const [warehouseId, setWarehouseId] = useState('');
-  const [toWarehouseId, setToWarehouseId] = useState('');
+  // Send stock: a transfer from the main warehouse to a sub-warehouse.
+  const [warehouseId, setWarehouseId] = useState(params.get('from') ?? '');
+  const [toWarehouseId, setToWarehouseId] = useState(params.get('to') ?? '');
+  const access = useWarehouseAccess();
   const [reason, setReason] = useState<AdjustmentReason>('damaged');
   const [reference, setReference] = useState('');
   const [notes, setNotes] = useState('');
@@ -74,12 +77,20 @@ export default function StockEntryForm() {
     [inventory, date],
   );
 
-  if (!inventory || !levels) return <Spinner className="py-24" label={t('Loading…')} />;
+  if (!inventory || !levels || !access) return <Spinner className="py-24" label={t('Loading…')} />;
 
   const p = inventory.precision;
-  const active = inventory.warehouses.filter((w) => !w.archived);
-  const from = warehouseId || inventory.defaultWarehouse?.id || '';
-  const to = toWarehouseId || active.find((w) => w.id !== from)?.id || '';
+  // A sub-warehouse's stock is changed directly by the owner, an admin or
+  // an accountant only (the cloud refuses anyone else).
+  const active = inventory.warehouses.filter(
+    (w) => !w.archived && (access.manages || !access.offered || !w.parentId),
+  );
+  const from = active.some((w) => w.id === warehouseId)
+    ? warehouseId
+    : inventory.defaultWarehouse?.id || active[0]?.id || '';
+  const to = active.some((w) => w.id === toWarehouseId && w.id !== from)
+    ? toWarehouseId
+    : active.find((w) => w.id !== from)?.id || '';
   const items = inventory.stockItems.filter((i) => !i.archived);
   const itemOptions = items
     .map((i) => ({

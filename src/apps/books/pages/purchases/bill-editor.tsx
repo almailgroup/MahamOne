@@ -43,6 +43,7 @@ import { categoryOptions, useAccounts } from '@/apps/books/features/accounting/a
 import { AttachmentList, useDraftAttachments } from '@/features/purchases/attachments';
 import { ItemNameInput } from '@/apps/books/features/editor/item-name-input';
 import { useInventory } from '@/apps/books/features/inventory/use-inventory';
+import { useWarehouseAccess } from '@/features/inventory/issues';
 import { StockLineHint } from '@/apps/books/features/inventory/stock-hint';
 import { StockSuggestion } from '@/apps/books/features/inventory/stock-suggestion';
 import { accountingSettings } from '@/db/chart-setup';
@@ -111,6 +112,7 @@ function Editor({
   );
   const accounts = useAccounts();
   const inventory = useInventory();
+  const warehouseAccess = useWarehouseAccess();
 
   const vendor = useMemo(
     () => clients?.find((c) => c.id === doc.clientId) ?? null,
@@ -567,6 +569,7 @@ function Editor({
                           lines={doc.items}
                           use={type === 'bill' ? 'receive' : 'sell'}
                           onWarehouseChange={(warehouseId) => updateLine(item.id, { warehouseId })}
+                          subWarehouses={!warehouseAccess?.offered || warehouseAccess.manages}
                         />
                       ) : null}
                     </div>

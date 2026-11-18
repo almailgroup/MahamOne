@@ -236,6 +236,64 @@ describe('a change in words', () => {
   });
 });
 
+describe('items issued to employees', () => {
+  const asked = (what: string) =>
+    change({
+      tbl: 'approvals',
+      kind: 'approval',
+      actorName: 'Ahmed Saleh',
+      important: true,
+      summary: {
+        what,
+        request: 'stock_issue',
+        subject: 'stockIssues',
+        number: '',
+        status: what === 'requested' ? 'pending' : what,
+        name: 'Mohammed Ahmed',
+        nameAr: 'محمد أحمد',
+        jobTitle: 'Security Guard',
+        jobTitleAr: 'حارس أمن',
+        items: [
+          { quantity: 1, name: 'Trouser', nameAr: 'بنطلون' },
+          { quantity: 1, name: 'T-shirt', nameAr: 'قميص' },
+          { quantity: 1, name: 'Jacket' },
+        ],
+      },
+    });
+
+  it('says who issued what to whom, waiting for approval, and the decision', () => {
+    expect(describeChange(asked('requested'))).toEqual({
+      actor: 'Ahmed Saleh',
+      text: 'Issued 1 Trouser, 1 T-shirt, 1 Jacket to Mohammed Ahmed (Security Guard), waiting for approval',
+      detail: '',
+      important: true,
+    });
+    expect(describeChange(asked('approved')).text).toBe(
+      'Confirmed the items issued to Mohammed Ahmed (Security Guard): 1 Trouser, 1 T-shirt, 1 Jacket',
+    );
+    expect(describeChange(asked('rejected')).text).toBe(
+      'Turned down the items to issue to Mohammed Ahmed (Security Guard): 1 Trouser, 1 T-shirt, 1 Jacket',
+    );
+    const kept = change({
+      tbl: 'stockIssues',
+      kind: 'item',
+      summary: {
+        what: 'added',
+        number: 'ISS-0001',
+        name: 'Mohammed Ahmed',
+        items: [{ quantity: 2, name: 'Shoes' }],
+      },
+    });
+    expect(describeChange(kept).text).toBe('Recorded 2 Shoes issued to Mohammed Ahmed');
+  });
+
+  it('reads in Arabic, with the Arabic names', async () => {
+    await loadLanguage('ar');
+    expect(describeChange(asked('requested')).text).toContain('محمد أحمد (حارس أمن)');
+    expect(describeChange(asked('requested')).text).toContain('1 بنطلون، 1 قميص، 1 Jacket');
+  });
+});
+
 describe('the changes of an email, by person', () => {
   it('lists important changes each and counts the rest by kind', () => {
     const groups = groupChanges([

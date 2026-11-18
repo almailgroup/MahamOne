@@ -1,8 +1,8 @@
 import type { LucideIcon } from 'lucide-react';
 import {
+  Armchair,
   ArrowDownLeft,
   ArrowUpRight,
-  Armchair,
   Calculator,
   ClipboardList,
   FileClock,
@@ -18,6 +18,7 @@ import {
   ReceiptText,
   Repeat,
   ScrollText,
+  Shirt,
   ShoppingCart,
   Truck,
   Users,
@@ -214,5 +215,13 @@ export const CREATE_ACTIONS = {
     command: msg('New stock adjustment'),
     to: '/inventory/adjustments/new',
     icon: PackagePlus,
+  },
+  stock_issue: {
+    id: 'stock_issue',
+    label: msg('Items to an employee'),
+    command: msg('Issue items to an employee'),
+    to: '/inventory/issues/new',
+    icon: Shirt,
+    keywords: 'uniform custody guard',
   },
 } satisfies Record<string, CreateAction>;

@@ -458,15 +458,16 @@ export async function loadLedger(company: Company): Promise<CompanyLedger> {
   ]);
   // A transaction without the stock tables (seeding demo data) has no stock to post.
   const outer = Dexie.currentTransaction;
-  const stockTables = [db.stockMovements, db.stockEntries, db.landedCosts];
+  const stockTables = [db.stockMovements, db.stockEntries, db.landedCosts, db.stockIssues];
   const readable = !outer || stockTables.every((table) => outer.storeNames.includes(table.name));
-  const [movements, entries, landedCosts] = readable
+  const [movements, entries, landedCosts, issues] = readable
     ? await Promise.all([
         db.stockMovements.where('companyId').equals(company.id).toArray(),
         db.stockEntries.where('companyId').equals(company.id).toArray(),
         db.landedCosts.where('companyId').equals(company.id).toArray(),
+        db.stockIssues.where('companyId').equals(company.id).toArray(),
       ])
-    : [[], [], []];
+    : [[], [], [], []];
   const exempt = new Set(clients.filter((c) => c.taxExempt).map((c) => c.id));
   const byId = new Map(documents.map((d) => [d.id, d]));
   const template = accountingSettings(company).template;
@@ -485,7 +486,7 @@ export async function loadLedger(company: Company): Promise<CompanyLedger> {
     },
   };
   const { lines, problems } = buildLedger(
-    { documents, payments, journals, expenses, stock: { movements, entries } },
+    { documents, payments, journals, expenses, stock: { movements, entries, issues } },
     ctx,
   );
   return { accounts, lines, problems, journals };

@@ -20,13 +20,15 @@ expiry alerts and employee letters (see "Salary approval", "Expiry alerts"
 and "Employee letters" below).
 `migrations/20261207000000_staffing_costings.sql` comes next: manpower
 costings of Maham People (see "Manpower costings" below).
-`migrations/20261208000000_ai_assistant.sql` comes last: the AI assistant's
+`migrations/20261208000000_ai_assistant.sql` comes next: the AI assistant's
 switch is the owner's and the admins' (see "The AI assistant's switch"
-below). Each file is
+below). `migrations/20261210000000_warehouse_issues.sql` comes last:
+sub-warehouses, who looks after them, and items issued to employees (see
+"Sub-warehouses and items issued" below). Each file is
 run once, in this order; a release that needs more from the server adds a
 file, and only that one is run. The files after the first are safe to run again, except the
-fourth once there are manpower costings; the first is not, once there are records of version
-16 (see below). The owner's
+fourth once there are manpower costings or items issued, and the eighth once there are items
+issued; the first is not, once there are records of version 16 (see below). The owner's
 step-by-step guides are [`docs/supabase-setup.md`](../docs/supabase-setup.md)
 and [`docs/email-alerts.md`](../docs/email-alerts.md). `health-check.sql`
 tells whether every file has run, each as its latest version, and whether
@@ -285,16 +287,18 @@ signed-in users, with row-level security on. Run it with
 | 7   | `migrations/20261130000000_people_alerts.sql`         | Phase 4      | Needs 6.                                                                |
 | 8   | `migrations/20261207000000_staffing_costings.sql`     | Phase 5      | Needs 7.                                                                |
 | 9   | `migrations/20261208000000_ai_assistant.sql`          | AI assistant | Needs 8.                                                                |
+| 10  | `migrations/20261210000000_warehouse_issues.sql`      | Warehouses   | Needs 9. 4 and 8 can't run again once there are items issued.           |
 
 A file run again puts back its own version of every function, rule and
 constraint it defines. What a later file replaced must then be put back by
 running again the latest file that defines it, and so on: after 3, run 7,
-8 and 9; after 4, 8 and 9; after 5 or 6, 7, 8 and 9; after 7, 8 and 9;
-after 8, 9 (after the first file, which only succeeds before there are
-records of version 16: 2, 5, 7, 8 and 9).
-`maham_closure` in `health-check.sql` is this table. The fourth file only
-succeeds before there are manpower costings: once there are, the check
-never asks for it, and what only it makes needs a fix from the developer.
+8, 9 and 10; after 4, 8, 9 and 10; after 5 or 6, 7, 8, 9 and 10; after 7,
+8, 9 and 10; after 8, 9 and 10; after 9, 10 (after the first file, which
+only succeeds before there are records of version 16: 2, 5, 7, 8, 9 and
+10). `maham_closure` in `health-check.sql` is this table. The fourth file
+only succeeds before there are manpower costings or items issued, and the
+eighth before there are items issued: once there are, the check never asks
+for them, and what only they make needs a fix from the developer.
 
 ## Health check
 
@@ -891,3 +895,75 @@ own check before it syncs), so the app works the same either way.
   file's `records_guard`), `src/cloud/health-check-sql.test.ts` (MISSING
   before it, OK after it) and `src/cloud/outbox.test.ts` (the device's own
   check).
+
+## Sub-warehouses and items issued
+
+`20261210000000_warehouse_issues.sql` lets the cloud keep sub-warehouses,
+who looks after each, and items issued to employees (uniforms, shoes,
+badges; see
+[`docs/release-notes-warehouses.md`](../docs/release-notes-warehouses.md)).
+It stops with "Run 20261208000000_ai_assistant.sql first, then this file."
+and changes nothing when that file hasn't run. Until it runs, the app offers
+sub-warehouses and issuing items only for companies kept on a device; a
+company in the cloud keeps its warehouses as before, and the device holds
+any items issued back until the server takes them.
+
+- A new kind of record, `stockIssues` (`records_tbl_check`): items handed
+  from a warehouse to an employee, kept once an approver confirms them. Only
+  an approver (the owner, or an admin or accountant allowed to approve)
+  writes one; anyone else sends the items for approval, a request of kind
+  `stock_issue` whose `after` is the issue. Items issued are never deleted
+  (`can_delete_record`): they are voided. Nor are their stock movements
+  (`sourceType` `issue`) while the issue is posted, so an app from before
+  this file, which finds no source for them and takes them out, changes
+  nothing in the cloud (its delete is parked); a void reaches the cloud
+  before the deletes of its movements (the app pushes `stockIssues` first).
+- A request to issue items is taken only from someone who may issue from
+  its warehouse (`issues_from`): the owner, an admin or an accountant, from
+  any warehouse; anyone else only from the sub-warehouse in use whose
+  `keeper.userId` is theirs, and who isn't a viewer. The request names
+  whoever sent it as the one who issued them (`after.issuedBy`), and by the
+  keeper's name and job title when the warehouse is theirs
+  (`requestedByName`, `after.issuedByName`); anyone else's names are not
+  taken from their copy (the app names the account). It is decided as every other request:
+  only an approver confirms it, and the approver's device records the issue.
+- Sub-warehouses (a warehouse with a `parentId`) and keepers are set up by
+  the owner, an admin or an accountant (`manages_warehouses`,
+  `warehouse_ruled`). Anyone else records no opening stock, adjustment or
+  transfer of a sub-warehouse (`entry_in_sub_warehouse`), adds or changes
+  no invoice or bill line that moves its stock (`sub_warehouse_lines`), and
+  deletes neither a sub-warehouse, its stock entries nor an invoice or bill
+  that moves its stock. Its stock comes from
+  the main warehouse by transfers and leaves it by items issued.
+- `public.stock_issue_recipients(company)`: the current employees' id,
+  number, name, job title and department, for whoever looks after a
+  sub-warehouse in use and isn't a viewer (and for the owner, the admins and
+  the accountants), so a keeper who is staff can choose who receives items.
+  Nothing else of People: staff still never get employee records, salaries
+  or documents. Items issued themselves (the recipient's name, number and
+  job title with the items) are records of Maham Books, which staff and
+  viewers read as any other.
+- `change_details` adds who receives the items and what (`issue_summary`)
+  to a request of kind `stock_issue` and to `stockIssues`, so the bell and
+  the emails say "Issued 1 Trouser, 1 Jacket to Mohammed Ahmed (Security
+  guard), waiting for approval". `change_kind` counts `stockIssues` among
+  items; `record_app` puts them in Maham Books.
+- `server_features()` answers every earlier name and `stock_issues`.
+- The daily clean-up of deletion markers is scheduled when `pg_cron` is on,
+  as in the staffing costings file, since that file can't run again once
+  items are issued: turning `pg_cron` on and running this file is enough.
+- The file replaces `records_guard`, `can_delete_record`, `change_details`,
+  `change_kind`, `record_app` and `server_features()`, each as the latest
+  earlier file left it with only these rules added, so it is run again
+  after any earlier file that defines them is (the table in "Scripts by
+  phase"); the health check names it then.
+- Tests: `src/cloud/warehouse-issues-sql.test.ts` (the guard, every file
+  run twice with this one after them, every rule of the functions it
+  replaces kept, sub-warehouses and their stock for the owner, admins,
+  accountants and staff, items issued and the requests for them, deletes,
+  who reads the recipients, and the change feed),
+  `src/cloud/health-check-sql.test.ts` (MISSING before it, OK after it, and
+  the scripts it no longer asks for once items are issued),
+  `src/db/stock-issues.test.ts` (the app's side, the device's own check
+  included) and `e2e/warehouses.spec.ts` (a keeper's issue confirmed by the
+  owner, through the e2e fake).

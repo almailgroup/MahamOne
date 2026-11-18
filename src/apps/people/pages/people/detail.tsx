@@ -42,6 +42,7 @@ import { MarkLeftDialog } from '@/features/people/mark-left-dialog';
 import { useEmployees, usePeopleSettings } from '@/features/people/hooks';
 import { EndOfServiceTab, LeaveTab, LoansTab } from '@/features/payroll/employee-tabs';
 import { LettersTab } from '@/features/people/letters-tab';
+import { IssuedItemsTab } from '@/features/people/issued-items-tab';
 import { LETTER_KINDS } from '@/lib/hr/letters';
 import type { LetterKind } from '@/db/types';
 import { cn } from '@/lib/cn';
@@ -58,7 +59,7 @@ import { useLanguage } from '@/i18n/provider';
 import { localName } from '@/i18n/names';
 import { msg, t, tp } from '@/i18n';
 
-type Tab = 'overview' | 'leave' | 'loans' | 'eos' | 'letters';
+type Tab = 'overview' | 'leave' | 'loans' | 'eos' | 'letters' | 'issued';
 const TABS: { value: Tab; label: string }[] = [
   { value: 'overview', label: msg('Overview') },
   { value: 'leave', label: msg('Leave') },
@@ -66,6 +67,8 @@ const TABS: { value: Tab; label: string }[] = [
   { value: 'eos', label: msg('End of service') },
   // Employee letters (#19).
   { value: 'letters', label: msg('Letters') },
+  // Uniforms and other items issued from a warehouse.
+  { value: 'issued', label: msg('Issued items') },
 ];
 
 function Row({
@@ -358,6 +361,7 @@ export default function EmployeeDetailPage() {
           }
         />
       ) : null}
+      {tab === 'issued' ? <IssuedItemsTab employee={employee} /> : null}
       {tab !== 'overview' ? null : (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="space-y-6 lg:col-span-2">

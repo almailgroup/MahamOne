@@ -15,6 +15,7 @@ export const KIND_LABELS: Record<ApprovalKind, string> = {
   security_cheque_cash: msg('Security cheque cashed'),
   payroll: msg('Pay run'),
   letter: msg('Employee letter'),
+  stock_issue: msg('Items issued'),
 };
 
 /** A kind this version doesn't know (made by a newer one) reads as a request. */

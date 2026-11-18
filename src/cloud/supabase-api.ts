@@ -22,6 +22,7 @@ import {
   type PushResult,
   type RecordKey,
   type StoredFile,
+  type IssueRecipientRow,
   type TeamMember,
 } from './api';
 
@@ -346,6 +347,29 @@ export function supabaseApi(supabase: SupabaseClient): CloudApi {
         email: r.email,
         role: role(r.role),
         joinedAt: r.joined_at,
+      }));
+    },
+
+    async stockIssueRecipients(companyId) {
+      const rows = await rpc<
+        {
+          id: string;
+          number: string;
+          name: string;
+          name_ar: string;
+          job_title: string;
+          job_title_ar: string;
+          department: string;
+        }[]
+      >('stock_issue_recipients', { p_company: companyId });
+      return rows.map((r): IssueRecipientRow => ({
+        id: r.id,
+        number: r.number,
+        name: r.name,
+        nameAr: r.name_ar,
+        jobTitle: r.job_title,
+        jobTitleAr: r.job_title_ar,
+        department: r.department,
       }));
     },
 

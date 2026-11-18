@@ -39,6 +39,7 @@ import type {
   LetterTemplate,
   EmployeeLetter,
   StaffingCosting,
+  StockIssue,
 } from './types';
 import { DATABASE_NAME } from '@/lib/brand';
 import { seedMissingCharts } from './chart-setup';
@@ -88,6 +89,7 @@ export class InvoiceDatabase extends Dexie {
   letterTemplates!: Table<LetterTemplate, string>;
   employeeLetters!: Table<EmployeeLetter, string>;
   staffingCostings!: Table<StaffingCosting, string>;
+  stockIssues!: Table<StockIssue, string>;
   meta!: Table<KeyValue, string>;
   // Cloud sync bookkeeping (see src/cloud): never exported or restored.
   outbox!: Table<OutboxEntry, number>;
@@ -199,6 +201,11 @@ export class InvoiceDatabase extends Dexie {
     this.version(17).stores({
       staffingCostings: 'id, companyId, clientId, quoteId, status',
     });
+    // Items issued from a warehouse to employees (uniforms, shoes, badges),
+    // kept once an approver confirms them.
+    this.version(18).stores({
+      stockIssues: 'id, companyId, [companyId+date], warehouseId, recipient.employeeId',
+    });
     // Every change to a company kept in the cloud is queued for the server.
     this.use(outboxMiddleware(DATA_TABLES));
   }
@@ -243,6 +250,7 @@ export const DATA_TABLES = [
   'letterTemplates',
   'employeeLetters',
   'staffingCostings',
+  'stockIssues',
 ] as const;
 
 export type DataTable = (typeof DATA_TABLES)[number];

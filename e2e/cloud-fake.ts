@@ -368,7 +368,16 @@ function changeKind(tbl: string, data: Data | null): string {
     return 'compliance';
   }
   if (tbl === 'clients') return 'contact';
-  if (['products', 'warehouses', 'stockMovements', 'stockEntries', 'landedCosts'].includes(tbl)) {
+  if (
+    [
+      'products',
+      'warehouses',
+      'stockMovements',
+      'stockEntries',
+      'landedCosts',
+      'stockIssues',
+    ].includes(tbl)
+  ) {
     return 'item';
   }
   if (tbl === 'expenses') return 'expense';
@@ -441,8 +450,18 @@ function changeDetails(
     else if (data && data.status !== old.status) what = String(data.status);
     return {
       important: ['requested', 'approved', 'rejected'].includes(what),
-      summary: { what, request: row.kind, number: row.subjectNumber, status: row.status },
+      summary: {
+        what,
+        request: row.kind,
+        number: row.subjectNumber,
+        status: row.status,
+        // Items to issue: who receives them, and what.
+        ...(row.kind === 'stock_issue' ? issueSummary(row.after as Data | null) : {}),
+      },
     };
+  }
+  if (tbl === 'stockIssues') {
+    return { important: false, summary: { what, number: row.number, ...issueSummary(row) } };
   }
   if (tbl === 'companies' && old && data) {
     const strip = (r: Data) => {
@@ -453,6 +472,103 @@ function changeDetails(
     if (strip(old) === strip(data)) return null;
   }
   return { important: false, summary: { what } };
+}
+
+/**
+ * Who may change warehouses and the stock of sub-warehouses, and record
+ * items issued, as records_guard and can_delete_record of
+ * 20261210000000_warehouse_issues.sql (warehouseWriteRefusal in
+ * src/cloud/roles.ts): the refusal's message, or null.
+ */
+function warehouseRules(
+  role: Role | undefined,
+  user: string,
+  warehouse: (id: string) => Data | null,
+) {
+  const manages = role === 'owner' || role === 'admin' || role === 'accountant';
+  const text = (value: unknown) => (typeof value === 'string' ? value : '');
+  const isSub = (id: unknown) => text(id) !== '' && text(warehouse(text(id))?.parentId) !== '';
+  const ruled = (w: Data | null) =>
+    Boolean(w && (text(w.parentId) !== '' || (typeof w.keeper === 'object' && w.keeper !== null)));
+  const inSub = (entry: Data | null) =>
+    Boolean(entry && (isSub(entry.warehouseId) || isSub(entry.toWarehouseId)));
+  const lines = (doc: Data | null) => {
+    const items = Array.isArray(doc?.items) ? (doc!.items as Data[]) : [];
+    const moved = items
+      .filter((i) => isSub(i?.warehouseId))
+      .map((i) => [text(i.id), text(i.productId), text(i.warehouseId), i.quantity ?? null])
+      .sort((a, b) => String(a[0]).localeCompare(String(b[0])));
+    return moved.length ? canonical({ moved, type: doc?.type, stage: stage(doc?.status) }) : '[]';
+  };
+  /** May ask for items to be issued from this warehouse (almailbooks.issues_from). */
+  const issuesFrom = (id: unknown) => {
+    if (!role || role === 'viewer') return false;
+    if (manages) return true;
+    const w = warehouse(text(id));
+    const keeper = w?.keeper as Data | null | undefined;
+    return Boolean(w && text(w.parentId) !== '' && w.archived !== true && keeper?.userId === user);
+  };
+  return {
+    manages,
+    issuesFrom,
+    refusal(tbl: string, old: Data | null, data: Data | null, approver: boolean): string | null {
+      switch (tbl) {
+        case 'warehouses':
+          return !manages && (ruled(data) || ruled(old))
+            ? 'Only the owner, an admin or an accountant sets up sub-warehouses.'
+            : null;
+        case 'stockEntries':
+          return !manages && (inSub(data) || inSub(old))
+            ? 'Only the owner, an admin or an accountant changes the stock of a sub-warehouse directly.'
+            : null;
+        case 'stockIssues':
+          if (!data) return old ? 'You cannot delete this record.' : null;
+          return approver
+            ? null
+            : 'Only an approver records items issued. Send them for approval instead.';
+        case 'documents':
+          if (!data)
+            return !manages && lines(old) !== '[]' ? 'You cannot delete this record.' : null;
+          return !manages && lines(data) !== lines(old)
+            ? 'Only the owner, an admin or an accountant moves the stock of a sub-warehouse on a document.'
+            : null;
+        case 'approvals':
+          return !old &&
+            data?.kind === 'stock_issue' &&
+            !issuesFrom((data.after as Data)?.warehouseId)
+            ? 'You can only issue items from the sub-warehouse you look after.'
+            : null;
+        default:
+          return null;
+      }
+    },
+  };
+}
+
+/** Who receives items issued, and what, as almailbooks.issue_summary. */
+function issueSummary(issue: Data | null | undefined): Data {
+  const recipient = (issue?.recipient ?? null) as Data | null;
+  const lines = Array.isArray(issue?.lines) ? (issue!.lines as Data[]) : [];
+  const filled = (value: unknown) => (typeof value === 'string' && value !== '' ? value : null);
+  return Object.fromEntries(
+    Object.entries({
+      name: filled(recipient?.name),
+      nameAr: filled(recipient?.nameAr),
+      jobTitle: filled(recipient?.jobTitle),
+      jobTitleAr: filled(recipient?.jobTitleAr),
+      items: lines.length
+        ? lines.map((l) =>
+            Object.fromEntries(
+              Object.entries({
+                quantity: typeof l.quantity === 'number' ? l.quantity : null,
+                name: filled(l.name),
+                nameAr: filled(l.nameAr),
+              }).filter(([, v]) => v !== null),
+            ),
+          )
+        : null,
+    }).filter(([, v]) => v !== null),
+  );
 }
 
 export class FakeSupabase {
@@ -757,8 +873,41 @@ export class FakeSupabase {
   ): Record<string, unknown> | null | Refusal {
     const row = this.records.get(`${company}/${change.tbl}/${change.id}`);
     const old = row && !row.deleted ? row.data : null;
-    const data = change.deleted ? null : (change.data ?? null);
+    let data = change.deleted ? null : (change.data ?? null);
     const companyRow = this.records.get(`${company}/companies/${company}`);
+    // Sub-warehouses and items issued (20261210000000_warehouse_issues.sql).
+    const warehouses = warehouseRules(role, user, (id) => {
+      const found = this.records.get(`${company}/warehouses/${id}`);
+      return found && !found.deleted ? found.data : null;
+    });
+    const refused = warehouses.refusal(change.tbl, old, data, this.approver(company, user));
+    if (refused) return refuse(`almail:permission ${refused}`);
+    // The movements of items issued go with the issue while it stands.
+    if (change.tbl === 'stockMovements' && !data && old?.sourceType === 'issue') {
+      const issue = this.records.get(`${company}/stockIssues/${String(old.sourceId ?? '')}`);
+      if (issue && !issue.deleted && issue.data?.status === 'posted') {
+        return refuse('almail:permission You cannot delete this record.');
+      }
+    }
+    if (change.tbl === 'approvals' && !old && data?.kind === 'stock_issue') {
+      // Asked for by whoever sends it, as the one who issued the items:
+      // named as the warehouse's keeper when it is theirs.
+      const asked = (data.after ?? null) as Data | null;
+      const store = this.records.get(`${company}/warehouses/${String(asked?.warehouseId ?? '')}`);
+      const keeper = (store && !store.deleted ? store.data?.keeper : null) as Data | null;
+      const name = typeof keeper?.name === 'string' ? keeper.name.trim() : '';
+      const title = typeof keeper?.jobTitle === 'string' ? keeper.jobTitle.trim() : '';
+      const named = keeper?.userId === user && name ? (title ? `${name} (${title})` : name) : null;
+      const { requestedByName: _name, ...request } = data;
+      data = named ? { ...request, requestedByName: named } : request;
+      if (asked && typeof asked === 'object' && !Array.isArray(asked)) {
+        const { issuedByName: _issuer, ...issue } = asked;
+        data = {
+          ...data,
+          after: { ...issue, issuedBy: user, ...(named ? { issuedByName: named } : {}) },
+        };
+      }
+    }
     // Employee letters (#19, 20261130000000_people_alerts.sql).
     if (change.tbl === 'peopleSettings') {
       if (role === 'owner' || role === 'admin') return data;
@@ -1249,6 +1398,7 @@ export class FakeSupabase {
           'employee_letters',
           'staffing_costings',
           'ai_assistant',
+          'stock_issues',
         ];
       // The change feed (20261123000000_change_feed.sql).
       case 'notification_status': {
@@ -1397,6 +1547,34 @@ export class FakeSupabase {
         }
         entry!.members.delete(String(b.p_user));
         return undefined;
+      }
+      // Who items can be issued to (20261210000000_warehouse_issues.sql).
+      case 'stock_issue_recipients': {
+        const rows = [...this.records.values()].filter((r) => r.company === company && !r.deleted);
+        const rules = warehouseRules(mine, me.id, (id) => {
+          const found = this.records.get(`${company}/warehouses/${id}`);
+          return found && !found.deleted ? found.data : null;
+        });
+        const keeps = rows.some((r) => r.tbl === 'warehouses' && rules.issuesFrom(r.id));
+        if (!mine || !(rules.manages || keeps)) {
+          return refuse(
+            'almail:permission Only whoever looks after a sub-warehouse sees who items are issued to.',
+          );
+        }
+        const field = (row: Data | null, key: string) =>
+          typeof row?.[key] === 'string' ? (row[key] as string) : '';
+        return rows
+          .filter((r) => r.tbl === 'employees' && field(r.data, 'status') !== 'left')
+          .map((r) => ({
+            id: r.id,
+            number: field(r.data, 'number'),
+            name: field(r.data, 'name'),
+            name_ar: field(r.data, 'nameAr'),
+            job_title: field(r.data, 'jobTitle'),
+            job_title_ar: field(r.data, 'jobTitleAr'),
+            department: field(r.data, 'department'),
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
       }
       case 'company_team': {
         const entry = this.companies.get(company);

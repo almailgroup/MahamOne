@@ -51,6 +51,8 @@ export function changeLink(event: ChangeEvent): string | null {
     case 'stockEntries':
     case 'landedCosts':
       return '/inventory';
+    case 'stockIssues':
+      return one ? `/inventory/issues/${id}` : '/inventory/issues';
     case 'expenses':
       return '/expenses';
     case 'journals':

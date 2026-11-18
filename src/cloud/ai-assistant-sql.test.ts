@@ -142,7 +142,9 @@ describe('the file', () => {
   }, 60_000);
 
   it('names ai_assistant with everything the earlier files name', async () => {
-    expect(await features(h)).toEqual([...EARLIER, 'ai_assistant']);
+    const through = await startDatabase(1, MIGRATIONS.indexOf(FILE) + 1);
+    expect(await features(through)).toEqual([...EARLIER, 'ai_assistant']);
+    expect(await features(h)).toContain('ai_assistant');
     const before = await startDatabase(1, MIGRATIONS.indexOf(FILE));
     expect(await features(before)).toEqual(EARLIER);
   }, 60_000);

@@ -4,14 +4,16 @@ import { CheckCircle2, Download, ShoppingCart, TriangleAlert } from 'lucide-reac
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db/db';
 import { accountingSettings } from '@/db/chart-setup';
-import type { ID, Product } from '@/db/types';
+import type { ID, Product, StockIssue } from '@/db/types';
 import { useCompany, useFormat } from '@/app/company';
+import { useCloudLink } from '@/cloud/hooks';
+import { useMemberNames } from '@/features/approvals/hooks';
 import { compareMovements, stockLevels } from '@/lib/inventory/costing';
 import { stockAccounts } from '@/lib/inventory/sources';
 import { downloadCsv } from '@/lib/csv';
 import { today } from '@/lib/dates';
 import { dec, fromMinor, round, toMinor } from '@/lib/money';
-import { t } from '@/i18n';
+import { currentLanguage, t } from '@/i18n';
 import { localName } from '@/i18n/names';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { Badge, Card, EmptyState, Spinner } from '@/components/ui/misc';
@@ -29,13 +31,14 @@ import { isolate } from '@/apps/books/features/reports/report-language';
 import { DateField } from '@/components/ui/date-field';
 
 export type InventoryReportId =
-  'stock-on-hand' | 'stock-valuation' | 'stock-movements' | 'low-stock';
+  'stock-on-hand' | 'stock-valuation' | 'stock-movements' | 'low-stock' | 'issued-items';
 
 export const INVENTORY_REPORTS: InventoryReportId[] = [
   'stock-on-hand',
   'stock-valuation',
   'stock-movements',
   'low-stock',
+  'issued-items',
 ];
 
 function Th({ children, end }: { children: ReactNode; end?: boolean }) {
@@ -116,7 +119,216 @@ export function InventoryReports({ report }: { report: InventoryReportId }) {
   if (report === 'stock-on-hand') return <StockOnHand inventory={inventory} />;
   if (report === 'stock-valuation') return <StockValuation inventory={inventory} />;
   if (report === 'stock-movements') return <ItemMovements inventory={inventory} />;
+  if (report === 'issued-items') return <IssuedItems inventory={inventory} />;
   return <LowStock inventory={inventory} />;
+}
+
+/**
+ * Items issued to employees, line by line: who received which item, how
+ * many, when, from which warehouse, who issued and who confirmed it. Void
+ * issues and those still waiting for approval are left out.
+ */
+function IssuedItems({ inventory }: { inventory: InventoryData }) {
+  const company = useCompany();
+  const fmt = useFormat();
+  const issues = useLiveQuery(
+    () => db.stockIssues.where('companyId').equals(company.id).toArray(),
+    [company.id],
+  );
+  const [warehouseId, setWarehouseId] = useState('');
+  const [employeeId, setEmployeeId] = useState('');
+  const [itemId, setItemId] = useState('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const link = useCloudLink(company.id);
+  // Who issued and confirmed each, by their account when no name was kept.
+  const names = useMemberNames(company.id, link, Boolean(issues?.length));
+  const ar = currentLanguage() === 'ar';
+  if (!issues) return <Spinner className="py-24" label={t('Loading…')} />;
+  const issuer = (i: StockIssue) =>
+    i.issuedByName || (i.issuedBy ? (names.get(i.issuedBy) ?? '') : '');
+  const approver = (i: StockIssue) =>
+    i.approvedByName || (i.approvedBy ? (names.get(i.approvedBy) ?? '') : '');
+
+  const kept = issues.filter((i) => i.status === 'posted');
+  // The employees and items of the issues themselves: no People data needed.
+  const people = new Map(kept.map((i) => [i.recipient.employeeId, i.recipient]));
+  const things = new Map(kept.flatMap((i) => i.lines.map((l) => [l.productId, l] as const)));
+  const rows = kept
+    .filter(
+      (i) =>
+        (!warehouseId || i.warehouseId === warehouseId) &&
+        (!employeeId || i.recipient.employeeId === employeeId) &&
+        (!from || i.date >= from) &&
+        (!to || i.date <= to),
+    )
+    .sort((a, b) => b.date.localeCompare(a.date) || b.number.localeCompare(a.number))
+    .flatMap((issue) =>
+      issue.lines.filter((l) => !itemId || l.productId === itemId).map((line) => ({ issue, line })),
+    );
+  const total = rows.reduce((sum, r) => sum.plus(r.line.quantity), dec(0)).toNumber();
+  const warehouseName = (id: ID) => localName(inventory.warehouses.find((w) => w.id === id));
+  const person = (r: (typeof rows)[number]['issue']['recipient']) => {
+    const name = (ar && r.nameAr) || r.name;
+    const title = (ar && r.jobTitleAr) || r.jobTitle;
+    return title ? `${name} (${title})` : name;
+  };
+
+  const exportCsv = () =>
+    downloadCsv(
+      'issued-items',
+      [
+        t('Date'),
+        t('Number'),
+        t('Employee number'),
+        t('Employee'),
+        t('Job title'),
+        t('Item'),
+        t('Quantity'),
+        t('Unit'),
+        t('Warehouse'),
+        t('Issued by'),
+        t('Confirmed by'),
+      ],
+      rows.map(({ issue, line }) => [
+        issue.date,
+        issue.number,
+        issue.recipient.number,
+        (ar && issue.recipient.nameAr) || issue.recipient.name,
+        (ar && issue.recipient.jobTitleAr) || issue.recipient.jobTitle,
+        (ar && line.nameAr) || line.name,
+        line.quantity,
+        line.unit,
+        warehouseName(issue.warehouseId),
+        issuer(issue),
+        approver(issue),
+      ]),
+    );
+
+  return (
+    <div>
+      <Toolbar onExport={rows.length ? exportCsv : undefined}>
+        <label className="block w-56">
+          <span className="mb-1 block text-xs font-medium text-slate-500">{t('Employee')}</span>
+          <Combobox
+            ariaLabel={t('Employee')}
+            value={employeeId}
+            onChange={setEmployeeId}
+            options={[
+              { value: '', label: t('All employees') },
+              ...[...people.values()]
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((r) => ({
+                  value: r.employeeId,
+                  label: person(r),
+                  detail: r.number,
+                  keywords: `${r.name} ${r.nameAr ?? ''} ${r.number}`,
+                })),
+            ]}
+            placeholder={t('All employees')}
+            searchPlaceholder={t('Search employees…')}
+          />
+        </label>
+        <label className="block w-48">
+          <span className="mb-1 block text-xs font-medium text-slate-500">{t('Item')}</span>
+          <Select value={itemId} onChange={(e) => setItemId(e.target.value)}>
+            <option value="">{t('All items')}</option>
+            {[...things.values()]
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map((l) => (
+                <option key={l.productId} value={l.productId}>
+                  {(ar && l.nameAr) || l.name}
+                </option>
+              ))}
+          </Select>
+        </label>
+        {inventory.warehouses.length > 1 ? (
+          <label className="block w-48">
+            <span className="mb-1 block text-xs font-medium text-slate-500">{t('Warehouse')}</span>
+            <Select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
+              <option value="">{t('All warehouses')}</option>
+              {inventory.warehouses.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {localName(w)}
+                </option>
+              ))}
+            </Select>
+          </label>
+        ) : null}
+        <DateInput label={t('From')} value={from} onChange={setFrom} />
+        <DateInput label={t('To')} value={to} onChange={setTo} />
+      </Toolbar>
+      <Card className="overflow-hidden">
+        {rows.length === 0 ? (
+          <EmptyState
+            title={t('No items issued')}
+            description={t('Items issued to employees and confirmed show here, line by line.')}
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="border-b border-slate-100 bg-slate-50/60">
+                <tr>
+                  <Th>{t('Date')}</Th>
+                  <Th>{t('Employee')}</Th>
+                  <Th>{t('Item')}</Th>
+                  <Th end>{t('Quantity')}</Th>
+                  <Th>{t('Warehouse')}</Th>
+                  <Th>{t('Issued by')}</Th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {rows.map(({ issue, line }) => (
+                  <tr key={`${issue.id}-${line.id}`}>
+                    <Td>
+                      <Link
+                        to={`/inventory/issues/${issue.id}`}
+                        className="text-primary-700 hover:underline"
+                      >
+                        {fmt.date(issue.date)}
+                      </Link>
+                      <span className="tabular block text-xs text-slate-500">{issue.number}</span>
+                    </Td>
+                    <Td>
+                      <bdi dir="auto">{person(issue.recipient)}</bdi>
+                      <span className="tabular block text-xs text-slate-500">
+                        {issue.recipient.number}
+                      </span>
+                    </Td>
+                    <Td>
+                      <bdi dir="auto">{(ar && line.nameAr) || line.name}</bdi>
+                    </Td>
+                    <Td end strong>
+                      {fmt.quantity(line.quantity)}
+                      {line.unit ? (
+                        <span className="font-normal text-slate-500"> {line.unit}</span>
+                      ) : null}
+                    </Td>
+                    <Td>{warehouseName(issue.warehouseId)}</Td>
+                    <Td>
+                      <bdi dir="auto">{issuer(issue) || '—'}</bdi>
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="border-t border-slate-200 bg-slate-50/60">
+                <tr>
+                  <Td strong>{t('Total')}</Td>
+                  <Td>{''}</Td>
+                  <Td>{''}</Td>
+                  <Td end strong>
+                    {fmt.quantity(total)}
+                  </Td>
+                  <Td>{''}</Td>
+                  <Td>{''}</Td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
 }
 
 function StockOnHand({ inventory }: { inventory: InventoryData }) {

@@ -65,7 +65,15 @@ const PEOPLE = new Set([
   'staffingCostings',
 ]);
 const COMPLIANCE = new Set(['complianceDocuments', 'renewals', 'complianceMarks', 'vehicles']);
-const ITEMS = new Set(['products', 'warehouses', 'stockMovements', 'stockEntries', 'landedCosts']);
+const ITEMS = new Set([
+  'products',
+  'warehouses',
+  'stockMovements',
+  'stockEntries',
+  'landedCosts',
+  // Since 20261210000000_warehouse_issues.sql.
+  'stockIssues',
+]);
 
 /** The kind of change a record makes, as almailbooks.change_kind. */
 export function changeKind(table: string, data: Row | null | undefined): ChangeKind {
@@ -98,6 +106,37 @@ function strip(row: Row): Row {
   return Object.fromEntries(
     Object.entries(row).filter(([, value]) => value !== null && value !== undefined),
   );
+}
+
+/** A non-empty text, as nullif(…, ''). */
+const filled = (value: unknown) => {
+  const found = text(value);
+  return found === '' ? null : found;
+};
+
+/**
+ * Who receives items issued, and what, as almailbooks.issue_summary: the
+ * employee's name and job title, and each line's quantity and item.
+ */
+export function issueSummary(issue: Row | null): Row {
+  const recipient = obj(issue?.recipient);
+  const lines = Array.isArray(issue?.lines) ? (issue!.lines as unknown[]) : [];
+  return strip({
+    name: filled(recipient?.name),
+    nameAr: filled(recipient?.nameAr),
+    jobTitle: filled(recipient?.jobTitle),
+    jobTitleAr: filled(recipient?.jobTitleAr),
+    items: lines.length
+      ? lines.map((line) => {
+          const l = obj(line);
+          return strip({
+            quantity: num(l?.quantity),
+            name: filled(l?.name),
+            nameAr: filled(l?.nameAr),
+          });
+        })
+      : null,
+  });
 }
 
 function without(row: Row | null, ...keys: string[]): Row | null {
@@ -289,6 +328,8 @@ export function changeDetails(
         subject: text(data.subjectTbl),
         number: text(data.subjectNumber),
         status: now,
+        // Items to issue: who receives them, and what.
+        ...(data.kind === 'stock_issue' && obj(data.after) ? issueSummary(obj(data.after)) : {}),
       };
       break;
     }
@@ -346,6 +387,9 @@ export function changeDetails(
       break;
     case 'journals':
       summary = { what, number: text(data.number) };
+      break;
+    case 'stockIssues':
+      summary = { what, number: text(data.number), ...issueSummary(data) };
       break;
     case 'vehicles':
       summary = { what, name: text(data.plate) };

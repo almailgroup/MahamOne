@@ -398,6 +398,9 @@ const PUSH_ORDER: Partial<Record<DataTable, number>> = {
   employees: 1,
   complianceDocuments: 2,
   renewals: 2,
+  // Before their stock movements: the cloud keeps those of an issue that
+  // stands, so a void reaches it first.
+  stockIssues: 4,
   attachments: 8,
   activities: 9,
 };
@@ -515,6 +518,10 @@ async function retryRefusedFiles(companyId: string, role: MemberRole): Promise<v
     });
 }
 
+/** A stock movement of items issued: it waits with them for the server to take them. */
+const issueMovement = (name: string, record: Record<string, unknown>) =>
+  name === 'stockMovements' && record.sourceType === 'issue';
+
 /**
  * Records a server without the tables of version 16 must not get: their
  * tables (it would refuse them), and confidential register documents and
@@ -533,9 +540,13 @@ async function heldForServer(
   // 20261207000000_staffing_costings.sql: before it, the cloud refuses the
   // costings and doesn't know their activity is private.
   const costings = !linkHasFeature(link, 'staffing_costings');
+  // Items issued to employees, until the server has
+  // 20261210000000_warehouse_issues.sql: before it, the cloud refuses them.
+  const issues = !linkHasFeature(link, 'stock_issues');
   const heldCosting = (name: string, record: Record<string, unknown>) =>
-    costings &&
-    (V17_TABLES.includes(name) || (name === 'activities' && record.entity === 'costing'));
+    (issues && (V18_TABLES.includes(name) || issueMovement(name, record))) ||
+    (costings &&
+      (V17_TABLES.includes(name) || (name === 'activities' && record.entity === 'costing')));
   if (linkHasFeature(link, 'tables_v16')) return heldCosting;
   const confidential = new Set(
     (
@@ -560,6 +571,7 @@ async function heldForServer(
  */
 async function releaseHeld(companyId: string, features: readonly string[]): Promise<void> {
   const costings = features.includes('staffing_costings');
+  const issues = features.includes('stock_issues');
   const waiting = await db.outbox
     .where('[companyId+parked]')
     .equals([companyId, 1])
@@ -573,14 +585,27 @@ async function releaseHeld(companyId: string, features: readonly string[]): Prom
       .filter((activity) => activity?.entity === 'costing')
       .map((activity) => activity!.id),
   );
+  const movementIds = issues
+    ? []
+    : waiting.filter((entry) => entry.table === 'stockMovements').map((entry) => entry.id);
+  const issueMovements = new Set(
+    (await db.stockMovements.bulkGet(movementIds))
+      .filter((m) => m && issueMovement('stockMovements', m as unknown as Record<string, unknown>))
+      .map((m) => m!.id),
+  );
   const released = waiting
     .filter(
       (entry) =>
-        costings ||
-        !(
-          V17_TABLES.includes(entry.table) ||
-          (entry.table === 'activities' && costingActivities.has(entry.id))
-        ),
+        (issues ||
+          !(
+            V18_TABLES.includes(entry.table) ||
+            (entry.table === 'stockMovements' && issueMovements.has(entry.id))
+          )) &&
+        (costings ||
+          !(
+            V17_TABLES.includes(entry.table) ||
+            (entry.table === 'activities' && costingActivities.has(entry.id))
+          )),
     )
     .map((entry) => entry.seq!);
   if (released.length === 0) return;
@@ -1083,6 +1108,7 @@ const ENTITY: Partial<Record<DataTable, ActivityEntity>> = {
   yearEnds: 'year_end',
   payRuns: 'payroll',
   stockEntries: 'stock',
+  stockIssues: 'stock',
   // Private, like payroll (#3).
   staffingCostings: 'costing',
 };
@@ -1630,11 +1656,20 @@ const V16_TABLES: readonly string[] = [
  */
 const V17_TABLES: readonly string[] = ['staffingCostings'];
 
+/**
+ * Tables of database version 18 (items issued to employees). A link noted
+ * before it has the tables it pulled with, without them.
+ */
+const V18_TABLES: readonly string[] = ['stockIssues'];
+
 /** The tables a link's device has pulled the company with (see CloudLink.tables). */
 export function pulledTables(link: Pick<CloudLink, 'tables'>): string[] {
   return (
     link.tables ??
-    DATA_TABLES.filter((name) => !V16_TABLES.includes(name) && !V17_TABLES.includes(name))
+    DATA_TABLES.filter(
+      (name) =>
+        !V16_TABLES.includes(name) && !V17_TABLES.includes(name) && !V18_TABLES.includes(name),
+    )
   );
 }
 
@@ -1771,6 +1806,7 @@ export async function notePermissions(companyId: string, mine: MyPermissions): P
 const STOCK_TABLES = [
   'documents',
   'stockEntries',
+  'stockIssues',
   'landedCosts',
   'stockMovements',
   'products',

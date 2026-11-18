@@ -349,6 +349,7 @@ const BOOKS_APP = new Set([
   'stockEntries',
   'landedCosts',
   'chequeLayouts',
+  'stockIssues',
 ]);
 
 /**
@@ -1251,4 +1252,153 @@ export function keepLettersSwitch(
   const data = { ...after };
   keptKey(data, asRow(before) ?? {}, 'letters');
   return data;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Sub-warehouses and items issued (20261210000000_warehouse_issues.sql)       */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Sets up sub-warehouses and changes their stock directly: the owner, an
+ * admin or an accountant (everyone in a company kept on this device), as
+ * almailbooks.manages_warehouses.
+ */
+export function managesWarehouses(role: MemberRole | null | undefined): boolean {
+  return role === 'owner' || role === 'admin' || role === 'accountant';
+}
+
+const text = (value: unknown) => (typeof value === 'string' ? value : '');
+
+/**
+ * A warehouse only those who manage warehouses change: a sub-warehouse, or
+ * one someone looks after, as almailbooks.warehouse_ruled.
+ */
+export function warehouseRuled(warehouse: AnyRecord): boolean {
+  const row = asRow(warehouse);
+  if (!row) return false;
+  const keeper = row.keeper;
+  return text(row.parentId) !== '' || (typeof keeper === 'object' && keeper !== null);
+}
+
+/** Finds a warehouse of the company by id, as stored. */
+export type WarehouseLookup = (id: string) => AnyRecord;
+
+const isSub = (warehouses: WarehouseLookup, id: unknown) =>
+  text(id) !== '' && text(asRow(warehouses(text(id)))?.parentId) !== '';
+
+/** A stock entry moves the stock of a sub-warehouse, as almailbooks.entry_in_sub_warehouse. */
+export function entryInSubWarehouse(entry: AnyRecord, warehouses: WarehouseLookup): boolean {
+  const row = asRow(entry);
+  return Boolean(
+    row && (isSub(warehouses, row.warehouseId) || isSub(warehouses, row.toWarehouseId)),
+  );
+}
+
+/**
+ * The lines of a document that move a sub-warehouse's stock, with its type
+ * and stage, as almailbooks.sub_warehouse_lines, to compare two copies.
+ */
+export function subWarehouseLines(doc: AnyRecord, warehouses: WarehouseLookup): string {
+  const row = asRow(doc);
+  const items = Array.isArray(row?.items) ? (row!.items as Record<string, unknown>[]) : [];
+  const lines = items
+    .filter((i) => isSub(warehouses, i?.warehouseId))
+    .map((i) => ({
+      id: text(i.id),
+      productId: text(i.productId),
+      warehouseId: text(i.warehouseId),
+      quantity: i.quantity ?? null,
+    }))
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  if (lines.length === 0) return '[]';
+  return JSON.stringify({ lines, type: row?.type ?? null, stage: documentStage(row?.status) });
+}
+
+/**
+ * May ask for items to be issued from a warehouse: a member who manages
+ * warehouses, or who looks after it (a sub-warehouse in use), as
+ * almailbooks.issues_from.
+ */
+export function issuesFromWarehouse(
+  role: MemberRole | null | undefined,
+  userId: string | null | undefined,
+  warehouse: AnyRecord,
+): boolean {
+  if (!role || role === 'viewer') return false;
+  if (managesWarehouses(role)) return true;
+  const row = asRow(warehouse);
+  const keeper = asRow(row?.keeper as AnyRecord);
+  return (
+    Boolean(row && userId) &&
+    text(row!.parentId) !== '' &&
+    row!.archived !== true &&
+    text(keeper?.userId) === userId
+  );
+}
+
+/**
+ * The name a request to issue items is stored with, as records_guard of
+ * 20261210000000_warehouse_issues.sql sets it: the keeper's name and job
+ * title when the warehouse is theirs, otherwise none (the app names the
+ * account).
+ */
+export function issuerName(userId: string | null | undefined, warehouse: AnyRecord): string | null {
+  const keeper = asRow(asRow(warehouse)?.keeper as AnyRecord);
+  const name = text(keeper?.name).trim();
+  if (!userId || !name || text(keeper?.userId) !== userId) return null;
+  const title = text(keeper?.jobTitle).trim();
+  return title ? `${name} (${title})` : name;
+}
+
+/**
+ * Why the cloud refuses a write about warehouses and the stock of
+ * sub-warehouses (records_guard and can_delete_record of
+ * 20261210000000_warehouse_issues.sql), or null when it takes it:
+ * 'manager' for what only those who manage warehouses do, 'approver' for
+ * items issued written by anyone but an approver, 'keeper' for a request
+ * to issue items from a warehouse the person may not issue from.
+ */
+export function warehouseWriteRefusal(
+  member: {
+    role: MemberRole | null | undefined;
+    userId: string | null | undefined;
+    approver: boolean;
+  },
+  table: string,
+  before: AnyRecord,
+  after: AnyRecord,
+  warehouses: WarehouseLookup,
+): 'manager' | 'approver' | 'keeper' | null {
+  const manager = managesWarehouses(member.role);
+  switch (table) {
+    case 'warehouses':
+      return !manager && (warehouseRuled(after) || warehouseRuled(before)) ? 'manager' : null;
+    case 'stockEntries':
+      return !manager &&
+        (entryInSubWarehouse(after, warehouses) || entryInSubWarehouse(before, warehouses))
+        ? 'manager'
+        : null;
+    case 'stockIssues':
+      if (!after) return 'approver';
+      return member.approver ? null : 'approver';
+    case 'documents':
+      if (manager) return null;
+      // Deleted: one that moves a sub-warehouse's stock is theirs to delete.
+      if (after === undefined || after === null) {
+        return subWarehouseLines(before, warehouses) !== '[]' ? 'manager' : null;
+      }
+      return subWarehouseLines(after, warehouses) !== subWarehouseLines(before, warehouses)
+        ? 'manager'
+        : null;
+    case 'approvals': {
+      const request = asRow(after);
+      if (before || !request || request.kind !== 'stock_issue') return null;
+      const asked = asRow(request.after as AnyRecord);
+      return issuesFromWarehouse(member.role, member.userId, warehouses(text(asked?.warehouseId)))
+        ? null
+        : 'keeper';
+    }
+    default:
+      return null;
+  }
 }

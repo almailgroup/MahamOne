@@ -99,6 +99,19 @@ has to be added to the app or to Vercel.
     eighth script hasn't run, and then changes nothing. Running it changes
     nothing else. If any script from the third to the eighth is ever run
     again, run this one again after them.
+14. Then the tenth script,
+    [`supabase/migrations/20261210000000_warehouse_issues.sql`](../supabase/migrations/20261210000000_warehouse_issues.sql)
+    (a new query, paste, **Run**), after the ninth. It lets the cloud keep
+    sub-warehouses, who looks after each, and items issued to employees
+    (uniforms, shoes, badges), confirmed by the owner or an approver (see
+    "Warehouses and items issued" below). It stops with "Run
+    20261208000000_ai_assistant.sql first, then this file." if the ninth
+    script hasn't run, and then changes nothing. Running it changes nothing
+    by itself either: warehouses stay as they are until you add a
+    sub-warehouse. If any script from the third to the ninth is ever run
+    again, run this one again after them. Once items have been issued, the
+    fourth and eighth scripts stop with an error about `records_tbl_check`
+    and change nothing.
 
 Each script is run once. A new version of the app that needs more from the
 database comes with a new script: run just that one, after the others. The
@@ -106,7 +119,8 @@ later scripts are safe to run again (they create what is missing and replace
 their own rules with the same ones), but **don't run the first script again**:
 once the app keeps cheque layouts, vehicles, approval requests or HR letters,
 it stops with an error about `records_tbl_check` and changes nothing. The
-fourth script stops the same way once there are manpower costings. If the
+fourth script stops the same way once there are manpower costings or items
+issued, and the eighth once there are items issued. If the
 first was run again and finished without an error, or any script was run
 again after a later one, run the health check: it names the scripts to run
 again, in order.
@@ -115,9 +129,9 @@ again, in order.
 marker (no data) for 30 days. They are also cleaned up as the app syncs, but a
 daily job does it for every company. The email alerts script (step 7) turns it
 on; without email alerts, open **Database → Extensions**, search for
-**pg_cron**, enable it, then run the eighth script (step 12) once more,
-and the ninth (step 13) after it. The fourth script schedules it too, but
-once there are manpower costings it can't run again.
+**pg_cron**, enable it, then run the tenth script (step 14) once more.
+The fourth and eighth scripts schedule it too, but once there are manpower
+costings or items issued they can't run again.
 
 To check, run the health check (see "Health check" below): it says, step by
 step, whether each script has run, each as its latest version, and whether
@@ -563,6 +577,50 @@ manpower costing** (استخدام تسعير العمالة) on that page.
   the cloud refuses them as it refuses payroll. A member the owner gave view
   only or no access to Maham People doesn't change them.
 
+## Warehouses and items issued
+
+**Maham Books → Inventory → Warehouses** (المستودعات): one main warehouse
+and, under it, sub-warehouses (مستودع فرعي), each looked after by an
+employee. In a company kept in the cloud this needs the tenth script (step
+1.14); until then the page offers sub-warehouses only for companies kept on
+a device.
+
+1. **New sub-warehouse**: choose the employee who **looks after** it (it is
+   named after them; you can change the name) and, under **Issues items
+   from it**, their Maham One account. Invite that employee to the team as
+   **Staff** first (**Settings → Team**).
+2. **Send stock** on the sub-warehouse moves stock from the main warehouse
+   to it, as a transfer: one warehouse goes down, the other up, at the same
+   cost.
+3. The employee signs in and, under **Inventory**, sees **You look after
+   …** with **Issue items**: they choose the employee who receives the items
+   (uniforms, trousers, T-shirts, shoes, shoulder badges, jackets…) and the
+   quantities, and press **Send for approval**. Nothing leaves the
+   sub-warehouse yet.
+4. You (or an approver) get it in **Approvals**, and under the bell when
+   **Changes by your team** is on (**Settings → Email alerts → Changes by
+   your team**): "Ahmed
+   (Warehouse supervisor) issued to Mohammed Ahmed (Security guard): 1
+   Trouser, 1 T-shirt, 1 Jacket". **Confirm** records it as ISS-0001 and so
+   on, and takes the quantities out of that sub-warehouse; **Reject** moves
+   nothing and tells them why.
+5. **Inventory → Issued items** lists every issue, who received what, from
+   which warehouse, who issued and who confirmed it, and when. Each
+   employee's page has an **Issued items** tab with what they hold, and
+   **Reports → Issued items** has it line by line, with a CSV.
+   An issue made by mistake is **voided** (never deleted): its stock comes
+   back to the warehouse.
+
+- The owner, admins and accountants set up sub-warehouses and change their
+  stock directly (opening stock, adjustments, transfers); the employee who
+  looks after one only issues items from it. The database itself refuses
+  anything else.
+- A keeper who is staff sees the names, numbers and job titles of current
+  employees to choose who receives items, and nothing else of Maham People:
+  no salaries, payroll or documents.
+- The cost of the items issued is booked to **6240 Items issued to
+  employees** (an expense), out of inventory, at the average cost.
+
 ## Scripts by phase
 
 The database scripts are in
@@ -580,14 +638,17 @@ order, in a new query of the SQL editor (paste the whole file, **Run**).
 | 7   | `20261130000000_people_alerts.sql`         | Phase 4                 | Once, after 6.                                                                  |
 | 8   | `20261207000000_staffing_costings.sql`     | Phase 5                 | Once, after 7.                                                                  |
 | 9   | `20261208000000_ai_assistant.sql`          | AI assistant            | Once, after 8.                                                                  |
+| 10  | `20261210000000_warehouse_issues.sql`      | Warehouses              | Once, after 9. Then 4 and 8 can't run again once items are issued.              |
 
-Scripts 2, 3 and 5 to 9 are safe to run again. Script 4 is too, until there
-are manpower costings: then it stops with an error about `records_tbl_check`
-and changes nothing. A script run again after a later one puts back its own,
+Scripts 2, 3, 5 to 7, 9 and 10 are safe to run again. Script 4 is too,
+until there are manpower costings or items issued, and script 8 until there
+are items issued: then they stop with an error about `records_tbl_check`
+and change nothing. A script run again after a later one puts back its own,
 older version of what the later one changed. The health check finds that and
 says which scripts to run again, in order. As a rule: after script 3 run 7,
-8 and 9 again; after 4, run 8 and 9 again; after 5 or 6, run 7, 8 and 9
-again; after 7, run 8 and 9 again; after 8, run 9 again.
+8, 9 and 10 again; after 4, run 8, 9 and 10 again; after 5 or 6, run 7, 8,
+9 and 10 again; after 7, run 8, 9 and 10 again; after 8, run 9 and 10
+again; after 9, run 10 again.
 
 ## Health check
 
@@ -604,8 +665,8 @@ objects and statuses. Run it after running a script, or any time.
 2. Paste the whole of
    [`supabase/health-check.sql`](../supabase/health-check.sql) and click
    **Run**.
-3. You get one table: **step** (the script, 1 to 9 as in the table above, or
-   10 Schedules, 11 Email alerts, 12 Data and privacy), **check**, **status**
+3. You get one table: **step** (the script, 1 to 10 as in the table above, or
+   11 Schedules, 12 Email alerts, 13 Data and privacy), **check**, **status**
    and **detail**. The **last row** sums it up: "All good", or how many
    FAIL, MISSING and WARN there are, with the scripts to run, in order.
 
@@ -630,15 +691,17 @@ What to do:
   the scripts the detail names, in that order; the last row lists them all,
   for example "Run 20261130000000_people_alerts.sql again, then
   20261207000000_staffing_costings.sql again, then
-  20261208000000_ai_assistant.sql again (in this order)". Then run the
+  20261208000000_ai_assistant.sql again, then
+  20261210000000_warehouse_issues.sql again (in this order)". Then run the
   health check again. The check never asks for the first script, nor for the
-  fourth once there are manpower costings: if a row says something "can't be
+  fourth once there are manpower costings or items issued, nor for the
+  eighth once there are items issued: if a row says something "can't be
   fixed by running a script" or "can't be put back by running it again", ask
   the developer.
 - **"Email alerts were never set up"** (WARN): they are optional. To set
   them up, follow [`email-alerts.md`](email-alerts.md), then run the scripts
-  the detail names (the email alerts script, then the Phase 4, Phase 5 and
-  AI assistant scripts again).
+  the detail names (the email alerts script, then the Phase 4, Phase 5, AI
+  assistant and warehouses scripts again).
 - **"pg_cron is not on"** (WARN): nothing runs on a schedule (morning
   emails, emails of team changes, the daily clean-ups). Open **Database →
   Extensions**, enable **pg_cron** and **pg_net**, then run again the

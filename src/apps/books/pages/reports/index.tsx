@@ -65,6 +65,7 @@ const GROUPS = [
       { id: 'stock-valuation', label: msg('Stock valuation') },
       { id: 'stock-movements', label: msg('Stock movements') },
       { id: 'low-stock', label: msg('Low stock') },
+      { id: 'issued-items', label: msg('Issued items') },
     ],
   },
 ];

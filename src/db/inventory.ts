@@ -17,8 +17,10 @@ import type {
   ProductKind,
   StockEntry,
   StockEntryKind,
+  StockIssue,
   StockMovement,
   Warehouse,
+  WarehouseKeeper,
 } from './types';
 import { costMovements } from '@/lib/inventory/costing';
 import {
@@ -26,6 +28,7 @@ import {
   documentMovements,
   entryMovements,
   isStockItem,
+  issueMovements,
   landedCostLinks,
   landedCostMovements,
   movesStock,
@@ -70,6 +73,7 @@ export function stockTables(): Table[] {
     db.stockMovements,
     db.stockEntries,
     db.landedCosts,
+    db.stockIssues,
   ];
 }
 
@@ -164,13 +168,37 @@ export async function saveWarehouse(input: Warehouse): Promise<Warehouse> {
     if (input.archived && input.isDefault) {
       throw new InventoryError(t('Choose another default warehouse before archiving this one.'));
     }
+    const parentId = input.parentId || null;
+    if (parentId) {
+      const parent = all.find((w) => w.id === parentId);
+      if (!parent || parent.archived || parent.id === input.id) {
+        throw new InventoryError(t('Choose the main warehouse this one belongs to.'));
+      }
+      if (parent.parentId) {
+        throw new InventoryError(t('A sub-warehouse can’t have sub-warehouses of its own.'));
+      }
+      if (all.some((w) => w.parentId === input.id && !w.archived)) {
+        throw new InventoryError(
+          t('This warehouse has sub-warehouses, so it can’t become a sub-warehouse.'),
+        );
+      }
+      if (input.isDefault) {
+        throw new InventoryError(t('A sub-warehouse can’t be the default warehouse.'));
+      }
+    }
+    if (input.archived && all.some((w) => w.parentId === input.id && !w.archived)) {
+      throw new InventoryError(t('Archive its sub-warehouses before archiving this warehouse.'));
+    }
     const warehouse: Warehouse = {
       ...input,
       name,
       nameAr: input.nameAr?.trim() ?? '',
       address: input.address.trim(),
-      // The first warehouse is the default one.
-      isDefault: input.isDefault || !all.some((w) => w.id !== input.id && w.isDefault),
+      // The first warehouse is the default one; a sub-warehouse never is.
+      isDefault:
+        !parentId && (input.isDefault || !all.some((w) => w.id !== input.id && w.isDefault)),
+      parentId,
+      keeper: cleanKeeper(input.keeper),
       updatedAt: nowStamp(),
     };
     if (warehouse.isDefault) {
@@ -194,6 +222,27 @@ export async function saveWarehouse(input: Warehouse): Promise<Warehouse> {
   });
 }
 
+/** The keeper as stored: trimmed, or null when it names nobody. */
+function cleanKeeper(keeper: WarehouseKeeper | null | undefined): WarehouseKeeper | null {
+  if (!keeper) return null;
+  const name = keeper.name.trim();
+  const userId = keeper.userId?.trim() || null;
+  if (!name && !userId) return null;
+  return {
+    employeeId: keeper.employeeId || null,
+    name,
+    nameAr: keeper.nameAr?.trim() ?? '',
+    jobTitle: keeper.jobTitle.trim(),
+    jobTitleAr: keeper.jobTitleAr?.trim() ?? '',
+    userId,
+  };
+}
+
+/** Whether a warehouse is a sub-warehouse (it belongs to a main one). */
+export function isSubWarehouse(warehouse: Pick<Warehouse, 'parentId'> | null | undefined): boolean {
+  return Boolean(warehouse?.parentId);
+}
+
 /* -------------------------------------------------------------------------- */
 /* Accounts                                                                   */
 /* -------------------------------------------------------------------------- */
@@ -211,6 +260,19 @@ export async function ensureStockAccounts(company: Company): Promise<void> {
     await ensureSpecAccount(company, 'costOfSales');
   }
   if (!found.adjustments) await ensureSpecAccount(company, 'inventoryAdjustments');
+}
+
+/**
+ * The stock accounts and the expense account of items issued to employees
+ * (6240), created when missing. Must run where the accounts and activities
+ * tables are writable.
+ */
+export async function ensureIssueAccounts(company: Company): Promise<void> {
+  await ensureStockAccounts(company);
+  const accounts = await db.accounts.where('companyId').equals(company.id).toArray();
+  if (!stockAccounts(accounts, accountingSettings(company).template).issuedItems) {
+    await ensureSpecAccount(company, 'issuedItems');
+  }
 }
 
 /* -------------------------------------------------------------------------- */
@@ -432,10 +494,11 @@ export async function rebuildStock(companyId: ID): Promise<void> {
     if (!company) return;
     const lock = accountingSettings(company).lockDate;
     const setup = await loadSetup(company);
-    const [documents, entries, costs, movements] = await Promise.all([
+    const [documents, entries, costs, issues, movements] = await Promise.all([
       db.documents.where('companyId').equals(companyId).toArray(),
       db.stockEntries.where('companyId').equals(companyId).toArray(),
       db.landedCosts.where('companyId').equals(companyId).toArray(),
+      db.stockIssues.where('companyId').equals(companyId).toArray(),
       db.stockMovements.where('companyId').equals(companyId).toArray(),
     ]);
     const bySource = new Map<ID, StockMovement[]>();
@@ -461,6 +524,7 @@ export async function rebuildStock(companyId: ID): Promise<void> {
     }
     for (const entry of entries) await sync(entry.id, entryMovements(entry, setup));
     for (const cost of costs) await sync(cost.id, await planLandedCost(cost, setup));
+    for (const issue of issues) await sync(issue.id, issueMovements(issue, setup));
     // Movements whose source is gone.
     for (const left of bySource.values()) {
       const open = left.filter((m) => lock === null || m.date > lock);
@@ -1000,6 +1064,22 @@ export async function voidStockEntry(id: ID): Promise<void> {
       vars: { number: entry.number },
     });
   });
+}
+
+/**
+ * Brings the movements of items issued to an employee in line with the
+ * issue as stored (posted or void), then re-costs the items. Runs inside a
+ * transaction that includes `stockTables()`.
+ */
+export async function syncIssueStock(company: Company, issue: StockIssue): Promise<void> {
+  const setup = await loadSetup(company);
+  const existing = await db.stockMovements.where('sourceId').equals(issue.id).toArray();
+  await recost(company, await replaceMovements(company, existing, issueMovements(issue, setup)));
+}
+
+/** The next free number of a kind of stock record, e.g. "ISS-0007". */
+export function nextStockNumber(prefix: string, taken: string[]): string {
+  return nextNumber(prefix, taken);
 }
 
 /* -------------------------------------------------------------------------- */

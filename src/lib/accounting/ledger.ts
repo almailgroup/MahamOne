@@ -9,6 +9,7 @@ import type {
   Payment,
   PostingSnapshot,
   StockEntry,
+  StockIssue,
   StockMovement,
   TaxKind,
   TaxLine,
@@ -33,7 +34,15 @@ import { interpolate, msg, t, type Vars } from '@/i18n';
  */
 
 export type LedgerSource =
-  'invoice' | 'credit' | 'bill' | 'vendor_credit' | 'payment' | 'expense' | 'journal' | 'stock';
+  | 'invoice'
+  | 'credit'
+  | 'bill'
+  | 'vendor_credit'
+  | 'payment'
+  | 'expense'
+  | 'journal'
+  | 'stock'
+  | 'issue';
 
 /**
  * What a line means for VAT returns (like Odoo's tax tags): the value of
@@ -159,6 +168,8 @@ export interface StockLedgerContext {
   inventoryAccountId: ID | null;
   costOfSalesAccountId: ID | null;
   adjustmentAccountId: ID | null;
+  /** Where items issued to employees are booked; missing until an issue needs it. */
+  issuedItemsAccountId?: ID | null;
   /** Bill lines and charges allocated as landed costs, as "billId:lineId". */
   landedCostLines: Set<string>;
 }
@@ -746,6 +757,46 @@ export function postStockEntry(
 }
 
 /**
+ * Ledger lines of items issued to an employee: their cost leaves inventory
+ * and is booked as an expense (items issued to employees). Void issues post
+ * nothing.
+ */
+export function postStockIssue(
+  issue: StockIssue,
+  movements: StockMovementPosting[],
+  ctx: LedgerContext,
+): LedgerLine[] {
+  if (issue.status !== 'posted') return [];
+  const moved = movements.reduce((acc, m) => acc + toMinor(m.value, ctx.precision), 0);
+  if (moved === 0) return [];
+  const expense = usable(ctx, ctx.stock?.issuedItemsAccountId);
+  if (!expense) {
+    throw new LedgerError('No account is set up for items issued to employees.', {
+      text: msg('No account is set up for items issued to employees.'),
+    });
+  }
+  const base = {
+    date: issue.date,
+    source: 'issue' as const,
+    sourceId: issue.id,
+    number: issue.number,
+    contactId: null,
+  };
+  const text = described(msg('Items issued {number} to {name}'), {
+    number: issue.number,
+    name: issue.recipient.name,
+  });
+  const lines = [
+    { ...base, accountId: inventoryAccount(ctx), amount: moved, ...text },
+    { ...base, accountId: expense, amount: -moved, ...text },
+  ];
+  if (!balanced(lines)) {
+    throw new UnbalancedEntryError(`Stock issue ${issue.number} does not balance`);
+  }
+  return lines;
+}
+
+/**
  * Date a returned or cancelled cheque is reversed in the books, or null for
  * any other payment. The payment keeps its entries on its own date and the
  * reversal goes on the day the cheque came back (or was cancelled), so
@@ -1137,8 +1188,8 @@ export function buildLedger(
     payments: Payment[];
     journals: ManualJournal[];
     expenses?: Expense[];
-    /** Stock movements and entries; their postings need `ctx.stock`. */
-    stock?: { movements: StockMovementPosting[]; entries: StockEntry[] };
+    /** Stock movements, entries and issues; their postings need `ctx.stock`. */
+    stock?: { movements: StockMovementPosting[]; entries: StockEntry[]; issues?: StockIssue[] };
   },
   ctx: LedgerContext,
 ): { lines: LedgerLine[]; problems: LedgerProblem[] } {
@@ -1172,6 +1223,7 @@ export function buildLedger(
   if (data.stock && ctx.stock) {
     const byDocument = new Map<ID, StockMovementPosting[]>();
     const byEntry = new Map<ID, StockMovementPosting[]>();
+    const byIssue = new Map<ID, StockMovementPosting[]>();
     const add = (map: Map<ID, StockMovementPosting[]>, key: ID, m: StockMovementPosting) => {
       const list = map.get(key);
       if (list) list.push(m);
@@ -1179,6 +1231,7 @@ export function buildLedger(
     };
     for (const m of data.stock.movements) {
       if (m.sourceType === 'opening' || m.sourceType === 'adjustment') add(byEntry, m.sourceId, m);
+      else if (m.sourceType === 'issue') add(byIssue, m.sourceId, m);
       else if (m.documentId) add(byDocument, m.documentId, m);
     }
     for (const doc of data.documents) {
@@ -1190,6 +1243,11 @@ export function buildLedger(
     for (const entry of data.stock.entries) {
       attempt('stock', entry.id, entry.number, () =>
         postStockEntry(entry, byEntry.get(entry.id) ?? [], ctx),
+      );
+    }
+    for (const issue of data.stock.issues ?? []) {
+      attempt('issue', issue.id, issue.number, () =>
+        postStockIssue(issue, byIssue.get(issue.id) ?? [], ctx),
       );
     }
   }

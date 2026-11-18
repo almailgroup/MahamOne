@@ -950,6 +950,43 @@ describe('the app’s copy of the rules (src/cloud/change-feed.ts)', () => {
       ['complianceDocuments', null, rec(c, 'cd', { title: 'Licence', type: 'licence' }), false],
       ['attachments', null, rec(c, 'f', { name: 'scan.pdf' }), false],
       ['accounts', null, rec(c, 'acc', { name: 'Cash' }), false],
+      // Items issued to employees (20261210000000_warehouse_issues.sql).
+      [
+        'approvals',
+        null,
+        rec(c, 'a', {
+          kind: 'stock_issue',
+          subjectTbl: 'stockIssues',
+          subjectNumber: '',
+          status: 'pending',
+          after: {
+            warehouseId: 'store',
+            recipient: { name: 'Made-up Guard', nameAr: '', jobTitle: 'Security Guard' },
+            lines: [
+              { productId: 'p1', name: 'Trouser', nameAr: 'بنطلون', quantity: 1 },
+              { productId: 'p2', name: 'T-shirt', quantity: 2 },
+            ],
+          },
+        }),
+        false,
+      ],
+      [
+        'approvals',
+        rec(c, 'a', { kind: 'stock_issue', status: 'pending', after: { recipient: {} } }),
+        rec(c, 'a', { kind: 'stock_issue', status: 'approved', after: { recipient: {} } }),
+        false,
+      ],
+      [
+        'stockIssues',
+        null,
+        rec(c, 'si', {
+          number: 'ISS-0001',
+          recipient: { name: 'Made-up Guard', jobTitle: 'Security Guard' },
+          lines: [{ productId: 'p1', name: 'Shoes', quantity: 1.5 }],
+        }),
+        false,
+      ],
+      ['stockIssues', rec(c, 'si', { number: 'ISS-0001', lines: [] }), null, false],
     ];
     for (const [tbl, before, after, isPrivate] of cases) {
       const data = after ?? before;

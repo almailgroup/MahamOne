@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { isStockIssueRequest } from '@/db/stock-issues';
+import { IssueRequestCard } from './issue-request-card';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ClipboardCheck } from 'lucide-react';
 import { db } from '@/db/db';
@@ -126,6 +128,14 @@ export function ApprovalsInbox() {
                 />
               ) : isLetterApproval(request) ? (
                 <LetterRequestCard request={request} names={names} showSubject />
+              ) : isStockIssueRequest(request) ? (
+                <IssueRequestCard
+                  request={request}
+                  names={names}
+                  approver={view.approver}
+                  userId={userId}
+                  showSubject
+                />
               ) : isChequeRequest(request) ? (
                 <ChequeRequestCard
                   request={request}

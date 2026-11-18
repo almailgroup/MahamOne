@@ -39,6 +39,7 @@ import {
   switchesAi,
   switchesLetters,
   type RecordLookup,
+  warehouseWriteRefusal,
 } from './roles';
 import { linkHasFeature } from './features';
 import type { CloudLink, OutboxEntry } from './types';
@@ -151,6 +152,92 @@ async function linksFor(
 
 /** Tables whose changes the company's approval rules decide on (see refuseByRules). */
 const RULED = new Set(['documents', 'approvals', 'payments', 'securityCheques']);
+
+/** Tables whose changes the sub-warehouses decide on (see refuseWarehouses). */
+const WAREHOUSE_RULED = new Set([
+  'warehouses',
+  'stockEntries',
+  'stockIssues',
+  'documents',
+  'approvals',
+]);
+
+/**
+ * The warehouses the records being written name, as stored in this
+ * transaction: whether they are sub-warehouses, and who looks after them,
+ * decides who may write them (see refuseWarehouses).
+ */
+async function warehousesFor(
+  down: DBCore,
+  trans: DBCoreTransaction,
+  changes: Change[],
+): Promise<Map<string, Record<string, unknown>>> {
+  const named = (row: Record<string, unknown> | undefined): unknown[] => {
+    if (!row) return [];
+    const items = Array.isArray(row.items) ? (row.items as Record<string, unknown>[]) : [];
+    const asked = (row.after ?? null) as Record<string, unknown> | null;
+    return [
+      row.warehouseId,
+      row.toWarehouseId,
+      asked?.warehouseId,
+      ...items.map((i) => i?.warehouseId),
+    ];
+  };
+  const ids = [
+    ...new Set(
+      changes
+        .flatMap((c) => [...named(c.before), ...named(c.after)])
+        .filter((id): id is string => typeof id === 'string' && id !== ''),
+    ),
+  ];
+  const found = new Map<string, Record<string, unknown>>();
+  if (ids.length === 0 || !down.schema.tables.some((t) => t.name === 'warehouses')) return found;
+  const rows = (await down.table('warehouses').getMany({ trans, keys: ids })) as (
+    Record<string, unknown> | undefined
+  )[];
+  ids.forEach((id, i) => {
+    if (rows[i]) found.set(id, rows[i]!);
+  });
+  return found;
+}
+
+/**
+ * Sub-warehouses and items issued, as records_guard and can_delete_record
+ * of 20261210000000_warehouse_issues.sql once the company's server has
+ * them: sub-warehouses (and their keepers) are set up, and their stock
+ * changed directly, by the owner, an admin or an accountant; items issued
+ * are written by approvers only and never deleted; a request to issue items
+ * comes from whoever may issue from the warehouse.
+ */
+function refuseWarehouses(
+  link: CloudLink,
+  table: string,
+  change: Change,
+  warehouses: Map<string, Record<string, unknown>> | undefined,
+): string | null {
+  if (!WAREHOUSE_RULED.has(table) || !linkHasFeature(link, 'stock_issues')) return null;
+  if (table === 'stockIssues' && change.after === undefined) {
+    return t('Items issued are voided, never deleted.');
+  }
+  const refusal = warehouseWriteRefusal(
+    { role: link.role, userId: link.userId, approver: isApprover(link.role, link.approver) },
+    table,
+    change.before,
+    change.after,
+    (id) => warehouses?.get(id),
+  );
+  if (refusal === 'approver') {
+    return t('Only an approver records items issued. Send them for approval instead.');
+  }
+  if (refusal === 'keeper') {
+    return t('You can only issue items from the sub-warehouse you look after.');
+  }
+  return refusal === 'manager'
+    ? t(
+        'Only the owner, an admin or an accountant sets up sub-warehouses or changes their stock directly.',
+      )
+    : null;
+}
 
 /**
  * The records the files being written are kept with, as stored in this
@@ -416,10 +503,12 @@ function refuse(
   lookup: RecordLookup | undefined,
   runs?: Map<string, Record<string, unknown>>,
   settings?: Record<string, unknown> | null,
+  warehouses?: Map<string, Record<string, unknown>>,
 ): string | null {
   return (
     refuseByRole(link, table, change, lookup) ??
     refuseLetters(link, table, change, settings) ??
+    refuseWarehouses(link, table, change, warehouses) ??
     refuseByRules(link, table, change, company, runs)
   );
 }
@@ -504,7 +593,7 @@ async function capture(
   const companyIds = changes.map((c) => c.companyId);
   const linked = linksFor(down, trans, companyIds);
   // All at once: Dexie keeps its transaction across only so many waits.
-  const [links, companies, owners, runs, settings] = await Promise.all([
+  const [links, companies, owners, runs, settings, warehouses] = await Promise.all([
     linked,
     RULED.has(name) && down.schema.tables.some((t) => t.name === 'companies')
       ? companiesFor(
@@ -528,6 +617,8 @@ async function capture(
     name === 'approvals' ? payRunsFor(down, trans, changes) : undefined,
     // Whether the companies' letters are on (#19).
     name === 'employeeLetters' ? peopleSettingsFor(down, trans, companyIds) : undefined,
+    // The warehouses the records name: sub-warehouses and their keepers.
+    WAREHOUSE_RULED.has(name) ? warehousesFor(down, trans, changes) : undefined,
   ]);
   for (const change of changes) {
     const link = change.companyId ? links.get(change.companyId) : null;
@@ -541,6 +632,7 @@ async function capture(
       lookup,
       runs,
       settings?.get(link.companyId),
+      warehouses,
     );
     if (reason) throw new CloudPermissionError(reason, link.companyId);
   }
@@ -588,6 +680,7 @@ export function outboxMiddleware(tables: readonly string[]): Middleware<DBCore> 
       const withCompanies = down.schema.tables.some((t) => t.name === 'companies');
       const withPayRuns = down.schema.tables.some((t) => t.name === 'payRuns');
       const withPeopleSettings = down.schema.tables.some((t) => t.name === 'peopleSettings');
+      const withWarehouses = down.schema.tables.some((t) => t.name === 'warehouses');
       // The records files are kept with, for the owner's limits (see ownersFor).
       const owners = ATTACHMENT_OWNER_TABLES.filter((name) =>
         down.schema.tables.some((t) => t.name === name),
@@ -606,6 +699,10 @@ export function outboxMiddleware(tables: readonly string[]): Middleware<DBCore> 
             // Letters are judged with the company's letters switch (#19).
             if (stores.includes('employeeLetters') && withPeopleSettings) {
               wanted.push('peopleSettings');
+            }
+            // Stock and documents are judged with the warehouses they name.
+            if (stores.some((s) => WAREHOUSE_RULED.has(s)) && withWarehouses) {
+              wanted.push('warehouses');
             }
             const extra = wanted.filter((s) => !stores.includes(s));
             return down.transaction([...stores, ...extra], mode, options);

@@ -7,6 +7,7 @@ import type {
   LineItem,
   Product,
   StockEntry,
+  StockIssue,
   StockMovement,
 } from '@/db/types';
 import { allocate, documentLineParts, isPosted } from '@/lib/accounting/ledger';
@@ -159,6 +160,37 @@ export function entryMovements(entry: StockEntry, setup: StockSetup): PlannedMov
   });
 }
 
+/**
+ * Movements of items issued to an employee: they leave the warehouse at the
+ * weighted average cost. Void issues move nothing.
+ */
+export function issueMovements(issue: StockIssue, setup: StockSetup): PlannedMovement[] {
+  if (issue.status !== 'posted') return [];
+  const from = warehouseOf(issue.warehouseId, setup);
+  return issue.lines.flatMap((line, index): PlannedMovement[] =>
+    !setup.products.has(line.productId) || line.quantity === 0
+      ? []
+      : [
+          {
+            productId: line.productId,
+            warehouseId: from,
+            date: issue.date,
+            quantity: -line.quantity,
+            sourceType: 'issue',
+            sourceId: issue.id,
+            lineId: line.id,
+            documentId: null,
+            number: issue.number,
+            sourceValue: null,
+            returnOf: null,
+            basisQuantity: null,
+            sequence: order(issue.createdAt, index),
+            notes: '',
+          },
+        ],
+  );
+}
+
 /** Lines of the bills a landed cost links, or null when it has no effect. */
 export interface LandedCostLinks {
   /** Lines and charges of the bill with the charges that post to inventory. */
@@ -265,7 +297,12 @@ export function landedCostMovements(
 export function stockAccounts(
   accounts: Account[],
   template: ChartTemplateId,
-): { inventory?: Account; costOfSales?: Account; adjustments?: Account } {
+): {
+  inventory?: Account;
+  costOfSales?: Account;
+  adjustments?: Account;
+  issuedItems?: Account;
+} {
   const live = [...accounts].sort((a, b) => Number(a.archived) - Number(b.archived));
   return {
     inventory: findSpecAccount(accounts, 'inventory', template),
@@ -273,6 +310,7 @@ export function stockAccounts(
       live.find((a) => a.role === 'cost_of_sales') ??
       findSpecAccount(accounts, 'costOfSales', template),
     adjustments: findSpecAccount(accounts, 'inventoryAdjustments', template),
+    issuedItems: findSpecAccount(accounts, 'issuedItems', template),
   };
 }
 
@@ -301,6 +339,7 @@ export function stockLedgerContext(data: {
     inventoryAccountId: accounts.inventory?.id ?? null,
     costOfSalesAccountId: accounts.costOfSales?.id ?? null,
     adjustmentAccountId: accounts.adjustments?.id ?? null,
+    issuedItemsAccountId: accounts.issuedItems?.id ?? null,
     landedCostLines,
   };
 }

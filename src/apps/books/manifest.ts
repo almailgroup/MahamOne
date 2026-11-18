@@ -119,6 +119,7 @@ export const BOOKS: SuiteApp = {
       children: [
         { to: '/products', label: msg('Products & services'), keywords: 'items' },
         { to: '/inventory', label: msg('Stock and warehouses'), keywords: 'stock' },
+        { to: '/inventory/issues', label: msg('Issued items'), keywords: 'uniforms custody' },
       ],
     },
     { kind: 'link', to: '/banking', label: msg('Banking'), icon: Banknote },
@@ -170,7 +171,11 @@ export const BOOKS: SuiteApp = {
       actions: [A.bill, A.expense, A.purchase_order, A.payment_out, A.vendor_credit],
     },
     { label: msg('Contacts and items'), column: 1, actions: [A.client, A.vendor, A.product] },
-    { label: msg('Accounting'), column: 0, actions: [A.journal, A.asset, A.stock_adjustment] },
+    {
+      label: msg('Accounting'),
+      column: 0,
+      actions: [A.journal, A.asset, A.stock_adjustment, A.stock_issue],
+    },
   ],
   tools: [
     { to: '/invoices', label: msg('Invoices'), icon: FileText, keywords: 'sales bill customer' },
@@ -275,6 +280,7 @@ export const FINANCE: SuiteApp = {
       children: [
         { to: '/products', label: msg('Products & services'), keywords: 'items' },
         { to: '/inventory', label: msg('Stock and warehouses'), keywords: 'stock' },
+        { to: '/inventory/issues', label: msg('Issued items'), keywords: 'uniforms custody' },
       ],
     },
     { kind: 'link', to: '/banking', label: msg('Banking'), icon: Banknote },

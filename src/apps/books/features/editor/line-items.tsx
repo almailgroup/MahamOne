@@ -37,6 +37,7 @@ import {
 import { ItemNameInput } from './item-name-input';
 import { TaxSelect } from './tax-select';
 import { useInventory } from '@/apps/books/features/inventory/use-inventory';
+import { useWarehouseAccess } from '@/features/inventory/issues';
 import { StockLineHint, type StockUse } from '@/apps/books/features/inventory/stock-hint';
 import { StockSuggestion } from '@/apps/books/features/inventory/stock-suggestion';
 
@@ -117,6 +118,7 @@ export function LineItemsEditor({
   stockUse?: StockUse;
 }) {
   const inventory = useInventory();
+  const warehouseAccess = useWarehouseAccess();
   const company = useCompany();
   const showArabic =
     language === undefined || isRtlLanguage(language) || items.some((i) => i.nameAr?.trim());
@@ -344,6 +346,7 @@ export function LineItemsEditor({
                     lines={items}
                     use={stockUse}
                     onWarehouseChange={(warehouseId) => update(index, { warehouseId })}
+                    subWarehouses={!warehouseAccess?.offered || warehouseAccess.manages}
                   />
                 ) : null}
               </div>

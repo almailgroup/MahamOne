@@ -16,6 +16,9 @@ import {
   Star,
   Archive,
   ArchiveRestore,
+  CornerDownRight,
+  Send,
+  Shirt,
   Warehouse as WarehouseIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -52,6 +55,7 @@ import {
   useUnitAmount,
 } from '@/apps/books/features/inventory/use-inventory';
 import { WarehouseDialog } from '@/apps/books/features/inventory/warehouse-dialog';
+import { useWarehouseAccess, warehousePath } from '@/features/inventory/issues';
 
 type Tab = 'stock' | 'history' | 'warehouses' | 'landed-costs';
 const TABS: Tab[] = ['stock', 'history', 'warehouses', 'landed-costs'];
@@ -68,6 +72,7 @@ export default function InventoryPage() {
   const [editing, setEditing] = useState<Warehouse | null>(null);
   const [rebuilding, setRebuilding] = useState(false);
   const inventory = useInventory();
+  const access = useWarehouseAccess();
   const records = useLiveQuery(async () => {
     const [entries, landedCosts, bills] = await Promise.all([
       db.stockEntries.where('companyId').equals(company.id).toArray(),
@@ -95,10 +100,23 @@ export default function InventoryPage() {
       .sort((a, b) => localName(a).localeCompare(localName(b)));
   }, [inventory, query]);
 
-  if (!inventory || !records) return <Spinner className="py-24" label={t('Loading…')} />;
+  if (!inventory || !records || !access) {
+    return <Spinner className="py-24" label={t('Loading…')} />;
+  }
 
   const p = inventory.precision;
   const activeWarehouses = inventory.warehouses.filter((w) => !w.archived);
+  // Main warehouses, each followed by its sub-warehouses.
+  const ordered = inventory.warehouses
+    .filter((w) => !w.parentId || !inventory.warehouses.some((m) => m.id === w.parentId))
+    .flatMap((main) => [main, ...inventory.warehouses.filter((w) => w.parentId === main.id)]);
+  // The sub-warehouses the person looks after (and may issue from).
+  const mine = access.offered
+    ? inventory.warehouses.filter(
+        (w) => w.parentId && !w.archived && w.keeper?.userId && w.keeper.userId === access.userId,
+      )
+    : [];
+  const subsOffered = access.offered && access.manages;
   const warehouseName = (id: string | null | undefined) =>
     localName(inventory.warehouses.find((w) => w.id === id)) || '—';
   const totalValue = inventory.stockItems.reduce(
@@ -199,6 +217,31 @@ export default function InventoryPage() {
         }
       />
 
+      {mine.length > 0 ? (
+        <Card className="mb-6">
+          <ul className="divide-y divide-slate-100">
+            {mine.map((w) => (
+              <li key={w.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+                <Shirt className="size-5 shrink-0 text-slate-400" />
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-slate-900">
+                    {t('You look after {warehouse}', { warehouse: localName(w) })}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {t(
+                      'Issue uniforms and other items from it to employees. Each issue waits for an approver.',
+                    )}
+                  </p>
+                </div>
+                <ButtonLink to={`/inventory/issues/new?warehouse=${w.id}`} size="sm">
+                  <Shirt /> {t('Issue items')}
+                </ButtonLink>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      ) : null}
+
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
         <Stat
           label={t('Stock value')}
@@ -253,9 +296,9 @@ export default function InventoryPage() {
                   className="sm:w-52"
                 >
                   <option value="">{t('All warehouses')}</option>
-                  {inventory.warehouses.map((w) => (
+                  {ordered.map((w) => (
                     <option key={w.id} value={w.id}>
-                      {localName(w)}
+                      {warehousePath(w, inventory.warehouses)}
                     </option>
                   ))}
                 </Select>
@@ -273,13 +316,28 @@ export default function InventoryPage() {
             </div>
           ) : null}
           {tab === 'warehouses' ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setEditing(createWarehouse(company.id))}
-            >
-              <Plus /> {t('New warehouse')}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              {subsOffered && inventory.defaultWarehouse ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setEditing(
+                      createWarehouse(company.id, { parentId: inventory.defaultWarehouse!.id }),
+                    )
+                  }
+                >
+                  <CornerDownRight /> {t('New sub-warehouse')}
+                </Button>
+              ) : null}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setEditing(createWarehouse(company.id))}
+              >
+                <Plus /> {t('New warehouse')}
+              </Button>
+            </div>
           ) : null}
           {tab === 'landed-costs' ? (
             <ButtonLink to="/inventory/landed-costs/new" variant="outline" size="sm">
@@ -457,58 +515,154 @@ export default function InventoryPage() {
 
         {tab === 'warehouses' ? (
           <ul className="divide-y divide-slate-100">
-            {inventory.warehouses.map((w) => {
+            {ordered.map((w) => {
               const units = inventory.stockItems.reduce(
                 (sum, item) => sum + onHand(inventory.levels.get(item.id), w.id),
                 0,
               );
+              const sub = Boolean(w.parentId);
+              const parent = inventory.warehouses.find((m) => m.id === w.parentId);
+              // Stock is sent from the main warehouse; only those who manage
+              // warehouses move a sub-warehouse's stock directly.
+              const sendable =
+                sub &&
+                parent &&
+                !parent.archived &&
+                !w.archived &&
+                (access.manages || !access.offered);
+              // Staff change no sub-warehouse once the server keeps them.
+              const editable = !(sub && access.offered && !access.manages);
+              const issues = Boolean(sub) && access.issuesFrom(w);
+              const menu =
+                editable ||
+                sendable ||
+                issues ||
+                (subsOffered && !sub && !w.archived) ||
+                (!w.isDefault && !w.archived && !sub);
+              const keeper = w.keeper?.name
+                ? w.keeper.jobTitle
+                  ? `${w.keeper.name} (${w.keeper.jobTitle})`
+                  : w.keeper.name
+                : '';
               return (
-                <li key={w.id} className="flex items-center gap-3 px-4 py-3">
-                  <WarehouseIcon className="size-5 shrink-0 text-slate-400" />
+                <li
+                  key={w.id}
+                  className={`flex items-center gap-3 py-3 pe-4 ${sub ? 'ps-10' : 'ps-4'}`}
+                >
+                  {sub ? (
+                    <CornerDownRight className="size-5 shrink-0 text-slate-300" />
+                  ) : (
+                    <WarehouseIcon className="size-5 shrink-0 text-slate-400" />
+                  )}
                   <div className="min-w-0 flex-1">
                     <p className="flex flex-wrap items-center gap-2 font-medium text-slate-900">
                       <span className="truncate">{localName(w)}</span>
-                      {w.isDefault ? <Badge tone="blue">{t('Default')}</Badge> : null}
+                      {w.isDefault ? (
+                        <Badge tone="blue">
+                          {inventory.warehouses.some((s) => s.parentId === w.id)
+                            ? t('Main warehouse')
+                            : t('Default')}
+                        </Badge>
+                      ) : null}
+                      {sub ? <Badge tone="gray">{t('Sub-warehouse')}</Badge> : null}
                       {w.archived ? <Badge tone="gray">{t('Archived')}</Badge> : null}
                     </p>
                     <p className="truncate text-xs text-slate-500">
-                      {[w.address, t('{quantity} units on hand', { quantity: fmt.quantity(units) })]
+                      {[
+                        keeper ? t('Looked after by {name}', { name: keeper }) : '',
+                        w.address,
+                        t('{quantity} units on hand', { quantity: fmt.quantity(units) }),
+                      ]
                         .filter(Boolean)
                         .join(' · ')}
                     </p>
                   </div>
-                  <DropdownMenu>
-                    <DropdownTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={t('Actions for {name}', { name: localName(w) })}
-                      >
-                        <MoreHorizontal />
-                      </Button>
-                    </DropdownTrigger>
-                    <DropdownContent align="end">
-                      <DropdownItem icon={<Pencil />} onSelect={() => setEditing(w)}>
-                        {t('Edit')}
-                      </DropdownItem>
-                      {!w.isDefault && !w.archived ? (
-                        <DropdownItem
-                          icon={<Star />}
-                          onSelect={() => void updateWarehouse(w, { isDefault: true })}
+                  {sendable ? (
+                    <ButtonLink
+                      to={`/inventory/adjustments/new?kind=transfer&from=${parent!.id}&to=${w.id}`}
+                      variant="outline"
+                      size="sm"
+                      className="hidden sm:inline-flex"
+                    >
+                      <Send /> {t('Send stock')}
+                    </ButtonLink>
+                  ) : null}
+                  {issues ? (
+                    <ButtonLink
+                      to={`/inventory/issues/new?warehouse=${w.id}`}
+                      variant="outline"
+                      size="sm"
+                      className="hidden sm:inline-flex"
+                    >
+                      <Shirt /> {t('Issue items')}
+                    </ButtonLink>
+                  ) : null}
+                  {menu ? (
+                    <DropdownMenu>
+                      <DropdownTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={t('Actions for {name}', { name: localName(w) })}
                         >
-                          {t('Make default')}
-                        </DropdownItem>
-                      ) : null}
-                      {!w.isDefault ? (
-                        <DropdownItem
-                          icon={w.archived ? <ArchiveRestore /> : <Archive />}
-                          onSelect={() => void updateWarehouse(w, { archived: !w.archived })}
-                        >
-                          {w.archived ? t('Restore') : t('Archive')}
-                        </DropdownItem>
-                      ) : null}
-                    </DropdownContent>
-                  </DropdownMenu>
+                          <MoreHorizontal />
+                        </Button>
+                      </DropdownTrigger>
+                      <DropdownContent align="end">
+                        {editable ? (
+                          <DropdownItem icon={<Pencil />} onSelect={() => setEditing(w)}>
+                            {t('Edit')}
+                          </DropdownItem>
+                        ) : null}
+                        {sendable ? (
+                          <DropdownItem
+                            icon={<Send />}
+                            onSelect={() =>
+                              navigate(
+                                `/inventory/adjustments/new?kind=transfer&from=${parent!.id}&to=${w.id}`,
+                              )
+                            }
+                          >
+                            {t('Send stock')}
+                          </DropdownItem>
+                        ) : null}
+                        {issues ? (
+                          <DropdownItem
+                            icon={<Shirt />}
+                            onSelect={() => navigate(`/inventory/issues/new?warehouse=${w.id}`)}
+                          >
+                            {t('Issue items')}
+                          </DropdownItem>
+                        ) : null}
+                        {subsOffered && !sub && !w.archived ? (
+                          <DropdownItem
+                            icon={<CornerDownRight />}
+                            onSelect={() =>
+                              setEditing(createWarehouse(company.id, { parentId: w.id }))
+                            }
+                          >
+                            {t('Add a sub-warehouse')}
+                          </DropdownItem>
+                        ) : null}
+                        {!w.isDefault && !w.archived && !sub ? (
+                          <DropdownItem
+                            icon={<Star />}
+                            onSelect={() => void updateWarehouse(w, { isDefault: true })}
+                          >
+                            {t('Make default')}
+                          </DropdownItem>
+                        ) : null}
+                        {!w.isDefault && editable ? (
+                          <DropdownItem
+                            icon={w.archived ? <ArchiveRestore /> : <Archive />}
+                            onSelect={() => void updateWarehouse(w, { archived: !w.archived })}
+                          >
+                            {w.archived ? t('Restore') : t('Archive')}
+                          </DropdownItem>
+                        ) : null}
+                      </DropdownContent>
+                    </DropdownMenu>
+                  ) : null}
                 </li>
               );
             })}

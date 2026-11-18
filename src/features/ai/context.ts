@@ -42,7 +42,8 @@ const ABOUT: Record<AppId, string> = {
   books:
     'accounting: sales and purchase documents (a quote becomes an invoice in one click), payments, post-dated cheques, banking, ledger, reports; statements of account on a customer page',
   sales: 'quotes, proformas, sales orders, invoices, delivery notes, payments received',
-  inventory: 'items with codes and labels, stock per warehouse, counts, landed costs',
+  inventory:
+    'items with codes and labels, stock per warehouse, uniforms issued, counts, landed costs',
   people:
     'HR: employees and their papers, payroll with PIFSS, leave, staff loans, letters; end-of-service settlement on an employee page',
   crm: 'follow-up of quotes in a pipeline, prospects',

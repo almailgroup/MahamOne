@@ -2247,6 +2247,80 @@ export interface Warehouse {
   /** Documents move stock in and out of the default warehouse unless a line says otherwise. */
   isDefault: boolean;
   archived: boolean;
+  /**
+   * Sub-warehouses: the main warehouse they belong to (stock reaches them by
+   * transfer from it). Missing or null for a main warehouse.
+   */
+  parentId?: ID | null;
+  /** The person responsible for the stock kept here, when someone is. */
+  keeper?: WarehouseKeeper | null;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+/**
+ * Who looks after a sub-warehouse: an employee (People), and the account
+ * that issues items from it. Their name is kept here, so members who can't
+ * see People see it too.
+ */
+export interface WarehouseKeeper {
+  employeeId: ID | null;
+  name: string;
+  nameAr?: string;
+  jobTitle: string;
+  jobTitleAr?: string;
+  /** The Maham One account that issues items from the sub-warehouse; null when nobody does. */
+  userId: string | null;
+}
+
+/** Who received issued items, kept on the issue so it reads the same for everyone. */
+export interface IssueRecipient {
+  employeeId: ID;
+  /** Employee number, e.g. "E-0042". */
+  number: string;
+  name: string;
+  nameAr?: string;
+  jobTitle: string;
+  jobTitleAr?: string;
+}
+
+export interface StockIssueLine {
+  id: ID;
+  productId: ID;
+  /** The item's name when it was issued. */
+  name: string;
+  nameAr?: string;
+  unit: string;
+  quantity: number;
+}
+
+/**
+ * Items handed from a warehouse to an employee: uniforms, shoes, badges.
+ * Until an approver confirms it, an issue is an approval request (kind
+ * `stock_issue`); once confirmed it is kept here, its stock leaves the
+ * warehouse at the weighted average cost and the cost is booked as an
+ * expense. Void issues stay on record and their stock comes back.
+ */
+export interface StockIssue {
+  id: ID;
+  companyId: ID;
+  /** e.g. "ISS-0001", given when it is confirmed. */
+  number: string;
+  date: ISODate;
+  warehouseId: ID;
+  recipient: IssueRecipient;
+  /** The account that issued the items, and their name as shown on the issue. */
+  issuedBy: string | null;
+  issuedByName: string;
+  /** The approval request it was confirmed from; null when an approver issued it. */
+  requestId: ID | null;
+  approvedBy: string | null;
+  approvedByName: string;
+  approvedAt: Timestamp | null;
+  lines: StockIssueLine[];
+  notes: string;
+  status: 'posted' | 'void';
+  voidedAt?: Timestamp | null;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -2260,7 +2334,8 @@ export type StockSourceType =
   | 'adjustment'
   | 'opening'
   | 'transfer'
-  | 'landed_cost';
+  | 'landed_cost'
+  | 'issue';
 
 /**
  * One stock item coming into or leaving a warehouse. Movements are derived
@@ -2944,7 +3019,8 @@ export type ApprovalKind =
   | 'cheque_replace'
   | 'security_cheque_cash'
   | 'payroll'
-  | 'letter';
+  | 'letter'
+  | 'stock_issue';
 
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'cancelled' | 'applied';
 

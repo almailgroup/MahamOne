@@ -2,6 +2,9 @@ import type { Page } from '@playwright/test';
 import { chooseOption, expect, test } from './fixtures';
 
 /** A day of the previous calendar quarter, as the date inputs want it (yyyy-MM-dd). */
+/** The status of a return not filed yet, whichever day the test runs. */
+const UNFILED = /^(Ready to file|Overdue)$/;
+
 function lastQuarter(day: number): string {
   const now = new Date();
   const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 3, day));
@@ -67,7 +70,8 @@ test('a VAT return is reviewed, filed, paid and undone', async ({ page }) => {
   await page.goto('#/vat');
   await page.getByRole('link', { name: 'Review return' }).click();
   await expect(page).toHaveURL(/#\/vat\/\d{4}-\d{2}-01$/);
-  await expect(page.getByText('Ready to file')).toBeVisible();
+  // Last quarter's return: ready to file, or overdue once its due date has passed.
+  await expect(page.getByText(UNFILED)).toBeVisible();
   await expect(page.getByText('VAT due on sales and other outputs')).toBeVisible();
 
   // Every figure can be traced back to its documents.
@@ -109,7 +113,7 @@ test('a VAT return is reviewed, filed, paid and undone', async ({ page }) => {
   await page.goto(filedReturn);
   await page.getByRole('button', { name: 'Undo filing' }).click();
   await dialog.getByRole('button', { name: 'Undo filing' }).click();
-  await expect(page.getByText('Ready to file')).toBeVisible();
+  await expect(page.getByText(UNFILED)).toBeVisible();
 });
 
 test('tax rates have a kind that decides where they are reported', async ({ page }) => {

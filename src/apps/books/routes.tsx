@@ -18,6 +18,9 @@ const ItemLabelsPrint = lazy(() => import('./pages/products/item-labels-print'))
 const Inventory = lazy(() => import('./pages/inventory/index'));
 const StockEntryForm = lazy(() => import('./pages/inventory/entry-form'));
 const StockEntryView = lazy(() => import('./pages/inventory/entry-view'));
+const StockIssues = lazy(() => import('./pages/inventory/issues'));
+const StockIssueForm = lazy(() => import('./pages/inventory/issue-form'));
+const StockIssueView = lazy(() => import('./pages/inventory/issue-view'));
 const StockCount = lazy(() => import('./pages/inventory/count'));
 const StockCountPrint = lazy(() => import('./pages/inventory/count-print'));
 const LandedCostForm = lazy(() => import('./pages/inventory/landed-cost-form'));
@@ -181,6 +184,9 @@ export const booksRoutes: RouteObject[] = (
     { path: 'inventory', element: <Inventory /> },
     { path: 'inventory/adjustments/new', element: <StockEntryForm /> },
     { path: 'inventory/entries/:id', element: <StockEntryView /> },
+    { path: 'inventory/issues', element: <StockIssues /> },
+    { path: 'inventory/issues/new', element: <StockIssueForm /> },
+    { path: 'inventory/issues/:id', element: <StockIssueView /> },
     { path: 'inventory/count', element: <StockCount /> },
     { path: 'inventory/landed-costs/new', element: <LandedCostForm /> },
     { path: 'inventory/landed-costs/:id', element: <LandedCostView /> },

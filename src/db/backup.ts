@@ -88,6 +88,7 @@ const backupSchema = z.object({
     letterTemplates: z.array(ownedRow).default([]),
     employeeLetters: z.array(ownedRow).default([]),
     staffingCostings: z.array(ownedRow).default([]),
+    stockIssues: z.array(ownedRow).default([]),
   }),
   missingFiles: z.array(z.looseObject({ id: z.string().min(1) })).optional(),
 });
@@ -543,6 +544,7 @@ async function hashOf(dataUrl: string): Promise<string | null> {
 const STOCK_TABLES: DataTable[] = [
   'documents',
   'stockEntries',
+  'stockIssues',
   'landedCosts',
   'stockMovements',
   'products',
