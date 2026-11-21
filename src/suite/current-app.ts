@@ -60,6 +60,11 @@ function subscribe(listener: () => void) {
   return () => listeners.delete(listener);
 }
 
+/** For tests: the last app remembered. */
+export function lastApp(): AppId | null {
+  return last;
+}
+
 /** For tests: forget the last app. */
 export function resetLastApp(): void {
   last = null;

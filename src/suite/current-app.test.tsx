@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { db } from '@/db/db';
 import { saveCompany, setupCompany } from '@/db/records';
@@ -10,6 +10,7 @@ import type { MemberPermissions, MemberRole } from '@/cloud/roles';
 import { SALES } from '@/apps/sales/manifest';
 import { INVENTORY } from '@/apps/inventory/manifest';
 import {
+  lastApp,
   rememberApp,
   resetLastApp,
   useApps,
@@ -45,8 +46,17 @@ function Probe() {
   );
 }
 
-const choose = (app: SuiteApp) =>
+/**
+ * Opens an app as a person would: after React has remembered the app on
+ * screen (useRememberApp's effect), as it has long before anybody can click.
+ * Clicked sooner, on a busy machine, that effect runs after the click and
+ * puts the old app back.
+ */
+async function choose(app: SuiteApp) {
+  const onScreen = () => screen.getByText(/ of /).textContent?.split(' of ')[0];
+  await waitFor(() => expect(lastApp()).toBe(onScreen()));
   fireEvent.click(screen.getByRole('button', { name: `open ${app.id}` }));
+}
 
 /** The company kept in the cloud, with this role and the owner's limits. */
 async function linkAs(role: MemberRole, permissions?: MemberPermissions) {
@@ -160,14 +170,14 @@ describe('the app open in the split layout', () => {
     await shown(`books of ${SPLIT}`);
     // The switcher, the home's tiles or the palette: Sales' home is /invoices,
     // which Books lists under Receivables.
-    choose(SALES);
+    await choose(SALES);
     await shown(`sales of ${SPLIT}`);
     expect(router.state.location.pathname).toBe('/invoices');
     await act(() => router.navigate('/books'));
     await shown(`books of ${SPLIT}`);
     await act(() => router.navigate('/'));
     await shown(`books of ${SPLIT}`);
-    choose(INVENTORY);
+    await choose(INVENTORY);
     await shown(`inventory of ${SPLIT}`);
     expect(router.state.location.pathname).toBe('/inventory');
     // Receivables in Books still keep Books' sidebar when opened from it.
