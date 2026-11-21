@@ -9,8 +9,9 @@ type Client = Awaited<ReturnType<typeof createClient>>;
  * Whether this session entered a code from an authenticator app as well as
  * the password.
  *
- * What an admin needs before the actions that run with the service key —
- * adding people, resetting passwords — and before changing anybody's role.
+ * What an admin needs before managing the team — inviting people,
+ * withdrawing invites, removing a lost phone's sign-in — and before changing
+ * anybody's role. The database checks it too.
  * Somebody who has not set one up yet is aal1 here, and is told to.
  *
  * Read off the access token: every caller has had that token verified by the

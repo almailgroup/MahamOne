@@ -108,7 +108,7 @@ export function CommentThread({
         "postgres_changes",
         {
           event: "INSERT",
-          schema: "public",
+          schema: "tasks",
           table: "comments",
           filter: `task_id=eq.${taskId}`,
         },
@@ -137,7 +137,7 @@ export function CommentThread({
         "postgres_changes",
         {
           event: "DELETE",
-          schema: "public",
+          schema: "tasks",
           table: "comments",
           filter: `task_id=eq.${taskId}`,
         },

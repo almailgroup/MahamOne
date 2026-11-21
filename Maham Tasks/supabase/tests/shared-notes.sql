@@ -15,6 +15,9 @@
 
 begin;
 
+-- Maham Tasks' tables are in the tasks schema on Maham One's database.
+set local search_path = tasks, public;
+
 insert into auth.users (id, email, raw_user_meta_data) values
   ('aaaa0000-0000-4000-8000-000000000001', 'ali@test.local',  '{"full_name":"Ali"}'),
   ('bbbb0000-0000-4000-8000-000000000002', 'sara@test.local', '{"full_name":"Sara"}'),

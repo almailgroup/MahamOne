@@ -3,7 +3,7 @@
 /** Matches the storage bucket limit and the DB check constraint. */
 export const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
 
-export const ATTACHMENT_BUCKET = "task-attachments";
+export const ATTACHMENT_BUCKET = "tasks-attachments";
 
 /** How long a download link stays valid, in seconds. */
 export const SIGNED_URL_TTL = 60 * 10;

@@ -11,6 +11,9 @@
 
 begin;
 
+-- Maham Tasks' tables are in the tasks schema on Maham One's database.
+set local search_path = tasks, public;
+
 insert into auth.users (id, email, raw_user_meta_data) values
   ('aaaa0000-0000-4000-8000-000000000001', 'boss@test.local',   '{"full_name":"Boss"}'),
   ('bbbb0000-0000-4000-8000-000000000002', 'worker@test.local', '{"full_name":"Worker"}');
@@ -36,14 +39,14 @@ begin
   perform set_config('request.jwt.claim.sub', worker::text, true);
   select count(*) into seen from tasks where id = job;
   assert seen = 1, 'the assignee could not see the task to begin with';
-  select public.trash_task(job) into did;
+  select tasks.trash_task(job) into did;
   assert not did, 'a member was able to delete a task';
   select count(*) into seen from tasks where id = job;
   assert seen = 1, 'a refused delete still hid the task';
 
   -- ---- A manager or admin can, and it vanishes for everyone -------------
   perform set_config('request.jwt.claim.sub', boss::text, true);
-  select public.trash_task(job) into did;
+  select tasks.trash_task(job) into did;
   assert did, 'an admin could not delete a task';
   select count(*) into seen from tasks where id = job;
   assert seen = 0, 'a trashed task was still readable by the person who trashed it';
@@ -60,11 +63,11 @@ begin
 
   -- ---- Restore brings it back with everything on it ---------------------
   perform set_config('request.jwt.claim.sub', worker::text, true);
-  select public.restore_task(job) into did;
+  select tasks.restore_task(job) into did;
   assert not did, 'a member was able to restore a task';
 
   perform set_config('request.jwt.claim.sub', boss::text, true);
-  select public.restore_task(job) into did;
+  select tasks.restore_task(job) into did;
   assert did, 'an admin could not restore a task';
   select count(*) into seen from tasks where id = job;
   assert seen = 1, 'a restored task did not come back';
@@ -76,14 +79,14 @@ begin
   assert seen = 1, 'restoring was not written to the history';
 
   -- ---- The purge takes only what has sat there long enough --------------
-  perform public.trash_task(job);
+  perform tasks.trash_task(job);
   execute 'reset role';
   -- Backdate the bin timestamp as the owner, which the app never does.
-  update public.tasks set deleted_at = now() - interval '10 days' where id = job;
-  assert (select public.purge_trashed_tasks('30 days')) = 0, 'a ten-day-old task was purged early';
-  update public.tasks set deleted_at = now() - interval '31 days' where id = job;
-  assert (select public.purge_trashed_tasks('30 days')) = 1, 'a month-old task was not purged';
-  select count(*) into seen from public.tasks where id = job;
+  update tasks.tasks set deleted_at = now() - interval '10 days' where id = job;
+  assert (select tasks.purge_trashed_tasks('30 days')) = 0, 'a ten-day-old task was purged early';
+  update tasks.tasks set deleted_at = now() - interval '31 days' where id = job;
+  assert (select tasks.purge_trashed_tasks('30 days')) = 1, 'a month-old task was not purged';
+  select count(*) into seen from tasks.tasks where id = job;
   assert seen = 0, 'the purge did not actually remove the row';
 
   raise notice 'trash-tasks: every expectation held';

@@ -80,7 +80,7 @@ export function useTaskStream({
       .channel(channelName)
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "tasks", ...scope },
+        { event: "UPDATE", schema: "tasks", table: "tasks", ...scope },
         (payload) => {
           const row = payload.new as Task;
 
@@ -114,7 +114,7 @@ export function useTaskStream({
       )
       .on(
         "postgres_changes",
-        { event: "DELETE", schema: "public", table: "tasks", ...scope },
+        { event: "DELETE", schema: "tasks", table: "tasks", ...scope },
         (payload) => {
           const removed = payload.old as { id?: string };
           if (!removed.id) return;
@@ -123,7 +123,7 @@ export function useTaskStream({
       )
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "tasks", ...scope },
+        { event: "INSERT", schema: "tasks", table: "tasks", ...scope },
         // A new task needs its assignees resolved, so refetch.
         scheduleRefresh,
       )
@@ -131,7 +131,7 @@ export function useTaskStream({
         "postgres_changes",
         // task_assignments carries no project_id to scope on, so this fires for
         // every assignment change; the debounce keeps that cheap.
-        { event: "*", schema: "public", table: "task_assignments" },
+        { event: "*", schema: "tasks", table: "task_assignments" },
         scheduleRefresh,
       )
       .subscribe();

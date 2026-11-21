@@ -53,17 +53,17 @@ select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-0000000a11ce
 
 select set_config(
   'test.theirs',
-  public.start_direct_conversation('00000000-0000-4000-8000-00000000b0b0')::text,
+  tasks.start_direct_conversation('00000000-0000-4000-8000-00000000b0b0')::text,
   true);
 
-insert into public.direct_messages (conversation_id, author_id, body)
+insert into tasks.direct_messages (conversation_id, author_id, body)
 values (current_setting('test.theirs')::uuid,
         '00000000-0000-4000-8000-0000000a11ce',
         'The Kuwait account numbers are 4471 and 4472.');
 
 select check_that(
   'alice can read her own thread',
-  (select count(*) from public.direct_messages
+  (select count(*) from tasks.direct_messages
     where conversation_id = current_setting('test.theirs')::uuid) = 1);
 
 -- --- eve has a thread of her own, with dave --------------------------------
@@ -71,20 +71,20 @@ select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000ee
 
 select set_config(
   'test.hers',
-  public.start_direct_conversation('00000000-0000-4000-8000-0000000000dd')::text,
+  tasks.start_direct_conversation('00000000-0000-4000-8000-0000000000dd')::text,
   true);
 
 -- --- baseline: eve cannot see alice and bob's thread ----------------------
 select check_that(
   'eve cannot read a conversation she is not in',
-  (select count(*) from public.direct_messages
+  (select count(*) from tasks.direct_messages
     where conversation_id = current_setting('test.theirs')::uuid) = 0,
-  (select count(*)::text from public.direct_messages
+  (select count(*)::text from tasks.direct_messages
     where conversation_id = current_setting('test.theirs')::uuid));
 
 select check_that(
   'eve cannot see the conversation row either',
-  (select count(*) from public.conversations
+  (select count(*) from tasks.conversations
     where id = current_setting('test.theirs')::uuid) = 0);
 
 -- --- eve moves her own participant row into their thread ------------------
@@ -94,7 +94,7 @@ select check_that(
 do $$
 declare moved integer;
 begin
-  update public.conversation_participants
+  update tasks.conversation_participants
      set conversation_id = current_setting('test.theirs')::uuid
    where user_id = '00000000-0000-4000-8000-0000000000ee';
   get diagnostics moved = row_count;
@@ -109,10 +109,10 @@ end $$;
 
 select check_that(
   'and so eve still cannot read what alice wrote to bob',
-  (select count(*) from public.direct_messages
+  (select count(*) from tasks.direct_messages
     where conversation_id = current_setting('test.theirs')::uuid) = 0,
   (select coalesce(string_agg(body, ' | '), '(nothing)')
-     from public.direct_messages
+     from tasks.direct_messages
     where conversation_id = current_setting('test.theirs')::uuid));
 
 -- --- eve moves a message she wrote into their thread ----------------------
@@ -121,13 +121,13 @@ declare
   mine  uuid;
   moved integer;
 begin
-  insert into public.direct_messages (conversation_id, author_id, body)
+  insert into tasks.direct_messages (conversation_id, author_id, body)
   values (current_setting('test.hers')::uuid,
           '00000000-0000-4000-8000-0000000000ee',
           'Ignore those account numbers, use 9999 instead.')
   returning id into mine;
 
-  update public.direct_messages
+  update tasks.direct_messages
      set conversation_id = current_setting('test.theirs')::uuid
    where id = mine;
   get diagnostics moved = row_count;
@@ -147,16 +147,16 @@ reset role;
 -- in their conversation rather than what eve is allowed to see of it.
 select check_that(
   'and nothing of eve''s reached their conversation',
-  (select count(*) from public.direct_messages
+  (select count(*) from tasks.direct_messages
      where conversation_id = current_setting('test.theirs')::uuid
        and author_id = '00000000-0000-4000-8000-0000000000ee') = 0,
   (select coalesce(string_agg(body, ' | '), '(nothing)')
-     from public.direct_messages
+     from tasks.direct_messages
     where conversation_id = current_setting('test.theirs')::uuid));
 
 select check_that(
   'and eve is still only in her own',
-  (select count(*) from public.conversation_participants
+  (select count(*) from tasks.conversation_participants
      where user_id = '00000000-0000-4000-8000-0000000000ee'
        and conversation_id = current_setting('test.hers')::uuid) = 1);
 

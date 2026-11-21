@@ -22,10 +22,10 @@ insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-0000000041b1', 'lead@example.test'),
   ('00000000-0000-4000-8000-0000000041c1', 'doer@example.test');
 
-alter table public.profiles disable trigger profiles_guard_role_change;
-update public.profiles set role = 'manager'
+alter table tasks.profiles disable trigger profiles_guard_role_change;
+update tasks.profiles set role = 'manager'
  where id = '00000000-0000-4000-8000-0000000041b1';
-alter table public.profiles enable trigger profiles_guard_role_change;
+alter table tasks.profiles enable trigger profiles_guard_role_change;
 
 set local role authenticated;
 
@@ -35,7 +35,7 @@ select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-0000000041b1
 
 do $$
 begin
-  insert into public.task_templates (id, name, title, priority, steps, due_in_working_days) values
+  insert into tasks.task_templates (id, name, title, priority, steps, due_in_working_days) values
     ('44444444-4444-4444-8444-0000000041a1', 'Month-end payroll', 'Run payroll', 'high',
      array['Collect timesheets', 'Check overtime', 'Send to the bank'], 3);
   perform check_that('a manager saves a template', true);
@@ -44,12 +44,12 @@ exception when others then
 end $$;
 
 select check_that('…recorded as theirs',
-  (select created_by from public.task_templates where id = '44444444-4444-4444-8444-0000000041a1')
+  (select created_by from tasks.task_templates where id = '44444444-4444-4444-8444-0000000041a1')
     = '00000000-0000-4000-8000-0000000041b1');
 
 do $$
 begin
-  insert into public.task_templates (name, title, steps)
+  insert into tasks.task_templates (name, title, steps)
   values ('Too long', 'Fifty-one steps', array_fill('step'::text, array[51]));
   perform check_that('fifty steps at most', false, 'it was accepted');
 exception when check_violation then
@@ -58,7 +58,7 @@ end $$;
 
 do $$
 begin
-  insert into public.task_templates (name, title) values ('  ', 'Nameless');
+  insert into tasks.task_templates (name, title) values ('  ', 'Nameless');
   perform check_that('a template needs a name', false, 'it was accepted');
 exception when check_violation then
   perform check_that('a template needs a name', true, sqlerrm);
@@ -69,29 +69,29 @@ end $$;
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-0000000041c1', true);
 
 select check_that('a member reads the templates',
-  (select steps from public.task_templates where id = '44444444-4444-4444-8444-0000000041a1')
+  (select steps from tasks.task_templates where id = '44444444-4444-4444-8444-0000000041a1')
     = array['Collect timesheets', 'Check overtime', 'Send to the bank']);
 
 do $$
 begin
-  insert into public.task_templates (name, title) values ('Mine', 'Mine');
+  insert into tasks.task_templates (name, title) values ('Mine', 'Mine');
   perform check_that('a member cannot add one', false, 'it was accepted');
 exception when insufficient_privilege then
   perform check_that('a member cannot add one', true, sqlerrm);
 end $$;
 
-update public.task_templates set name = 'Changed';
-delete from public.task_templates;
+update tasks.task_templates set name = 'Changed';
+delete from tasks.task_templates;
 select check_that('nor change or remove one',
-  (select name from public.task_templates where id = '44444444-4444-4444-8444-0000000041a1')
+  (select name from tasks.task_templates where id = '44444444-4444-4444-8444-0000000041a1')
     = 'Month-end payroll');
 
 -- --- an admin removes it ---------------------------------------------------------
 
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-0000000041a1', true);
-delete from public.task_templates where id = '44444444-4444-4444-8444-0000000041a1';
+delete from tasks.task_templates where id = '44444444-4444-4444-8444-0000000041a1';
 select check_that('an admin removes one',
-  (select count(*) from public.task_templates) = 0);
+  (select count(*) from tasks.task_templates) = 0);
 
 reset role;
 

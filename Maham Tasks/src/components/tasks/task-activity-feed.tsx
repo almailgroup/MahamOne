@@ -51,7 +51,7 @@ export function TaskActivityFeed({ taskId }: { taskId: string }) {
         "postgres_changes",
         {
           event: "INSERT",
-          schema: "public",
+          schema: "tasks",
           table: "task_activity",
           filter: `task_id=eq.${taskId}`,
         },

@@ -21,10 +21,11 @@ monochrome interface.
 
 ## Features
 
-- **Auth** — email/password sign-in, password reset, profile management.
-  There is no self sign-up: admins add everyone from Team → Add teammate,
-  which needs no email, and the database refuses any account an admin did not
-  add. The very first account in an empty database becomes the admin.
+- **Auth** — one account for Maham One and Maham Tasks: email/password
+  sign-in, password reset, profile management. Admins invite people from
+  Team → Add teammate by their Maham One email, and they join by signing in;
+  an account without a Maham Tasks profile reaches nothing here. The owner
+  names the first admin (`tasks.add_first_admin`).
 - **Roles** — Admin, Manager, Team Member, enforced in the database.
 - **Projects** — multi-project workspace with a switcher; create, edit, delete.
 - **Tasks** — title, description, priority (Low/Medium/High/Urgent), status
@@ -93,137 +94,117 @@ Open http://localhost:3000. Until credentials are present the app serves the
 landing page with a setup checklist, and authenticated routes redirect there
 rather than erroring.
 
-### 1. Create the Supabase project
+### 1. Maham One's database
 
-Create a project at [supabase.com](https://supabase.com), then copy the values
-from **Project Settings → API** into `.env.local`:
+Maham Tasks runs on **Maham One's Supabase project**, in its own schema,
+`tasks`, beside Maham One's data and changing none of it. Copy the values from
+Maham One's project (**Project Settings → API**) into `.env.local`:
 
-| Variable                        | Purpose                                     |
-| ------------------------------- | ------------------------------------------- |
-| `NEXT_PUBLIC_SUPABASE_URL`      | Project URL                                  |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Publishable anon key (safe for the browser)  |
-| `NEXT_PUBLIC_SITE_URL`          | Base URL, used for auth email redirect links |
+| Variable                        | Purpose                                                |
+| ------------------------------- | ------------------------------------------------------ |
+| `NEXT_PUBLIC_SUPABASE_URL`      | Maham One's project URL                                 |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Its publishable key (safe for the browser)              |
+| `NEXT_PUBLIC_SITE_URL`          | This site's address, for links in emails                |
+| `TASKS_SERVER_SECRET`           | The server's own secret (step 3); never `NEXT_PUBLIC_` |
 
-The `service_role` key is **never** used by this app. Every table is guarded by
-Row Level Security instead, so the browser only ever holds a powerless key.
+**The service (secret) key is never used.** On Maham One's database it would
+open everything — payroll, Civil IDs, every company's books — so the server
+holds `TASKS_SERVER_SECRET` instead, which opens only the `tasks.srv_*`
+functions: each checks it, then does one thing to Maham Tasks' own tables
+(reminders, Telegram, push, the error log). See
+`src/lib/supabase/server-access.ts`.
 
-### 2. Apply the migrations
+### 2. The database script
 
-> **Use a Supabase project created for this app.** Running the script against a
-> database that already belongs to another application will stop with an
-> explanation — the schema lives in `public` and would collide. Check the
-> project selector at the top of the SQL editor before running.
+In Maham One's project: **SQL Editor → New query**, paste the whole of
+[`../supabase/migrations/20261212000000_maham_tasks.sql`](../supabase/migrations/20261212000000_maham_tasks.sql)
+and run it. It is safe to run again, and needs none of Maham One's other
+scripts. It is Maham Tasks' 46 migrations as they stood (the history is in git),
+moved to the `tasks` schema, with what running on Maham One's database needs:
 
-**Quickest — one paste.** Open the Supabase **SQL Editor**, paste the whole of
-[`supabase/setup.sql`](supabase/setup.sql) and run it. That file is every
-migration concatenated in order; it is safe to re-run.
+- one account for both apps, and nothing added to Maham One's sign-ups or
+  sign-ins (no trigger on `auth.users`): a Maham Tasks profile is made only
+  when somebody a Maham Tasks admin invited signs in here;
+- a restrictive rule on every table and on its two Storage buckets: a
+  signed-in account without a profile reaches none of it;
+- the server's functions and its secret.
 
-**Or use the CLI**, which applies the migrations individually:
+Then **Project Settings → Data API → Exposed schemas**: add `tasks`, so the
+API serves it.
 
-```bash
-npx supabase link --project-ref <your-project-ref>
-npx supabase db push
+### 3. The first admin and the server's secret
+
+Still in the SQL editor, with the email of your Maham One account:
+
+```sql
+select tasks.add_first_admin('you@example.com');
+select tasks.new_server_secret();
 ```
 
-`setup.sql` is generated — the migrations are the source of truth. After adding
-or editing one, regenerate with `npm run db:bundle` so the bundle cannot drift.
-
-| Migration                         | Contents                                     |
-| --------------------------------- | -------------------------------------------- |
-| `…0001_initial_schema.sql`        | Enums, tables, constraints, indexes           |
-| `…0002_functions_and_triggers.sql`| Auth helpers, signup hook, audit triggers     |
-| `…0003_row_level_security.sql`    | RLS policies and table grants                 |
-| `…0004_realtime.sql`              | Realtime publication, replica identity        |
-| `…0005_protect_last_admin.sql`    | Prevents locking out the last admin           |
-| `…0006_general_tasks_and_review_gate.sql` | Nullable project_id, review gate      |
-| `…0007_attachments.sql`           | Attachments table, storage bucket and policies |
-| `…0008_notifications.sql`         | Notifications table and trigger fan-out       |
-| `…0009_member_view_only_details.sql` | Members are view-only on task details      |
-| `…0010_fix_delete_task_audit.sql` | Lets a task with assignees be deleted         |
-| `…0011_due_time_and_positions.sql`| due_at with time, job_title, avatars bucket   |
-| `…0012_project_membership.sql`    | Projects become private to their members      |
-| `…0013_follow_ups.sql`            | Follow-up dates and notes, audited            |
-| `…0014_reminders.sql`             | Reminder preferences and outbound queue       |
-| `…0015_members_see_only_assigned.sql` | Members see only their own tasks          |
-
-### 3. Create the first user
-
-In the Supabase dashboard, **Authentication → Users → Add user → Create new
-user**, with *Auto Confirm User* ticked. **The first account in an empty
-database becomes the admin**, so a fresh deployment is never locked out. That
-is the only account the dashboard can make: from then on the database accepts
-only accounts an admin added from the Team page.
+The first makes you the Maham Tasks admin (nobody becomes admin by signing up
+first). The second returns the server's secret, once: put it in the server
+environment as `TASKS_SERVER_SECRET`. Running it again makes a new one and the
+old one stops working at once.
 
 ### 4. Adding everyone else
 
-**Team → Add teammate.** An admin fills in a name, an email and a role, and the
-account exists immediately with a one-time password to hand over. Nothing is
-emailed. This is the intended route for a workspace: access is granted by
-whoever is responsible for it, rather than claimed.
+An admin needs two-step sign-in on first (below). Then **Team → Add teammate**,
+with their Maham One email, a name and a role. That invites the email; it
+doesn't make an account or a password:
 
-A password somebody else chose and wrote down is only as private as wherever it
-was written, so **the first sign-in lands on "Choose your password"** and the
-app stays there until they have. The prompt is a flag on the account, cleared
-the moment a password is set. Afterwards — and for anyone who simply wants a
-new one — **Profile → Password → Change password** asks for the current
-password and then the new one, without going anywhere near an email.
+- **They have a Maham One account:** they open Maham Tasks and sign in with
+  the same email and password. That first sign-in puts them in.
+- **They don't:** they make one at Maham One with that email, confirm it from
+  the email it sends, then sign in here.
 
-**Locked out?** An admin can issue a new password from Team → ⋯ → Reset
-password, which works the same way: a one-time password to hand over, and the
-account flagged so the next sign-in asks them to choose their own. An admin can
-do this for anyone but themselves — their own password needs the current one,
-on the profile page — and never learns the password anybody ends up using. It
-is the one route that does not depend on email at all, which matters when the
-alternative is a reset link and a mail quota.
+The invite lasts 30 days. Until it is used, the Team page lists it under
+"Invited, not joined yet", where **Withdraw** takes it back; inviting the same
+email again starts the 30 days over. The answer is "Invited" whether or not
+the email has an account yet, so the form can't be used to find out who has
+one. A Maham One account whose email isn't confirmed can't use an invite.
 
-**There is no self sign-up.** This is a company portal: people are added by
-whoever is responsible for access. The app offers no way to register — an old
-link to `/register` lands on sign-in — and the database enforces it underneath
-(`…0034_close_self_registration.sql`): an account is accepted only if its
-`app_metadata` names the admin who added it, which only the server's service
-key can write. Somebody calling Supabase's sign-up endpoint directly with the
-public key is refused, whatever the project's sign-up setting. As a second
-lock, turn that setting off too: **Authentication → Sign In / Providers →
-Allow new users to sign up**. Team → Add teammate keeps working either way.
+Nobody is put in Maham Tasks without signing in themselves, and no admin sets
+or learns anybody's password: the account opens Maham One too, payroll and all
+for some. **Locked out?** **Forgot your password?** on the sign-in page emails
+them a link.
 
-Adding a user from the Supabase dashboard is refused once the first admin
-exists, because the dashboard cannot set `app_metadata` on creation. Add people
-from the Team page.
+**There is no self sign-up into Maham Tasks.** Anybody may have a Maham One
+account; only a Maham Tasks admin's invite makes it a Maham Tasks one.
+Somebody signed in without a profile or an invite is signed out of Maham Tasks
+with "Your Maham One account is not in Maham Tasks yet" (on this device only:
+they stay signed in to Maham One).
 
 **Two-step sign-in.** Anybody can add an authenticator app — the iPhone's
 Passwords app, Google or Microsoft Authenticator — from Profile → Two-step
-sign-in. After that, signing in asks for the six-digit code as well as the
-password, on every device.
+sign-in. After that, signing in to Maham Tasks asks for the six-digit code as
+well as the password. (Maham One doesn't ask for it, and its data isn't behind
+it; the code guards what an admin can do here.)
 
-Admins need it before they can add people, reset passwords or change roles;
-the Team page says so until it is on. It cannot lock anybody out by being
-switched on in the database: people who have not set it up are unaffected.
+Admins need it before they can add people, withdraw invites or change roles;
+the Team page says so until it is on, and the database checks it too. It
+cannot lock anybody out by being switched on in the database: people who have
+not set it up are unaffected.
 
 A password on its own is worth little once someone has an app. The app sends
 such a session to the code page, and the database treats it as a member's
-whatever the role (`…0038_two_step_sign_in.sql`), so a stolen admin password
-used straight against Supabase gets a member's access and no more.
+whatever the role (the two-step rules in the database script), so a stolen
+admin password used straight against Supabase gets a member's access and no
+more.
 
-*Lost phone?* In Supabase → Authentication → Users, open the person, and
-delete their factor under **Multi-Factor Authentication**; they can sign in
-with the password again and set up a new app. TOTP is on by default in every
+*Lost phone?* A Maham Tasks admin removes it from Team → ⋯ → Remove two-step
+sign-in (or, in Supabase → Authentication → Users, open the person and delete
+their factor under **Multi-Factor Authentication**); they can sign in with the
+password again and set up a new app. That button removes authenticator apps
+only, nothing else on the account. TOTP is on by default in every
 Supabase project (Authentication → Multi-Factor).
 
 #### "email rate limit exceeded"
 
-A Supabase project starts with a **shared, development-only mail service that
-sends a handful of messages an hour**. Adding people sends nothing, so it never
-gets in the way of onboarding — Team → Add teammate needs only
-`SUPABASE_SERVICE_ROLE_KEY` in the server environment, the same key the
-reminder dispatcher already uses.
-
-Password resets do go through it, so until you **connect your own mail
-service** in Supabase → Project Settings → Auth → SMTP Settings, "Forgot
-password" stops working once the hour's handful is spent. (An admin's Team → ⋯
-→ Reset password needs no email and always works.) If you are already sending
-reminders through Resend, the same account works as SMTP: host
-`smtp.resend.com`, port `465`, username `resend`, password your Resend API key,
-and a sender on a domain you have verified.
+Sign-in emails (confirmations, password resets) are Maham One's: they go
+through Maham One's mail service (Supabase → Project Settings → Auth → SMTP
+Settings), and its templates. Add this site to **Authentication → URL
+Configuration → Redirect URLs** (`https://tasks.mahamone.com/**`) so their links
+can come back here.
 
 ## Authorisation model
 
@@ -458,7 +439,7 @@ npm run lint    # eslint
 Regenerate database types after changing the schema:
 
 ```bash
-npx supabase gen types typescript --project-id <ref> --schema public \
+npx supabase gen types typescript --project-id <ref> --schema tasks \
   > src/lib/supabase/database.types.ts
 ```
 
@@ -484,7 +465,7 @@ npx supabase gen types typescript --project-id <ref> --schema public \
   body, status, attempts, last_error, dedupe_key, scheduled_for, sent_at
 
 `tasks.project_id` is nullable: NULL marks a **general task**. Files live in
-the private `task-attachments` storage bucket, reached only through short-lived
+the private `tasks-attachments` storage bucket, reached only through short-lived
 signed URLs.
 
 Enums: `user_role` (admin, manager, member), `task_status` (todo, in_progress,
@@ -505,23 +486,24 @@ offboarding a user never cascades away their projects, tasks or comment threads.
 
 ## Removing somebody
 
-Delete the account from **Supabase → Authentication → Users**. Everything they
-owned follows: the profile, their assignments, their notifications and their
-notes all cascade, and the things other people can still see — who created a
-project, who uploaded a file — keep the record with the name dropped to null.
+Take them out of Maham Tasks, not out of Maham One: their account is Maham
+One's too. In Maham One's project, **SQL Editor**:
 
-This used to fail with a 500, and the database log underneath it said
-`insert or update on table "notifications" violates foreign key constraint
-"notifications_user_id_fkey"`. The cascade was the whole story: deleting the
-account deletes the profile, which deletes their task assignments, and every
-assignment that goes fires the trigger that tells that person they have been
-removed from a task — addressed to the profile that has just been deleted. The
-more work somebody had been given, the more certainly they could not be
-removed. `push_notification` now checks the recipient still exists, which is
-what its own comment always claimed it did.
+```sql
+delete from tasks.profiles where lower(email) = lower('them@example.com');
+```
 
-`20260916000021_notify_missing_recipient.sql` carries the fix, and it has to be
-applied to the project before a delete will go through.
+Everything they owned in Maham Tasks follows: their assignments, their
+notifications and their notes cascade, and the things other people can still
+see — who created a project, who uploaded a file — keep the record with the
+name dropped to null. They can still sign in to Maham One; Maham Tasks signs
+them out with "not in Maham Tasks yet", and only a new invite brings them
+back. **Don't delete the account in Authentication → Users**: that removes
+their Maham One account as well.
+
+`push_notification` checks the recipient still exists, so a removal that
+cascades through many assignments goes through (it used to fail with a
+foreign key error on `notifications`).
 
 ## On a phone
 
@@ -818,7 +800,7 @@ would compile them into the browser bundle. See `.env.example` for the full list
 
 | Variable | For |
 | --- | --- |
-| `SUPABASE_SERVICE_ROLE_KEY` | Required for any delivery. The dispatcher reads every user's queue, so it cannot run as any one of them. |
+| `TASKS_SERVER_SECRET` | Required for any delivery. The dispatcher reads every user's queue, so it cannot run as any one of them; this secret opens the `tasks.srv_*` functions and nothing of Maham One. |
 | `CRON_SECRET` | Authenticates the dispatcher. `openssl rand -hex 32`. |
 | `RESEND_API_KEY`, `REMINDER_EMAIL_FROM` | Email |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`, `TELEGRAM_WEBHOOK_SECRET` | Telegram |
@@ -898,8 +880,9 @@ Kuwait time, tomorrow meaning the next working day. `/help` in the chat says
 the same.
 
 The database holds that line rather than trusting the app to: a trigger pins
-`telegram_chat_id` so only the webhook — which reaches Postgres with the
-service role, carrying no user identity — may name a chat. Clearing it is
+`telegram_chat_id` so only the webhook — which reaches Postgres through the
+server's own function (`tasks.srv_link_telegram`), carrying no user identity —
+may name a chat. Clearing it is
 still yours, because that is what unlinking is. Without the trigger the update
 policy on that table said only "your own row", which was true of the two dozen
 preference columns beside it and let a hand-written request point the bot at
@@ -1122,7 +1105,7 @@ Nothing you could not already open yourself. `buildSnapshot` in
 `src/lib/assistant/snapshot.ts` reads through the ordinary RLS-scoped queries, so
 a member's snapshot holds only the tasks assigned to them and a manager's
 holds their projects. The assistant has no permission logic of its own and no
-service-role access; it cannot widen what you see.
+server access; it cannot widen what you see.
 
 The snapshot is built server-side on every question. The browser never holds
 it, and never learns the Worker's address or its secret.
@@ -1477,7 +1460,7 @@ Admins who have linked Telegram are also sent a short note when there is
 something new — how many faults, on which pages, and how many reminders could
 not be delivered, since the last note — with a link to the details on their
 profile (migration 45, `src/lib/reminders/admin-alerts.ts`). It is sent by the
-scheduled reminder run, with the service key it already holds, so it keeps
+scheduled reminder run, with the server's secret it already holds, so it keeps
 the same office hours as everything else that reaches a person: a fault at
 midnight is in the first note of the working morning.
 
@@ -1654,8 +1637,8 @@ half in a chat log.
 
 Instead the pair is generated on first use and kept in `web_push_keys`: one
 row, forever, in a table with row-level security on and **no policies at
-all**. Nothing holding a user's session can read it; only the service role
-the dispatcher runs as. The public half is handed to the browser by the app.
+all**. Nothing holding a user's session can read it; only the server, through
+`tasks.srv_web_push_keys` and its secret. The public half is handed to the browser by the app.
 Nobody ever has to see the private one, which is the point.
 
 `supabase/tests/web-push.sql` checks the parts that are easy to get wrong:
@@ -1708,18 +1691,19 @@ npm run test:e2e  # end-to-end — Playwright against a production build
 ```
 
 CI runs both on every push and pull request, along with types, lint, the
-build, a check that `supabase/setup.sql` still matches the migrations, and
-every policy suite in `supabase/tests/` against a real PostgreSQL.
+build, and every policy suite in `supabase/tests/` against a real PostgreSQL,
+built from Maham One's script for Maham Tasks
+(`../supabase/migrations/20261212000000_maham_tasks.sql`). Maham One's own
+tests (`src/cloud/maham-tasks-sql.test.ts`) run that script after all of Maham
+One's and check that none of Maham One's functions, triggers or rules change,
+its health check reads the same, its sign-ups still work, and only Maham
+Tasks' people reach Maham Tasks.
 
-Those last two are worth a note, because both were broken for a while and in
-the same way — a check that only looks where it is told. `setup.sql` had not
-been regenerated in ten migrations, so the one file the section above tells a
-fresh deployment to run would have built a database the app could not read a
-task list out of. And the policy job named its suites one at a time, so eight
-of the ten arrived with their migrations and were never added to it; they had
-also been written to print a table of failures rather than to exit non-zero,
-so running them would not have failed the build either. The suites are now
-found by glob and a failed check raises.
+The policy suites are worth a note: the job once named them one at a time,
+so eight of the ten arrived with their migrations and were never added to it;
+they had also been written to print a table of failures rather than to exit
+non-zero, so running them would not have failed the build either. The suites
+are now found by glob and a failed check raises.
 
 ### What is covered, and why those things
 
@@ -1838,75 +1822,83 @@ Faults inside the app are reported separately, to the admins on Telegram (see
 
 ### Backups
 
-**On Supabase's Pro plan** backups are automatic: daily, kept seven days,
-under Database → Backups (point-in-time recovery is an add-on). That is the
-simplest answer, and it covers files too.
+Maham Tasks' data is in Maham One's database, so **Maham One's backups cover
+it** (on Supabase's Pro plan: daily, kept seven days, under Database →
+Backups; files in Storage are not in them, see below).
 
-**On the free plan there are no backups you can download**, so the repository
-has a weekly one: `.github/workflows/backup.yml`, Sunday 04:30 Kuwait time. It
-dumps the roles, schema and data with Supabase's own CLI, encrypts them with
-a passphrase only you hold, and keeps the result as a workflow artifact for 30
+On the free plan the repository has an optional weekly copy of the `tasks`
+schema only: `.github/workflows/maham-tasks-backup.yml` at the root of the
+Maham One repository, Sunday 04:30 Kuwait time. It dumps the schema and data
+of `tasks` (never Maham One's) with Supabase's own CLI, encrypts them with a
+passphrase only you hold, and keeps the result as a workflow artifact for 30
 days. It does nothing until it is set up:
 
-1. In Supabase, open **Connect** and copy the **Session pooler** connection
-   string (GitHub's runners need the pooler; the direct address is IPv6 only).
-   Put your database password into it.
+1. In Supabase (Maham One's project), open **Connect** and copy the **Session
+   pooler** connection string (GitHub's runners need the pooler; the direct
+   address is IPv6 only). Put the database password into it. **That password
+   reads everything in the database**, Maham One included: add it only if you
+   accept a GitHub secret holding it.
 2. In GitHub, **Settings → Secrets and variables → Actions → New repository
-   secret**: `SUPABASE_DB_URL`, that string.
+   secret**: `TASKS_SUPABASE_DB_URL`, that string.
 3. Make up a long passphrase, save it in your password manager, and add it as
-   a second secret, `BACKUP_PASSPHRASE`. Without it a backup cannot be opened
-   — by anyone, including you — so keep it somewhere that is not this
+   a second secret, `TASKS_BACKUP_PASSPHRASE`. Without it a backup cannot be
+   opened — by anyone, including you — so keep it somewhere that is not this
    repository, a chat or an email.
-4. **Actions → Weekly backup → Run workflow**, and check it finishes green with
-   an artifact attached.
+4. **Actions → Maham Tasks weekly backup → Run workflow**, and check it
+   finishes green with an artifact attached.
 
 To open one, download the artifact, then:
 
 ```bash
-gpg --decrypt almail-2026-10-18.tar.gz.gpg | tar -xzf -
-# backup/roles.sql, backup/schema.sql, backup/data.sql
+gpg --decrypt maham-tasks-2026-12-20.tar.gz.gpg | tar -xzf -
+# backup/schema.sql, backup/data.sql
 ```
 
 **Try a restore once a quarter** — a backup nobody has restored is a hope.
-Create a scratch Supabase project, and with its Session pooler string:
+Create a scratch Supabase project, run Maham One's
+`supabase/migrations/20261212000000_maham_tasks.sql` in it, then with its
+Session pooler string:
 
 ```bash
 psql "$SCRATCH_DB_URL" \
   --single-transaction --variable ON_ERROR_STOP=1 \
-  --file backup/roles.sql --file backup/schema.sql \
   --command 'SET session_replication_role = replica' \
   --file backup/data.sql
 ```
 
-Then point a local copy of the app at the scratch project and sign in. Delete
-the scratch project when done.
+Then point a local copy of the app at the scratch project and sign in (the
+accounts are not in the copy: make yours there and add it with
+`tasks.add_first_admin`). Delete the scratch project when done.
 
-**Files attached to tasks are not in the database**, so not in these backups;
-they live in Supabase Storage. Download the `task-attachments` and `avatars`
-buckets from the dashboard now and then, or move to Pro.
+**Files attached to tasks are not in the database**, so not in these copies;
+they live in Supabase Storage. Download the `tasks-attachments` and `tasks-avatars`
+buckets from the dashboard now and then.
 
 ## Deploying to Vercel
 
-1. **Apply the migrations** to your Supabase project (see above) — do this
-   first, or the deployed app will have nothing to talk to.
-2. **Import the repository** at [vercel.com/new](https://vercel.com/new).
-   Next.js is detected automatically; `vercel.json` pins the framework, build
-   and install commands, and region.
+Maham Tasks is its own Vercel project, beside Maham One's, built from the same
+repository:
+
+1. **Run the database script** in Maham One's Supabase project, expose the
+   `tasks` schema, name the first admin and make the server's secret (see
+   [Getting started](#getting-started)) — do this first, or the deployed app
+   will have nothing to talk to.
+2. **Create the project** at [vercel.com/new](https://vercel.com/new): import
+   `almailgroup/MahamOne` and set **Root Directory** to `Maham Tasks`. Next.js
+   is detected automatically; `vercel.json` pins the framework, build and
+   install commands, and the daily reminder run.
 3. **Add environment variables** under **Settings → Environment Variables**, for
    Production *and* Preview:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `NEXT_PUBLIC_SITE_URL` — your deployment URL, e.g.
-     `https://almailgroup-tasks.vercel.app`
-   - Optionally the reminder secrets above — see [Reminders](#reminders)
-4. **Configure Supabase auth URLs** under **Authentication → URL
-   Configuration**:
-   - *Site URL*: your production URL
-   - *Redirect URLs*: add `https://<your-domain>/auth/callback`, and
-     `https://*-<your-team>.vercel.app/auth/callback` if you want preview
-     deployments to handle email confirmation
-5. **Deploy**, then create the admin account in the Supabase dashboard — see
-   [Create the first user](#3-create-the-first-user).
+   - `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Maham
+     One's project URL and publishable key
+   - `NEXT_PUBLIC_SITE_URL` — `https://tasks.mahamone.com`
+   - `TASKS_SERVER_SECRET` and `CRON_SECRET` — see [Reminders](#reminders)
+   - Optionally the channels' keys — see [Reminders](#reminders)
+4. **Add the domain** under **Settings → Domains**: `tasks.mahamone.com`.
+5. **Let sign-in emails come back here.** In Maham One's Supabase project,
+   **Authentication → URL Configuration → Redirect URLs**: add
+   `https://tasks.mahamone.com/**`. **Leave the Site URL as it is**: it is
+   Maham One's, and every Maham One email uses it.
 
 Set `NEXT_PUBLIC_SITE_URL` to the deployment's own URL. It is what password
 reset emails link back to, so a stale value sends people to the wrong host.

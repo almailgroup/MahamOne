@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createServerAccess, type ServerAccess } from "@/lib/supabase/server-access";
 import { deliver } from "@/lib/reminders/providers";
 import type { QueuedReminder } from "@/lib/reminders/types";
 
@@ -24,7 +24,7 @@ export type DispatchTally = {
   givenUp: number;
 };
 
-type Admin = ReturnType<typeof createAdminClient>;
+type Admin = ServerAccess;
 
 export async function sendClaimed(
   supabase: Admin,
@@ -40,16 +40,7 @@ export async function sendClaimed(
 
     if (result.ok) {
       sent += 1;
-      await supabase
-        .from("reminder_queue")
-        .update({
-          status: "sent",
-          attempts,
-          sent_at: new Date().toISOString(),
-          last_error: null,
-          claimed_at: null,
-        })
-        .eq("id", reminder.id);
+      await supabase.rpc("reminder_sent", { p_id: reminder.id, p_attempts: attempts });
       continue;
     }
 
@@ -57,10 +48,7 @@ export async function sendClaimed(
     // browser data cleared. Removing the row is the only thing that stops
     // every future reminder queueing a message to nowhere.
     if (!result.ok && result.gone) {
-      await supabase
-        .from("push_subscriptions")
-        .delete()
-        .eq("endpoint", reminder.recipient);
+      await supabase.rpc("forget_push_device", { p_endpoint: reminder.recipient });
     }
 
     // Stop retrying once it is clearly not going to work, or we have tried enough.
@@ -80,24 +68,17 @@ export async function sendClaimed(
       await supabase.rpc("notify_reminder_failed", { reminder: reminder.id });
     }
 
-    await supabase
-      .from("reminder_queue")
-      .update({
-        status: exhausted ? "failed" : "pending",
-        attempts,
-        last_error: result.error,
-        // When it gave up, not when it was queued. An hour of retries sits
-        // between those two, and "why did nobody hear about this" is a
-        // question about the second one.
-        failed_at: exhausted ? new Date().toISOString() : null,
-        // Releasing the claim is what lets a retry be picked up again.
-        claimed_at: null,
-        // Back off so a struggling provider is not hammered on every run.
-        scheduled_for: exhausted
-          ? undefined
-          : new Date(Date.now() + attempts * 15 * 60_000).toISOString(),
-      })
-      .eq("id", reminder.id);
+    // Releasing the claim is what lets a retry be picked up again; backing off
+    // means a struggling provider is not hammered on every run. When it gives
+    // up, failed_at says when (not when it was queued: an hour of retries sits
+    // between the two, and "why did nobody hear about this" asks the second).
+    await supabase.rpc("reminder_failed", {
+      p_id: reminder.id,
+      p_attempts: attempts,
+      p_error: result.error,
+      p_exhausted: exhausted,
+      p_retry_at: exhausted ? null : new Date(Date.now() + attempts * 15 * 60_000).toISOString(),
+    });
   }
 
   return { considered: claimed.length, sent, retrying, givenUp };
@@ -118,7 +99,7 @@ export async function sendClaimed(
  */
 export async function dispatchForTask(taskId: string): Promise<DispatchTally | null> {
   try {
-    const supabase = createAdminClient();
+    const supabase = createServerAccess();
 
     const { data, error } = await supabase.rpc("claim_task_reminders", {
       task: taskId,
@@ -134,7 +115,7 @@ export async function dispatchForTask(taskId: string): Promise<DispatchTally | n
 
     return await sendClaimed(supabase, claimed);
   } catch (error) {
-    // No service-role key, no network, a provider throwing on import — none of
+    // No server secret, no network, a provider throwing on import — none of
     // it is the assigning user's problem, and the queue still holds the work.
     console.error(
       "[reminders] could not send on assignment; the daily run will:",

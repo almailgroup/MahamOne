@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createAdminClient } from "@/lib/supabase/admin";
+import type { ServerAccess } from "@/lib/supabase/server-access";
 import { isMissingFunction, isMissingTable } from "@/lib/supabase/missing";
 import { sendClaimed, type DispatchTally } from "@/lib/reminders/dispatch";
 import { alertAdmins } from "@/lib/reminders/admin-alerts";
@@ -31,7 +31,7 @@ import {
 /** How many to attempt per run, so one invocation cannot run past its timeout. */
 const BATCH_SIZE = 40;
 
-type Admin = ReturnType<typeof createAdminClient>;
+type Admin = ServerAccess;
 
 export type SweepResult = DispatchTally & {
   /** Why nothing was sent, when nothing was. */
@@ -102,9 +102,11 @@ export async function sweep(supabase: Admin, now: Date = new Date()): Promise<Sw
  * silently withheld because the table could not be read is worse.
  */
 async function holidaysOn(supabase: Admin, day: string): Promise<Set<string>> {
-  const { data, error } = await supabase.from("company_holidays").select("day").eq("day", day);
+  const { data, error } = await supabase.rpc<{ day: string }[]>("holidays", { p_from: day, p_to: day });
   if (error) {
-    if (!isMissingTable(error)) console.error(`[reminders] company_holidays: ${error.message}`);
+    if (!isMissingTable(error) && !isMissingFunction(error)) {
+      console.error(`[reminders] company_holidays: ${error.message}`);
+    }
     return new Set();
   }
   return new Set((data ?? []).map((row) => row.day));

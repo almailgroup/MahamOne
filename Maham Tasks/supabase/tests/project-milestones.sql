@@ -25,20 +25,20 @@ insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-0000000044c1', 'doer@example.test'),
   ('00000000-0000-4000-8000-0000000044d1', 'outsider@example.test');
 
-alter table public.profiles disable trigger profiles_guard_role_change;
-update public.profiles set role = 'manager'
+alter table tasks.profiles disable trigger profiles_guard_role_change;
+update tasks.profiles set role = 'manager'
  where id = '00000000-0000-4000-8000-0000000044b1';
-alter table public.profiles enable trigger profiles_guard_role_change;
+alter table tasks.profiles enable trigger profiles_guard_role_change;
 
-insert into public.projects (id, name, created_by) values
+insert into tasks.projects (id, name, created_by) values
   ('11111111-1111-4111-8111-0000000044a1', 'Office move', '00000000-0000-4000-8000-0000000044b1'),
   ('11111111-1111-4111-8111-0000000044b1', 'Website', '00000000-0000-4000-8000-0000000044b1');
 
-insert into public.tasks (id, project_id, title, status, created_by) values
+insert into tasks.tasks (id, project_id, title, status, created_by) values
   ('22222222-2222-4222-8222-0000000044a1', '11111111-1111-4111-8111-0000000044a1', 'Sign the lease', 'todo', '00000000-0000-4000-8000-0000000044b1'),
   ('22222222-2222-4222-8222-0000000044a2', '11111111-1111-4111-8111-0000000044a1', 'Book the movers', 'todo', '00000000-0000-4000-8000-0000000044b1'),
   ('22222222-2222-4222-8222-0000000044b1', '11111111-1111-4111-8111-0000000044b1', 'Write the home page', 'todo', '00000000-0000-4000-8000-0000000044b1');
-insert into public.task_assignments (task_id, user_id) values
+insert into tasks.task_assignments (task_id, user_id) values
   ('22222222-2222-4222-8222-0000000044a1', '00000000-0000-4000-8000-0000000044c1');
 
 set local role authenticated;
@@ -49,7 +49,7 @@ select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-0000000044b1
 
 do $$
 begin
-  insert into public.project_milestones (id, project_id, title, due_on) values
+  insert into tasks.project_milestones (id, project_id, title, due_on) values
     ('33333333-3333-4333-8333-0000000044a1', '11111111-1111-4111-8111-0000000044a1', 'Lease signed', '2026-11-05'),
     ('33333333-3333-4333-8333-0000000044a2', '11111111-1111-4111-8111-0000000044a1', 'Moved in', '2026-12-03'),
     ('33333333-3333-4333-8333-0000000044b1', '11111111-1111-4111-8111-0000000044b1', 'Site live', '2026-11-20');
@@ -59,25 +59,25 @@ exception when others then
 end $$;
 
 select check_that('…and is recorded as having made them',
-  (select bool_and(created_by = '00000000-0000-4000-8000-0000000044b1') from public.project_milestones));
+  (select bool_and(created_by = '00000000-0000-4000-8000-0000000044b1') from tasks.project_milestones));
 
 do $$
 begin
-  insert into public.project_milestones (project_id, title, due_on) values
+  insert into tasks.project_milestones (project_id, title, due_on) values
     ('11111111-1111-4111-8111-0000000044a1', '   ', '2026-11-05');
   perform check_that('a milestone needs a name', false, 'it was accepted');
 exception when check_violation then
   perform check_that('a milestone needs a name', true, sqlerrm);
 end $$;
 
-update public.tasks set milestone_id = '33333333-3333-4333-8333-0000000044a1'
+update tasks.tasks set milestone_id = '33333333-3333-4333-8333-0000000044a1'
  where id in ('22222222-2222-4222-8222-0000000044a1', '22222222-2222-4222-8222-0000000044a2');
 select check_that('a manager puts tasks under a milestone',
-  (select count(*) from public.tasks where milestone_id = '33333333-3333-4333-8333-0000000044a1') = 2);
+  (select count(*) from tasks.tasks where milestone_id = '33333333-3333-4333-8333-0000000044a1') = 2);
 
 do $$
 begin
-  update public.tasks set milestone_id = '33333333-3333-4333-8333-0000000044a1'
+  update tasks.tasks set milestone_id = '33333333-3333-4333-8333-0000000044a1'
    where id = '22222222-2222-4222-8222-0000000044b1';
   perform check_that('not under another project''s milestone', false, 'it was accepted');
 exception when check_violation then
@@ -86,7 +86,7 @@ end $$;
 
 do $$
 begin
-  insert into public.tasks (project_id, title, created_by, milestone_id) values
+  insert into tasks.tasks (project_id, title, created_by, milestone_id) values
     ('11111111-1111-4111-8111-0000000044b1', 'Smuggled', '00000000-0000-4000-8000-0000000044b1',
      '33333333-3333-4333-8333-0000000044a1');
   perform check_that('nor created under one', false, 'it was accepted');
@@ -96,43 +96,43 @@ end $$;
 
 do $$
 begin
-  update public.project_milestones set project_id = '11111111-1111-4111-8111-0000000044b1'
+  update tasks.project_milestones set project_id = '11111111-1111-4111-8111-0000000044b1'
    where id = '33333333-3333-4333-8333-0000000044a1';
   perform check_that('a milestone stays in its project', false, 'it was moved');
 exception when check_violation then
   perform check_that('a milestone stays in its project', true, sqlerrm);
 end $$;
 
-update public.project_milestones set done_at = now()
+update tasks.project_milestones set done_at = now()
  where id = '33333333-3333-4333-8333-0000000044a1';
 select check_that('a manager marks a milestone reached',
-  (select done_at is not null from public.project_milestones where id = '33333333-3333-4333-8333-0000000044a1'));
+  (select done_at is not null from tasks.project_milestones where id = '33333333-3333-4333-8333-0000000044a1'));
 
 -- --- the member on the lease ------------------------------------------------------
 
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-0000000044c1', true);
 
 select check_that('a member sees their project''s milestones, and no others',
-  (select count(*) from public.project_milestones) = 2,
-  (select string_agg(title, ', ') from public.project_milestones));
+  (select count(*) from tasks.project_milestones) = 2,
+  (select string_agg(title, ', ') from tasks.project_milestones));
 
 do $$
 begin
-  insert into public.project_milestones (project_id, title, due_on) values
+  insert into tasks.project_milestones (project_id, title, due_on) values
     ('11111111-1111-4111-8111-0000000044a1', 'Party', '2026-12-10');
   perform check_that('a member cannot add a milestone', false, 'it was accepted');
 exception when insufficient_privilege then
   perform check_that('a member cannot add a milestone', true, sqlerrm);
 end $$;
 
-update public.project_milestones set title = 'Renamed' where id = '33333333-3333-4333-8333-0000000044a2';
-delete from public.project_milestones where id = '33333333-3333-4333-8333-0000000044a2';
+update tasks.project_milestones set title = 'Renamed' where id = '33333333-3333-4333-8333-0000000044a2';
+delete from tasks.project_milestones where id = '33333333-3333-4333-8333-0000000044a2';
 select check_that('nor rename or remove one',
-  (select title from public.project_milestones where id = '33333333-3333-4333-8333-0000000044a2') = 'Moved in');
+  (select title from tasks.project_milestones where id = '33333333-3333-4333-8333-0000000044a2') = 'Moved in');
 
 do $$
 begin
-  update public.tasks set milestone_id = '33333333-3333-4333-8333-0000000044a2'
+  update tasks.tasks set milestone_id = '33333333-3333-4333-8333-0000000044a2'
    where id = '22222222-2222-4222-8222-0000000044a1';
   perform check_that('a member cannot move their task to another milestone', false, 'it was accepted');
 exception when insufficient_privilege then
@@ -141,7 +141,7 @@ end $$;
 
 do $$
 begin
-  update public.tasks set status = 'in_progress'
+  update tasks.tasks set status = 'in_progress'
    where id = '22222222-2222-4222-8222-0000000044a1';
   perform check_that('…but still works the task under it', true);
 exception when others then
@@ -153,26 +153,26 @@ end $$;
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-0000000044d1', true);
 
 select check_that('somebody on neither project sees none of it',
-  (select count(*) from public.project_milestones) = 0);
+  (select count(*) from tasks.project_milestones) = 0);
 
 -- --- moving and removing ----------------------------------------------------------
 
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-0000000044b1', true);
 
-update public.tasks set project_id = '11111111-1111-4111-8111-0000000044b1'
+update tasks.tasks set project_id = '11111111-1111-4111-8111-0000000044b1'
  where id = '22222222-2222-4222-8222-0000000044a2';
 select check_that('a task moved to another project leaves its milestone behind',
   (select milestone_id is null and project_id = '11111111-1111-4111-8111-0000000044b1'
-     from public.tasks where id = '22222222-2222-4222-8222-0000000044a2'));
+     from tasks.tasks where id = '22222222-2222-4222-8222-0000000044a2'));
 
-delete from public.project_milestones where id = '33333333-3333-4333-8333-0000000044a1';
+delete from tasks.project_milestones where id = '33333333-3333-4333-8333-0000000044a1';
 select check_that('removing a milestone keeps its tasks, under none',
-  (select milestone_id is null from public.tasks where id = '22222222-2222-4222-8222-0000000044a1'));
+  (select milestone_id is null from tasks.tasks where id = '22222222-2222-4222-8222-0000000044a1'));
 
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-0000000044a1', true);
 
 select check_that('an admin sees every project''s milestones',
-  (select count(*) from public.project_milestones) = 2);
+  (select count(*) from tasks.project_milestones) = 2);
 
 -- --- results ---------------------------------------------------------------
 

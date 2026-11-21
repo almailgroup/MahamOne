@@ -1,63 +1,59 @@
--- ---------------------------------------------------------------------------
--- Almailgroup Task Management Portal — complete database setup
+-- =============================================================================
+-- Maham One cloud: Maham Tasks
+-- =============================================================================
 --
--- GENERATED FILE. Do not edit by hand: run `npm run db:bundle` instead.
--- Source of truth is supabase/migrations/, concatenated here in filename order.
+-- The owner runs this once in the Supabase SQL editor of Maham One's project
+-- (paste the whole file and press Run). It is safe to run again, with data
+-- in it. It needs none of Maham One's other files and changes nothing of
+-- them: Maham Tasks lives in its own schema, tasks, beside Maham One's.
 --
--- First-time setup: paste this whole file into the Supabase SQL editor and
--- run it. It is safe to re-run; every statement is idempotent.
+-- After it runs, in this order (docs/maham-tasks.md):
+--   1. Project Settings → Data API → Exposed schemas: add tasks.
+--   2. select tasks.add_first_admin('owner@example.com');  -- your Maham One email
+--   3. select tasks.new_server_secret();  -- put what it returns in Vercel as
+--      TASKS_SERVER_SECRET (the Maham Tasks project). Run it again only to
+--      replace the secret: the old one stops working at once.
 --
--- Bundled migrations:
---   20260913000001_initial_schema.sql
---   20260913000002_functions_and_triggers.sql
---   20260913000003_row_level_security.sql
---   20260913000004_realtime.sql
---   20260913000005_protect_last_admin.sql
---   20260913000006_general_tasks_and_review_gate.sql
---   20260913000007_attachments.sql
---   20260913000008_notifications.sql
---   20260913000009_member_view_only_details.sql
---   20260913000010_fix_delete_task_audit.sql
---   20260913000011_due_time_and_positions.sql
---   20260913000012_project_membership.sql
---   20260913000013_follow_ups.sql
---   20260913000014_reminders.sql
---   20260913000015_members_see_only_assigned.sql
---   20260914000016_personal_notes.sql
---   20260914000017_claim_reminders_and_counts.sql
---   20260914000018_task_counts_timezone.sql
---   20260914000019_shared_notes.sql
---   20260914000020_trash_tasks.sql
---   20260916000021_notify_missing_recipient.sql
---   20260916000022_claim_task_reminders.sql
---   20260916000023_team_chat.sql
---   20260919000024_direct_messages.sql
---   20260921000025_recurring_tasks.sql
---   20260921000026_web_push.sql
---   20260927000027_reminder_failures.sql
---   20260927000028_error_log.sql
---   20260927000029_task_checklists.sql
---   20260927000030_archive_projects.sql
---   20260930000031_guard_telegram_chat.sql
---   20261002000032_project_status_updates.sql
---   20261002000033_comment_reactions.sql
---   20261013000034_close_self_registration.sql
---   20261013000035_attachment_files_follow_task.sql
---   20261017000036_company_holidays.sql
---   20261017000037_office_reminders.sql
---   20261017000038_two_step_sign_in.sql
---   20261017000039_labels.sql
---   20261017000040_task_dependencies.sql
---   20261017000041_task_templates.sql
---   20261017000042_telegram_quick_add.sql
---   20261017000043_work_report.sql
---   20261017000044_project_milestones.sql
---   20261017000045_admin_alerts.sql
---   20261017000046_portal_health.sql
--- ---------------------------------------------------------------------------
+-- What it is
+--   * Maham Tasks' database, as its own 46 migrations left it (projects,
+--     tasks, comments, notes, chat, reminders, files…), moved from the public
+--     schema of its former project to the tasks schema here: every table,
+--     type, function, trigger, policy and grant the same, under tasks. Their
+--     check constraints are added NOT VALID, as later ones widen them, and
+--     validated at the end.
+--   * Its two Storage buckets, tasks-attachments and tasks-avatars, with
+--     their rules. Maham One's own bucket, company-files, and its rules are
+--     not touched.
+--   * Accounts are Maham One's: everyone signs in to Maham Tasks with their
+--     Maham One email and password. Being in Maham Tasks is a row in
+--     tasks.profiles: the first admin's, by the owner's line above; anyone
+--     else's when they accept a Maham Tasks admin's invite by signing in
+--     here with a confirmed account that has the invited email
+--     (tasks.add_teammate, tasks.invites, tasks.join).
+--   * Only Maham Tasks' people reach it: a restrictive rule on every table
+--     and on its two buckets, whatever a table's own rules allow.
+--   * No master key: Maham Tasks' server (reminders, Telegram, push) holds
+--     only TASKS_SERVER_SECRET, which opens the tasks.srv_* functions and
+--     nothing else; they reach Maham Tasks' tables only. Payroll, Civil IDs
+--     and every other Maham One record stay out of its reach.
+--
+-- Maham Tasks adds nothing to auth.users (no trigger: Maham One's sign-ups
+-- and sign-ins never go through it), and replaces none of Maham One's
+-- functions, triggers or rules. Changes to Maham Tasks' database go in this
+-- file, so the rules at its end cover them.
+-- =============================================================================
 
+create schema if not exists tasks;
+
+-- The API roles use the schema; each table grants signed-in people only what
+-- its rules are for (as Maham Tasks' migrations always did, and its tests
+-- check), and row-level security decides the rest. Functions are callable by
+-- signed-in people (their own checks decide); the end of this file takes
+-- them from everyone signed out but where it says so.
+grant usage on schema tasks to anon, authenticated, service_role;
+alter default privileges in schema tasks grant execute on functions to authenticated, service_role;
 -- =========================================================================
--- 20260913000001_initial_schema.sql
+-- 20260913000001_initial_schema.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -67,7 +63,7 @@
 -- comments and the task audit trail.
 -- ---------------------------------------------------------------------------
 
-create extension if not exists "pgcrypto";
+-- (pgcrypto: Supabase has it already, and gen_random_uuid() is built in.)
 
 -- --------------------------------------------------------------------------
 -- Enums
@@ -77,7 +73,7 @@ create extension if not exists "pgcrypto";
 -- same name already exists with different values, this database belongs to a
 -- different application — stop with an explanation rather than failing later
 -- with a confusing "invalid input value for enum" on the first table.
-create or replace function public.assert_enum(
+create or replace function tasks.assert_enum(
   type_name text,
   required text[]
 )
@@ -89,10 +85,10 @@ declare
 begin
   if not exists (
     select 1 from pg_type
-    where typname = type_name and typnamespace = 'public'::regnamespace
+    where typname = type_name and typnamespace = 'tasks'::regnamespace
   ) then
     execute format(
-      'create type public.%I as enum (%s)',
+      'create type tasks.%I as enum (%s)',
       type_name,
       (select string_agg(quote_literal(v), ', ') from unnest(required) v)
     );
@@ -103,11 +99,11 @@ begin
     into existing
   from pg_enum e
   join pg_type t on t.oid = e.enumtypid
-  where t.typname = type_name and t.typnamespace = 'public'::regnamespace;
+  where t.typname = type_name and t.typnamespace = 'tasks'::regnamespace;
 
   if not (required <@ existing) then
     raise exception
-      'public.% already exists here with different values (%), so this database belongs to another application.',
+      'tasks.% already exists here with different values (%), so this database belongs to another application.',
       type_name, array_to_string(existing, ', ')
       using hint =
         'Run this script against a Supabase project created for the task portal, not one already in use. Check the project selector at the top of the SQL editor.';
@@ -115,20 +111,20 @@ begin
 end;
 $fn$;
 
-select public.assert_enum('user_role', array['admin', 'manager', 'member']);
-select public.assert_enum('task_status', array['todo', 'in_progress', 'in_review', 'done']);
-select public.assert_enum('task_priority', array['low', 'medium', 'high', 'urgent']);
+select tasks.assert_enum('user_role', array['admin', 'manager', 'member']);
+select tasks.assert_enum('task_status', array['todo', 'in_progress', 'in_review', 'done']);
+select tasks.assert_enum('task_priority', array['low', 'medium', 'high', 'urgent']);
 
 -- --------------------------------------------------------------------------
 -- profiles — one row per auth user, created automatically on signup.
 -- --------------------------------------------------------------------------
 
-create table if not exists public.profiles (
+create table if not exists tasks.profiles (
   id          uuid primary key references auth.users (id) on delete cascade,
   email       text        not null,
   full_name   text,
   avatar_url  text,
-  role        public.user_role not null default 'member',
+  role        tasks.user_role not null default 'member',
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now(),
 
@@ -137,9 +133,9 @@ create table if not exists public.profiles (
 );
 
 create unique index if not exists profiles_email_key
-  on public.profiles (lower(email));
+  on tasks.profiles (lower(email));
 
-comment on table public.profiles is
+comment on table tasks.profiles is
   'Application profile for each auth.users row. Role drives authorisation.';
 
 -- --------------------------------------------------------------------------
@@ -149,11 +145,11 @@ comment on table public.profiles is
 -- never cascades away the projects they happened to create.
 -- --------------------------------------------------------------------------
 
-create table if not exists public.projects (
+create table if not exists tasks.projects (
   id          uuid primary key default gen_random_uuid(),
   name        text        not null,
   description text,
-  created_by  uuid references public.profiles (id) on delete set null,
+  created_by  uuid references tasks.profiles (id) on delete set null,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now(),
 
@@ -161,8 +157,8 @@ create table if not exists public.projects (
   constraint projects_description_length check (description is null or length(description) <= 2000)
 );
 
-create index if not exists projects_created_by_idx on public.projects (created_by);
-create index if not exists projects_created_at_idx on public.projects (created_at desc);
+create index if not exists projects_created_by_idx on tasks.projects (created_by);
+create index if not exists projects_created_at_idx on tasks.projects (created_at desc);
 
 -- --------------------------------------------------------------------------
 -- tasks
@@ -172,16 +168,16 @@ create index if not exists projects_created_at_idx on public.projects (created_a
 -- single drag updates exactly one row.
 -- --------------------------------------------------------------------------
 
-create table if not exists public.tasks (
+create table if not exists tasks.tasks (
   id          uuid primary key default gen_random_uuid(),
-  project_id  uuid        not null references public.projects (id) on delete cascade,
+  project_id  uuid        not null references tasks.projects (id) on delete cascade,
   title       text        not null,
   description text,
-  status      public.task_status   not null default 'todo',
-  priority    public.task_priority not null default 'medium',
+  status      tasks.task_status   not null default 'todo',
+  priority    tasks.task_priority not null default 'medium',
   due_date    date,
   position    double precision not null default 0,
-  created_by  uuid references public.profiles (id) on delete set null,
+  created_by  uuid references tasks.profiles (id) on delete set null,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now(),
 
@@ -190,9 +186,9 @@ create table if not exists public.tasks (
 );
 
 create index if not exists tasks_project_status_position_idx
-  on public.tasks (project_id, status, position);
+  on tasks.tasks (project_id, status, position);
 create index if not exists tasks_project_created_idx
-  on public.tasks (project_id, created_at desc);
+  on tasks.tasks (project_id, created_at desc);
 -- Overdue lookups only ever consider unfinished work.
 --
 -- Guarded on the column still being called due_date: migration 0011 renames it
@@ -202,12 +198,12 @@ do $$
 begin
   if exists (
     select 1 from information_schema.columns
-    where table_schema = 'public'
+    where table_schema = 'tasks'
       and table_name = 'tasks'
       and column_name = 'due_date'
   ) then
     execute 'create index if not exists tasks_open_due_date_idx
-      on public.tasks (due_date)
+      on tasks.tasks (due_date)
       where status <> ''done'' and due_date is not null';
   end if;
 end $$;
@@ -216,25 +212,25 @@ end $$;
 -- task_assignments — many-to-many between tasks and profiles.
 -- --------------------------------------------------------------------------
 
-create table if not exists public.task_assignments (
-  task_id     uuid not null references public.tasks (id) on delete cascade,
-  user_id     uuid not null references public.profiles (id) on delete cascade,
+create table if not exists tasks.task_assignments (
+  task_id     uuid not null references tasks.tasks (id) on delete cascade,
+  user_id     uuid not null references tasks.profiles (id) on delete cascade,
   assigned_at timestamptz not null default now(),
 
   primary key (task_id, user_id)
 );
 
 create index if not exists task_assignments_user_idx
-  on public.task_assignments (user_id);
+  on tasks.task_assignments (user_id);
 
 -- --------------------------------------------------------------------------
 -- comments — contextual discussion on a task, streamed over Realtime.
 -- --------------------------------------------------------------------------
 
-create table if not exists public.comments (
+create table if not exists tasks.comments (
   id         uuid primary key default gen_random_uuid(),
-  task_id    uuid not null references public.tasks (id) on delete cascade,
-  user_id    uuid references public.profiles (id) on delete set null,
+  task_id    uuid not null references tasks.tasks (id) on delete cascade,
+  user_id    uuid references tasks.profiles (id) on delete set null,
   content    text not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -243,7 +239,7 @@ create table if not exists public.comments (
 );
 
 create index if not exists comments_task_created_idx
-  on public.comments (task_id, created_at);
+  on tasks.comments (task_id, created_at);
 
 -- --------------------------------------------------------------------------
 -- task_activity — append-only audit trail, written by triggers.
@@ -252,10 +248,10 @@ create index if not exists comments_task_created_idx
 -- ship without an enum migration.
 -- --------------------------------------------------------------------------
 
-create table if not exists public.task_activity (
+create table if not exists tasks.task_activity (
   id         uuid primary key default gen_random_uuid(),
-  task_id    uuid not null references public.tasks (id) on delete cascade,
-  actor_id   uuid references public.profiles (id) on delete set null,
+  task_id    uuid not null references tasks.tasks (id) on delete cascade,
+  actor_id   uuid references tasks.profiles (id) on delete set null,
   action     text not null,
   field      text,
   old_value  text,
@@ -277,13 +273,13 @@ create table if not exists public.task_activity (
 );
 
 create index if not exists task_activity_task_created_idx
-  on public.task_activity (task_id, created_at desc);
+  on tasks.task_activity (task_id, created_at desc);
 
-comment on table public.task_activity is
+comment on table tasks.task_activity is
   'Append-only audit log. Written by triggers; never updated or deleted by the app.';
 
 -- =========================================================================
--- 20260913000002_functions_and_triggers.sql
+-- 20260913000002_functions_and_triggers.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -298,54 +294,54 @@ comment on table public.task_activity is
 -- Authorisation helpers
 -- --------------------------------------------------------------------------
 
-create or replace function public.current_user_role()
-returns public.user_role
+create or replace function tasks.current_user_role()
+returns tasks.user_role
 language sql
 stable
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
-  select role from public.profiles where id = auth.uid();
+  select role from tasks.profiles where id = auth.uid();
 $$;
 
-comment on function public.current_user_role() is
+comment on function tasks.current_user_role() is
   'Role of the calling user. SECURITY DEFINER so RLS on profiles does not recurse.';
 
-create or replace function public.is_admin()
+create or replace function tasks.is_admin()
 returns boolean
 language sql
 stable
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
-  select coalesce(public.current_user_role() = 'admin', false);
+  select coalesce(tasks.current_user_role() = 'admin', false);
 $$;
 
-create or replace function public.is_manager_or_admin()
+create or replace function tasks.is_manager_or_admin()
 returns boolean
 language sql
 stable
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
-  select coalesce(public.current_user_role() in ('admin', 'manager'), false);
+  select coalesce(tasks.current_user_role() in ('admin', 'manager'), false);
 $$;
 
 -- True when the caller created the task or is assigned to it.
-create or replace function public.can_edit_task(task uuid)
+create or replace function tasks.can_edit_task(task uuid)
 returns boolean
 language sql
 stable
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
   select exists (
-    select 1 from public.tasks t
+    select 1 from tasks.tasks t
     where t.id = task
       and (
         t.created_by = auth.uid()
         or exists (
-          select 1 from public.task_assignments a
+          select 1 from tasks.task_assignments a
           where a.task_id = t.id and a.user_id = auth.uid()
         )
       )
@@ -353,27 +349,27 @@ as $$
 $$;
 
 -- --------------------------------------------------------------------------
--- Signup — mirror every new auth user into public.profiles.
+-- Signup — mirror every new auth user into tasks.profiles.
 --
 -- The first account to register becomes the admin, so a fresh deployment is
 -- not locked out of project creation.
 -- --------------------------------------------------------------------------
 
-create or replace function public.handle_new_user()
+create or replace function tasks.handle_new_user()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 declare
-  assigned_role public.user_role;
+  assigned_role tasks.user_role;
 begin
-  select case when count(*) = 0 then 'admin'::public.user_role
-              else 'member'::public.user_role end
+  select case when count(*) = 0 then 'admin'::tasks.user_role
+              else 'member'::tasks.user_role end
     into assigned_role
-  from public.profiles;
+  from tasks.profiles;
 
-  insert into public.profiles (id, email, full_name, avatar_url, role)
+  insert into tasks.profiles (id, email, full_name, avatar_url, role)
   values (
     new.id,
     new.email,
@@ -387,16 +383,13 @@ begin
 end;
 $$;
 
-drop trigger if exists on_auth_user_created on auth.users;
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute function public.handle_new_user();
+-- (Maham One: no trigger on auth.users; see the end of this file.)
 
 -- --------------------------------------------------------------------------
 -- updated_at maintenance
 -- --------------------------------------------------------------------------
 
-create or replace function public.set_updated_at()
+create or replace function tasks.set_updated_at()
 returns trigger
 language plpgsql
 as $$
@@ -406,25 +399,25 @@ begin
 end;
 $$;
 
-drop trigger if exists profiles_set_updated_at on public.profiles;
+drop trigger if exists profiles_set_updated_at on tasks.profiles;
 create trigger profiles_set_updated_at
-  before update on public.profiles
-  for each row execute function public.set_updated_at();
+  before update on tasks.profiles
+  for each row execute function tasks.set_updated_at();
 
-drop trigger if exists projects_set_updated_at on public.projects;
+drop trigger if exists projects_set_updated_at on tasks.projects;
 create trigger projects_set_updated_at
-  before update on public.projects
-  for each row execute function public.set_updated_at();
+  before update on tasks.projects
+  for each row execute function tasks.set_updated_at();
 
-drop trigger if exists tasks_set_updated_at on public.tasks;
+drop trigger if exists tasks_set_updated_at on tasks.tasks;
 create trigger tasks_set_updated_at
-  before update on public.tasks
-  for each row execute function public.set_updated_at();
+  before update on tasks.tasks
+  for each row execute function tasks.set_updated_at();
 
-drop trigger if exists comments_set_updated_at on public.comments;
+drop trigger if exists comments_set_updated_at on tasks.comments;
 create trigger comments_set_updated_at
-  before update on public.comments
-  for each row execute function public.set_updated_at();
+  before update on tasks.comments
+  for each row execute function tasks.set_updated_at();
 
 -- --------------------------------------------------------------------------
 -- Role escalation guard
@@ -434,14 +427,14 @@ create trigger comments_set_updated_at
 -- yourself the admin role — only an existing admin may change `role`.
 -- --------------------------------------------------------------------------
 
-create or replace function public.guard_profile_role_change()
+create or replace function tasks.guard_profile_role_change()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 begin
-  if new.role is distinct from old.role and not public.is_admin() then
+  if new.role is distinct from old.role and not tasks.is_admin() then
     raise exception 'Only an admin can change a profile role'
       using errcode = 'insufficient_privilege';
   end if;
@@ -454,66 +447,66 @@ begin
 end;
 $$;
 
-drop trigger if exists profiles_guard_role_change on public.profiles;
+drop trigger if exists profiles_guard_role_change on tasks.profiles;
 create trigger profiles_guard_role_change
-  before update on public.profiles
-  for each row execute function public.guard_profile_role_change();
+  before update on tasks.profiles
+  for each row execute function tasks.guard_profile_role_change();
 
 -- --------------------------------------------------------------------------
 -- Task audit trail
 -- --------------------------------------------------------------------------
 
-create or replace function public.log_task_insert()
+create or replace function tasks.log_task_insert()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 begin
-  insert into public.task_activity (task_id, actor_id, action, new_value)
+  insert into tasks.task_activity (task_id, actor_id, action, new_value)
   values (new.id, auth.uid(), 'created', new.title);
   return null;
 end;
 $$;
 
-drop trigger if exists tasks_log_insert on public.tasks;
+drop trigger if exists tasks_log_insert on tasks.tasks;
 create trigger tasks_log_insert
-  after insert on public.tasks
-  for each row execute function public.log_task_insert();
+  after insert on tasks.tasks
+  for each row execute function tasks.log_task_insert();
 
-create or replace function public.log_task_update()
+create or replace function tasks.log_task_update()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 declare
   actor uuid := auth.uid();
 begin
   if new.status is distinct from old.status then
-    insert into public.task_activity (task_id, actor_id, action, field, old_value, new_value)
+    insert into tasks.task_activity (task_id, actor_id, action, field, old_value, new_value)
     values (new.id, actor, 'status_changed', 'status', old.status::text, new.status::text);
   end if;
 
   if new.priority is distinct from old.priority then
-    insert into public.task_activity (task_id, actor_id, action, field, old_value, new_value)
+    insert into tasks.task_activity (task_id, actor_id, action, field, old_value, new_value)
     values (new.id, actor, 'priority_changed', 'priority', old.priority::text, new.priority::text);
   end if;
 
   if new.due_date is distinct from old.due_date then
-    insert into public.task_activity (task_id, actor_id, action, field, old_value, new_value)
+    insert into tasks.task_activity (task_id, actor_id, action, field, old_value, new_value)
     values (new.id, actor, 'due_date_changed', 'due_date', old.due_date::text, new.due_date::text);
   end if;
 
   if new.title is distinct from old.title then
-    insert into public.task_activity (task_id, actor_id, action, field, old_value, new_value)
+    insert into tasks.task_activity (task_id, actor_id, action, field, old_value, new_value)
     values (new.id, actor, 'updated', 'title', old.title, new.title);
   end if;
 
   -- Body text is logged as a change marker only; the diff itself would bloat
   -- the audit table.
   if new.description is distinct from old.description then
-    insert into public.task_activity (task_id, actor_id, action, field)
+    insert into tasks.task_activity (task_id, actor_id, action, field)
     values (new.id, actor, 'updated', 'description');
   end if;
 
@@ -521,16 +514,16 @@ begin
 end;
 $$;
 
-drop trigger if exists tasks_log_update on public.tasks;
+drop trigger if exists tasks_log_update on tasks.tasks;
 create trigger tasks_log_update
-  after update on public.tasks
-  for each row execute function public.log_task_update();
+  after update on tasks.tasks
+  for each row execute function tasks.log_task_update();
 
-create or replace function public.log_assignment_change()
+create or replace function tasks.log_assignment_change()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 declare
   target uuid;
@@ -539,13 +532,13 @@ begin
   target := case when tg_op = 'INSERT' then new.user_id else old.user_id end;
 
   select coalesce(p.full_name, p.email) into label
-  from public.profiles p where p.id = target;
+  from tasks.profiles p where p.id = target;
 
   if tg_op = 'INSERT' then
-    insert into public.task_activity (task_id, actor_id, action, field, new_value)
+    insert into tasks.task_activity (task_id, actor_id, action, field, new_value)
     values (new.task_id, auth.uid(), 'assignee_added', 'assignees', label);
   else
-    insert into public.task_activity (task_id, actor_id, action, field, old_value)
+    insert into tasks.task_activity (task_id, actor_id, action, field, old_value)
     values (old.task_id, auth.uid(), 'assignee_removed', 'assignees', label);
   end if;
 
@@ -553,36 +546,36 @@ begin
 end;
 $$;
 
-drop trigger if exists task_assignments_log_insert on public.task_assignments;
+drop trigger if exists task_assignments_log_insert on tasks.task_assignments;
 create trigger task_assignments_log_insert
-  after insert on public.task_assignments
-  for each row execute function public.log_assignment_change();
+  after insert on tasks.task_assignments
+  for each row execute function tasks.log_assignment_change();
 
-drop trigger if exists task_assignments_log_delete on public.task_assignments;
+drop trigger if exists task_assignments_log_delete on tasks.task_assignments;
 create trigger task_assignments_log_delete
-  after delete on public.task_assignments
-  for each row execute function public.log_assignment_change();
+  after delete on tasks.task_assignments
+  for each row execute function tasks.log_assignment_change();
 
-create or replace function public.log_comment_insert()
+create or replace function tasks.log_comment_insert()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 begin
-  insert into public.task_activity (task_id, actor_id, action)
+  insert into tasks.task_activity (task_id, actor_id, action)
   values (new.task_id, new.user_id, 'commented');
   return null;
 end;
 $$;
 
-drop trigger if exists comments_log_insert on public.comments;
+drop trigger if exists comments_log_insert on tasks.comments;
 create trigger comments_log_insert
-  after insert on public.comments
-  for each row execute function public.log_comment_insert();
+  after insert on tasks.comments
+  for each row execute function tasks.log_comment_insert();
 
 -- =========================================================================
--- 20260913000003_row_level_security.sql
+-- 20260913000003_row_level_security.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -601,46 +594,46 @@ create trigger comments_log_insert
 -- AND require a JWT subject, so a role without an identity reads nothing.
 -- ---------------------------------------------------------------------------
 
-alter table public.profiles        enable row level security;
-alter table public.projects        enable row level security;
-alter table public.tasks           enable row level security;
-alter table public.task_assignments enable row level security;
-alter table public.comments        enable row level security;
-alter table public.task_activity   enable row level security;
+alter table tasks.profiles        enable row level security;
+alter table tasks.projects        enable row level security;
+alter table tasks.tasks           enable row level security;
+alter table tasks.task_assignments enable row level security;
+alter table tasks.comments        enable row level security;
+alter table tasks.task_activity   enable row level security;
 
 -- Force RLS to apply to table owners too, so a mistake in a SECURITY DEFINER
 -- function cannot quietly hand out unrestricted access.
-alter table public.profiles        force row level security;
-alter table public.projects        force row level security;
-alter table public.tasks           force row level security;
-alter table public.task_assignments force row level security;
-alter table public.comments        force row level security;
-alter table public.task_activity   force row level security;
+alter table tasks.profiles        force row level security;
+alter table tasks.projects        force row level security;
+alter table tasks.tasks           force row level security;
+alter table tasks.task_assignments force row level security;
+alter table tasks.comments        force row level security;
+alter table tasks.task_activity   force row level security;
 
 -- --------------------------------------------------------------------------
 -- profiles
 -- --------------------------------------------------------------------------
 
-drop policy if exists "profiles are readable by authenticated users" on public.profiles;
+drop policy if exists "profiles are readable by authenticated users" on tasks.profiles;
 create policy "profiles are readable by authenticated users"
-  on public.profiles for select
+  on tasks.profiles for select
   to authenticated
   using (auth.uid() is not null);
 
 -- Own row only. The guard_profile_role_change trigger blocks self-promotion.
-drop policy if exists "users update their own profile" on public.profiles;
+drop policy if exists "users update their own profile" on tasks.profiles;
 create policy "users update their own profile"
-  on public.profiles for update
+  on tasks.profiles for update
   to authenticated
   using (id = auth.uid())
   with check (id = auth.uid());
 
-drop policy if exists "admins update any profile" on public.profiles;
+drop policy if exists "admins update any profile" on tasks.profiles;
 create policy "admins update any profile"
-  on public.profiles for update
+  on tasks.profiles for update
   to authenticated
-  using (public.is_admin())
-  with check (public.is_admin());
+  using (tasks.is_admin())
+  with check (tasks.is_admin());
 
 -- No INSERT policy: rows are created exclusively by the handle_new_user
 -- trigger on auth.users. No DELETE policy: profiles die with their auth user.
@@ -649,97 +642,97 @@ create policy "admins update any profile"
 -- projects
 -- --------------------------------------------------------------------------
 
-drop policy if exists "projects are readable by authenticated users" on public.projects;
+drop policy if exists "projects are readable by authenticated users" on tasks.projects;
 create policy "projects are readable by authenticated users"
-  on public.projects for select
+  on tasks.projects for select
   to authenticated
   using (auth.uid() is not null);
 
-drop policy if exists "managers and admins create projects" on public.projects;
+drop policy if exists "managers and admins create projects" on tasks.projects;
 create policy "managers and admins create projects"
-  on public.projects for insert
+  on tasks.projects for insert
   to authenticated
-  with check (public.is_manager_or_admin() and created_by = auth.uid());
+  with check (tasks.is_manager_or_admin() and created_by = auth.uid());
 
-drop policy if exists "managers and admins update projects" on public.projects;
+drop policy if exists "managers and admins update projects" on tasks.projects;
 create policy "managers and admins update projects"
-  on public.projects for update
+  on tasks.projects for update
   to authenticated
-  using (public.is_manager_or_admin())
-  with check (public.is_manager_or_admin());
+  using (tasks.is_manager_or_admin())
+  with check (tasks.is_manager_or_admin());
 
 -- Deleting a project cascades to its tasks, so it stays with admins and the
 -- manager who created it.
-drop policy if exists "admins and owning managers delete projects" on public.projects;
+drop policy if exists "admins and owning managers delete projects" on tasks.projects;
 create policy "admins and owning managers delete projects"
-  on public.projects for delete
+  on tasks.projects for delete
   to authenticated
   using (
-    public.is_admin()
-    or (public.is_manager_or_admin() and created_by = auth.uid())
+    tasks.is_admin()
+    or (tasks.is_manager_or_admin() and created_by = auth.uid())
   );
 
 -- --------------------------------------------------------------------------
 -- tasks
 -- --------------------------------------------------------------------------
 
-drop policy if exists "tasks are readable by authenticated users" on public.tasks;
+drop policy if exists "tasks are readable by authenticated users" on tasks.tasks;
 create policy "tasks are readable by authenticated users"
-  on public.tasks for select
+  on tasks.tasks for select
   to authenticated
   using (auth.uid() is not null);
 
-drop policy if exists "authenticated users create tasks" on public.tasks;
+drop policy if exists "authenticated users create tasks" on tasks.tasks;
 create policy "authenticated users create tasks"
-  on public.tasks for insert
+  on tasks.tasks for insert
   to authenticated
   with check (created_by = auth.uid());
 
 -- Managers and admins may edit anything; members only their own or assigned
 -- tasks. can_edit_task() is SECURITY DEFINER to avoid recursing through the
 -- task_assignments policies.
-drop policy if exists "task editors update tasks" on public.tasks;
+drop policy if exists "task editors update tasks" on tasks.tasks;
 create policy "task editors update tasks"
-  on public.tasks for update
+  on tasks.tasks for update
   to authenticated
-  using (public.is_manager_or_admin() or public.can_edit_task(id))
-  with check (public.is_manager_or_admin() or public.can_edit_task(id));
+  using (tasks.is_manager_or_admin() or tasks.can_edit_task(id))
+  with check (tasks.is_manager_or_admin() or tasks.can_edit_task(id));
 
-drop policy if exists "managers admins and creators delete tasks" on public.tasks;
+drop policy if exists "managers admins and creators delete tasks" on tasks.tasks;
 create policy "managers admins and creators delete tasks"
-  on public.tasks for delete
+  on tasks.tasks for delete
   to authenticated
-  using (public.is_manager_or_admin() or created_by = auth.uid());
+  using (tasks.is_manager_or_admin() or created_by = auth.uid());
 
 -- --------------------------------------------------------------------------
 -- task_assignments
 -- --------------------------------------------------------------------------
 
-drop policy if exists "assignments are readable by authenticated users" on public.task_assignments;
+drop policy if exists "assignments are readable by authenticated users" on tasks.task_assignments;
 create policy "assignments are readable by authenticated users"
-  on public.task_assignments for select
+  on tasks.task_assignments for select
   to authenticated
   using (auth.uid() is not null);
 
 -- Whoever may edit the task may change who works on it. Members can also pick
 -- up unassigned work themselves.
-drop policy if exists "task editors add assignees" on public.task_assignments;
+drop policy if exists "task editors add assignees" on tasks.task_assignments;
 create policy "task editors add assignees"
-  on public.task_assignments for insert
+  on tasks.task_assignments for insert
   to authenticated
   with check (
-    public.is_manager_or_admin()
-    or public.can_edit_task(task_id)
+    tasks.is_manager_or_admin()
+    or tasks.can_edit_task(task_id)
     or user_id = auth.uid()
   );
 
-drop policy if exists "task editors remove assignees" on public.task_assignments;
+drop policy if exists "task editors remove assignees" on tasks.task_assignments;
 create policy "task editors remove assignees"
-  on public.task_assignments for delete
+  on tasks.task_assignments for delete
   to authenticated
   using (
-    public.is_manager_or_admin()
-    or public.can_edit_task(task_id)
+    tasks.is_manager_or_admin()
+    or tasks.can_edit_task(task_id)
     or user_id = auth.uid()
   );
 
@@ -747,30 +740,30 @@ create policy "task editors remove assignees"
 -- comments
 -- --------------------------------------------------------------------------
 
-drop policy if exists "comments are readable by authenticated users" on public.comments;
+drop policy if exists "comments are readable by authenticated users" on tasks.comments;
 create policy "comments are readable by authenticated users"
-  on public.comments for select
+  on tasks.comments for select
   to authenticated
   using (auth.uid() is not null);
 
-drop policy if exists "users write their own comments" on public.comments;
+drop policy if exists "users write their own comments" on tasks.comments;
 create policy "users write their own comments"
-  on public.comments for insert
+  on tasks.comments for insert
   to authenticated
   with check (user_id = auth.uid());
 
-drop policy if exists "users edit their own comments" on public.comments;
+drop policy if exists "users edit their own comments" on tasks.comments;
 create policy "users edit their own comments"
-  on public.comments for update
+  on tasks.comments for update
   to authenticated
   using (user_id = auth.uid())
   with check (user_id = auth.uid());
 
-drop policy if exists "authors and admins delete comments" on public.comments;
+drop policy if exists "authors and admins delete comments" on tasks.comments;
 create policy "authors and admins delete comments"
-  on public.comments for delete
+  on tasks.comments for delete
   to authenticated
-  using (user_id = auth.uid() or public.is_admin());
+  using (user_id = auth.uid() or tasks.is_admin());
 
 -- --------------------------------------------------------------------------
 -- task_activity
@@ -780,9 +773,9 @@ create policy "authors and admins delete comments"
 -- UPDATE and DELETE policies is what makes the log genuinely append-only.
 -- --------------------------------------------------------------------------
 
-drop policy if exists "activity is readable by authenticated users" on public.task_activity;
+drop policy if exists "activity is readable by authenticated users" on tasks.task_activity;
 create policy "activity is readable by authenticated users"
-  on public.task_activity for select
+  on tasks.task_activity for select
   to authenticated
   using (auth.uid() is not null);
 
@@ -796,21 +789,21 @@ create policy "activity is readable by authenticated users"
 -- `anon` is deliberately granted nothing — there is no public read surface.
 -- --------------------------------------------------------------------------
 
-grant select, update on public.profiles to authenticated;
-grant select, insert, update, delete on public.projects to authenticated;
-grant select, insert, update, delete on public.tasks to authenticated;
-grant select, insert, delete on public.task_assignments to authenticated;
-grant select, insert, update, delete on public.comments to authenticated;
+grant select, update on tasks.profiles to authenticated;
+grant select, insert, update, delete on tasks.projects to authenticated;
+grant select, insert, update, delete on tasks.tasks to authenticated;
+grant select, insert, delete on tasks.task_assignments to authenticated;
+grant select, insert, update, delete on tasks.comments to authenticated;
 -- Select only: the audit trail is written exclusively by triggers.
-grant select on public.task_activity to authenticated;
+grant select on tasks.task_activity to authenticated;
 
-grant execute on function public.current_user_role() to authenticated;
-grant execute on function public.is_admin() to authenticated;
-grant execute on function public.is_manager_or_admin() to authenticated;
-grant execute on function public.can_edit_task(uuid) to authenticated;
+grant execute on function tasks.current_user_role() to authenticated;
+grant execute on function tasks.is_admin() to authenticated;
+grant execute on function tasks.is_manager_or_admin() to authenticated;
+grant execute on function tasks.can_edit_task(uuid) to authenticated;
 
 -- =========================================================================
--- 20260913000004_realtime.sql
+-- 20260913000004_realtime.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -838,10 +831,10 @@ begin
     if not exists (
       select 1 from pg_publication_tables
       where pubname = 'supabase_realtime'
-        and schemaname = 'public'
+        and schemaname = 'tasks'
         and tablename = target
     ) then
-      execute format('alter publication supabase_realtime add table public.%I', target);
+      execute format('alter publication supabase_realtime add table tasks.%I', target);
     end if;
   end loop;
 end $$;
@@ -849,11 +842,11 @@ end $$;
 -- Realtime UPDATE payloads only carry the columns needed to identify a row
 -- unless the replica identity is full. The board diffs old vs new status, so
 -- tasks needs the complete old row.
-alter table public.tasks replica identity full;
-alter table public.comments replica identity full;
+alter table tasks.tasks replica identity full;
+alter table tasks.comments replica identity full;
 
 -- =========================================================================
--- 20260913000005_protect_last_admin.sql
+-- 20260913000005_protect_last_admin.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -864,18 +857,18 @@ alter table public.comments replica identity full;
 -- in-app way to recover. This makes that specific transition fail.
 -- ---------------------------------------------------------------------------
 
-create or replace function public.prevent_last_admin_demotion()
+create or replace function tasks.prevent_last_admin_demotion()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 declare
   remaining integer;
 begin
   if old.role = 'admin' and new.role is distinct from old.role then
     select count(*) into remaining
-    from public.profiles
+    from tasks.profiles
     where role = 'admin' and id <> old.id;
 
     if remaining = 0 then
@@ -890,13 +883,13 @@ $$;
 
 -- Runs after guard_profile_role_change (alphabetical order among BEFORE
 -- triggers on the same event), so permission is checked before this.
-drop trigger if exists profiles_protect_last_admin on public.profiles;
+drop trigger if exists profiles_protect_last_admin on tasks.profiles;
 create trigger profiles_protect_last_admin
-  before update on public.profiles
-  for each row execute function public.prevent_last_admin_demotion();
+  before update on tasks.profiles
+  for each row execute function tasks.prevent_last_admin_demotion();
 
 -- =========================================================================
--- 20260913000006_general_tasks_and_review_gate.sql
+-- 20260913000006_general_tasks_and_review_gate.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -912,25 +905,25 @@ create trigger profiles_protect_last_admin
 -- General tasks: project_id becomes optional.
 -- --------------------------------------------------------------------------
 
-alter table public.tasks alter column project_id drop not null;
+alter table tasks.tasks alter column project_id drop not null;
 
-comment on column public.tasks.project_id is
+comment on column tasks.tasks.project_id is
   'NULL marks a general task: assigned work that belongs to no project.';
 
 -- Board ordering for the general list, mirroring the per-project index.
 create index if not exists tasks_general_status_position_idx
-  on public.tasks (status, position)
+  on tasks.tasks (status, position)
   where project_id is null;
 
 -- Only managers and admins may open general tasks; anyone may still create a
 -- task inside a project.
-drop policy if exists "authenticated users create tasks" on public.tasks;
+drop policy if exists "authenticated users create tasks" on tasks.tasks;
 create policy "authenticated users create tasks"
-  on public.tasks for insert
+  on tasks.tasks for insert
   to authenticated
   with check (
     created_by = auth.uid()
-    and (project_id is not null or public.is_manager_or_admin())
+    and (project_id is not null or tasks.is_manager_or_admin())
   );
 
 -- --------------------------------------------------------------------------
@@ -946,16 +939,16 @@ create policy "authenticated users create tasks"
 -- the gate exists to protect.
 -- --------------------------------------------------------------------------
 
-create or replace function public.enforce_review_gate()
+create or replace function tasks.enforce_review_gate()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 begin
   if new.status is distinct from old.status
      and 'done' in (new.status::text, old.status::text)
-     and not public.is_manager_or_admin()
+     and not tasks.is_manager_or_admin()
   then
     if new.status = 'done' then
       raise exception 'Only a manager or admin can mark a task done. Move it to In Review instead.'
@@ -970,27 +963,27 @@ begin
 end;
 $$;
 
-drop trigger if exists tasks_enforce_review_gate on public.tasks;
+drop trigger if exists tasks_enforce_review_gate on tasks.tasks;
 create trigger tasks_enforce_review_gate
-  before update on public.tasks
-  for each row execute function public.enforce_review_gate();
+  before update on tasks.tasks
+  for each row execute function tasks.enforce_review_gate();
 
 -- Exposed so the UI can disable the Done option up front rather than letting
 -- the user discover the rule by hitting an error.
-create or replace function public.can_complete_tasks()
+create or replace function tasks.can_complete_tasks()
 returns boolean
 language sql
 stable
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
-  select public.is_manager_or_admin();
+  select tasks.is_manager_or_admin();
 $$;
 
-grant execute on function public.can_complete_tasks() to authenticated;
+grant execute on function tasks.can_complete_tasks() to authenticated;
 
 -- =========================================================================
--- 20260913000007_attachments.sql
+-- 20260913000007_attachments.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -1000,10 +993,10 @@ grant execute on function public.can_complete_tasks() to authenticated;
 -- A row is either a file (storage_path set) or a link (url set), never both.
 -- ---------------------------------------------------------------------------
 
-create table if not exists public.task_attachments (
+create table if not exists tasks.task_attachments (
   id           uuid primary key default gen_random_uuid(),
-  task_id      uuid not null references public.tasks (id) on delete cascade,
-  uploaded_by  uuid references public.profiles (id) on delete set null,
+  task_id      uuid not null references tasks.tasks (id) on delete cascade,
+  uploaded_by  uuid references tasks.profiles (id) on delete set null,
   kind         text not null check (kind in ('file', 'link')),
   name         text not null,
   storage_path text,
@@ -1032,45 +1025,45 @@ create table if not exists public.task_attachments (
 );
 
 create index if not exists task_attachments_task_idx
-  on public.task_attachments (task_id, created_at desc);
+  on tasks.task_attachments (task_id, created_at desc);
 
 create unique index if not exists task_attachments_storage_path_key
-  on public.task_attachments (storage_path)
+  on tasks.task_attachments (storage_path)
   where storage_path is not null;
 
-comment on table public.task_attachments is
+comment on table tasks.task_attachments is
   'Files and links attached to a task. Files live in the task-attachments bucket.';
 
 -- --------------------------------------------------------------------------
 -- Row Level Security
 -- --------------------------------------------------------------------------
 
-alter table public.task_attachments enable row level security;
-alter table public.task_attachments force row level security;
+alter table tasks.task_attachments enable row level security;
+alter table tasks.task_attachments force row level security;
 
-drop policy if exists "attachments are readable by authenticated users" on public.task_attachments;
+drop policy if exists "attachments are readable by authenticated users" on tasks.task_attachments;
 create policy "attachments are readable by authenticated users"
-  on public.task_attachments for select
+  on tasks.task_attachments for select
   to authenticated
   using (auth.uid() is not null);
 
 -- Anyone who may edit the task may attach to it.
-drop policy if exists "task editors add attachments" on public.task_attachments;
+drop policy if exists "task editors add attachments" on tasks.task_attachments;
 create policy "task editors add attachments"
-  on public.task_attachments for insert
+  on tasks.task_attachments for insert
   to authenticated
   with check (
     uploaded_by = auth.uid()
-    and (public.is_manager_or_admin() or public.can_edit_task(task_id))
+    and (tasks.is_manager_or_admin() or tasks.can_edit_task(task_id))
   );
 
-drop policy if exists "uploaders and managers remove attachments" on public.task_attachments;
+drop policy if exists "uploaders and managers remove attachments" on tasks.task_attachments;
 create policy "uploaders and managers remove attachments"
-  on public.task_attachments for delete
+  on tasks.task_attachments for delete
   to authenticated
-  using (uploaded_by = auth.uid() or public.is_manager_or_admin());
+  using (uploaded_by = auth.uid() or tasks.is_manager_or_admin());
 
-grant select, insert, delete on public.task_attachments to authenticated;
+grant select, insert, delete on tasks.task_attachments to authenticated;
 
 -- --------------------------------------------------------------------------
 -- Storage bucket
@@ -1092,7 +1085,7 @@ begin
   end if;
 
   insert into storage.buckets (id, name, public, file_size_limit)
-  values ('task-attachments', 'task-attachments', false, 26214400)
+  values ('tasks-attachments', 'tasks-attachments', false, 26214400)
   on conflict (id) do update
     set public = false,
         file_size_limit = excluded.file_size_limit;
@@ -1101,18 +1094,18 @@ begin
   execute $p$create policy "attachment objects readable by authenticated"
     on storage.objects for select
     to authenticated
-    using (bucket_id = 'task-attachments' and auth.uid() is not null)$p$;
+    using (bucket_id = 'tasks-attachments' and auth.uid() is not null)$p$;
 
   execute $p$drop policy if exists "attachment objects writable by task editors" on storage.objects$p$;
   execute $p$create policy "attachment objects writable by task editors"
     on storage.objects for insert
     to authenticated
     with check (
-      bucket_id = 'task-attachments'
+      bucket_id = 'tasks-attachments'
       and owner = auth.uid()
       and (
-        public.is_manager_or_admin()
-        or public.can_edit_task(nullif(split_part(name, '/', 1), '')::uuid)
+        tasks.is_manager_or_admin()
+        or tasks.can_edit_task(nullif(split_part(name, '/', 1), '')::uuid)
       )
     )$p$;
 
@@ -1121,13 +1114,13 @@ begin
     on storage.objects for delete
     to authenticated
     using (
-      bucket_id = 'task-attachments'
-      and (owner = auth.uid() or public.is_manager_or_admin())
+      bucket_id = 'tasks-attachments'
+      and (owner = auth.uid() or tasks.is_manager_or_admin())
     )$p$;
 end $$;
 
 -- =========================================================================
--- 20260913000008_notifications.sql
+-- 20260913000008_notifications.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -1138,15 +1131,15 @@ end $$;
 -- to its recipient.
 -- ---------------------------------------------------------------------------
 
-create table if not exists public.notifications (
+create table if not exists tasks.notifications (
   id         uuid primary key default gen_random_uuid(),
-  user_id    uuid not null references public.profiles (id) on delete cascade,
-  actor_id   uuid references public.profiles (id) on delete set null,
+  user_id    uuid not null references tasks.profiles (id) on delete cascade,
+  actor_id   uuid references tasks.profiles (id) on delete set null,
   type       text not null,
   title      text not null,
   body       text,
-  task_id    uuid references public.tasks (id) on delete cascade,
-  project_id uuid references public.projects (id) on delete cascade,
+  task_id    uuid references tasks.tasks (id) on delete cascade,
+  project_id uuid references tasks.projects (id) on delete cascade,
   read_at    timestamptz,
   created_at timestamptz not null default now(),
 
@@ -1164,45 +1157,45 @@ create table if not exists public.notifications (
 
 -- Drives the unread badge and the newest-first list.
 create index if not exists notifications_user_created_idx
-  on public.notifications (user_id, created_at desc);
+  on tasks.notifications (user_id, created_at desc);
 create index if not exists notifications_user_unread_idx
-  on public.notifications (user_id)
+  on tasks.notifications (user_id)
   where read_at is null;
 
-alter table public.notifications enable row level security;
-alter table public.notifications force row level security;
+alter table tasks.notifications enable row level security;
+alter table tasks.notifications force row level security;
 
 -- Strictly private: unlike the rest of this schema, a notification is visible
 -- only to its recipient.
-drop policy if exists "users read their own notifications" on public.notifications;
+drop policy if exists "users read their own notifications" on tasks.notifications;
 create policy "users read their own notifications"
-  on public.notifications for select
+  on tasks.notifications for select
   to authenticated
   using (user_id = auth.uid());
 
 -- Recipients may only mark as read; the content is written by triggers.
-drop policy if exists "users update their own notifications" on public.notifications;
+drop policy if exists "users update their own notifications" on tasks.notifications;
 create policy "users update their own notifications"
-  on public.notifications for update
+  on tasks.notifications for update
   to authenticated
   using (user_id = auth.uid())
   with check (user_id = auth.uid());
 
-drop policy if exists "users delete their own notifications" on public.notifications;
+drop policy if exists "users delete their own notifications" on tasks.notifications;
 create policy "users delete their own notifications"
-  on public.notifications for delete
+  on tasks.notifications for delete
   to authenticated
   using (user_id = auth.uid());
 
 -- No INSERT policy or grant: rows come only from the SECURITY DEFINER triggers
 -- below, so nobody can forge a notification to another user.
-grant select, update, delete on public.notifications to authenticated;
+grant select, update, delete on tasks.notifications to authenticated;
 
 -- --------------------------------------------------------------------------
 -- Helper
 -- --------------------------------------------------------------------------
 
-create or replace function public.push_notification(
+create or replace function tasks.push_notification(
   recipient uuid,
   actor uuid,
   kind text,
@@ -1214,7 +1207,7 @@ create or replace function public.push_notification(
 returns void
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 begin
   -- Never notify someone about their own action, and never about a missing user.
@@ -1222,7 +1215,7 @@ begin
     return;
   end if;
 
-  insert into public.notifications (user_id, actor_id, type, title, body, task_id, project_id)
+  insert into tasks.notifications (user_id, actor_id, type, title, body, task_id, project_id)
   values (recipient, actor, kind, heading, detail, task, project);
 end;
 $$;
@@ -1231,26 +1224,26 @@ $$;
 -- Assignment
 -- --------------------------------------------------------------------------
 
-create or replace function public.notify_assignment()
+create or replace function tasks.notify_assignment()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 declare
-  t public.tasks%rowtype;
+  t tasks.tasks%rowtype;
 begin
   if tg_op = 'INSERT' then
-    select * into t from public.tasks where id = new.task_id;
-    perform public.push_notification(
+    select * into t from tasks.tasks where id = new.task_id;
+    perform tasks.push_notification(
       new.user_id, auth.uid(), 'task_assigned',
       'You were assigned a task', t.title, t.id, t.project_id
     );
   else
-    select * into t from public.tasks where id = old.task_id;
+    select * into t from tasks.tasks where id = old.task_id;
     -- The task may already be gone when the assignment cascades away.
     if found then
-      perform public.push_notification(
+      perform tasks.push_notification(
         old.user_id, auth.uid(), 'task_unassigned',
         'You were removed from a task', t.title, t.id, t.project_id
       );
@@ -1261,15 +1254,15 @@ begin
 end;
 $$;
 
-drop trigger if exists task_assignments_notify_insert on public.task_assignments;
+drop trigger if exists task_assignments_notify_insert on tasks.task_assignments;
 create trigger task_assignments_notify_insert
-  after insert on public.task_assignments
-  for each row execute function public.notify_assignment();
+  after insert on tasks.task_assignments
+  for each row execute function tasks.notify_assignment();
 
-drop trigger if exists task_assignments_notify_delete on public.task_assignments;
+drop trigger if exists task_assignments_notify_delete on tasks.task_assignments;
 create trigger task_assignments_notify_delete
-  after delete on public.task_assignments
-  for each row execute function public.notify_assignment();
+  after delete on tasks.task_assignments
+  for each row execute function tasks.notify_assignment();
 
 -- --------------------------------------------------------------------------
 -- Status changes
@@ -1278,11 +1271,11 @@ create trigger task_assignments_notify_delete
 -- the people who worked on it.
 -- --------------------------------------------------------------------------
 
-create or replace function public.notify_status_change()
+create or replace function tasks.notify_status_change()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 declare
   actor uuid := auth.uid();
@@ -1296,15 +1289,15 @@ begin
     -- The task's creator reviews it; for general tasks with no creator left,
     -- fall back to every manager and admin.
     if new.created_by is not null then
-      perform public.push_notification(
+      perform tasks.push_notification(
         new.created_by, actor, 'task_review_requested',
         'A task is ready for review', new.title, new.id, new.project_id
       );
     else
       for recipient in
-        select id from public.profiles where role in ('admin', 'manager')
+        select id from tasks.profiles where role in ('admin', 'manager')
       loop
-        perform public.push_notification(
+        perform tasks.push_notification(
           recipient, actor, 'task_review_requested',
           'A task is ready for review', new.title, new.id, new.project_id
         );
@@ -1313,11 +1306,11 @@ begin
 
   elsif new.status = 'done' then
     for recipient in
-      select user_id from public.task_assignments where task_id = new.id
+      select user_id from tasks.task_assignments where task_id = new.id
       union
       select new.created_by where new.created_by is not null
     loop
-      perform public.push_notification(
+      perform tasks.push_notification(
         recipient, actor, 'task_completed',
         'A task was marked done', new.title, new.id, new.project_id
       );
@@ -1328,10 +1321,10 @@ begin
 end;
 $$;
 
-drop trigger if exists tasks_notify_status_change on public.tasks;
+drop trigger if exists tasks_notify_status_change on tasks.tasks;
 create trigger tasks_notify_status_change
-  after update on public.tasks
-  for each row execute function public.notify_status_change();
+  after update on tasks.tasks
+  for each row execute function tasks.notify_status_change();
 
 -- --------------------------------------------------------------------------
 -- Comments and @mentions
@@ -1341,18 +1334,18 @@ create trigger tasks_notify_status_change
 -- notifies the people it names.
 -- --------------------------------------------------------------------------
 
-create or replace function public.notify_comment()
+create or replace function tasks.notify_comment()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 declare
-  t public.tasks%rowtype;
+  t tasks.tasks%rowtype;
   recipient uuid;
   mentioned uuid[];
 begin
-  select * into t from public.tasks where id = new.task_id;
+  select * into t from tasks.tasks where id = new.task_id;
   if not found then
     return null;
   end if;
@@ -1360,7 +1353,7 @@ begin
   -- Anyone named with @Full Name, or @local-part of their email.
   select coalesce(array_agg(p.id), '{}')
     into mentioned
-  from public.profiles p
+  from tasks.profiles p
   where p.id <> coalesce(new.user_id, '00000000-0000-0000-0000-000000000000'::uuid)
     and (
       (p.full_name is not null and new.content ilike '%@' || p.full_name || '%')
@@ -1368,7 +1361,7 @@ begin
     );
 
   foreach recipient in array mentioned loop
-    perform public.push_notification(
+    perform tasks.push_notification(
       recipient, new.user_id, 'task_mentioned',
       'You were mentioned in a comment', left(new.content, 140), t.id, t.project_id
     );
@@ -1376,12 +1369,12 @@ begin
 
   -- Everyone else with a stake in the task: its assignees and its creator.
   for recipient in
-    select a.user_id from public.task_assignments a where a.task_id = t.id
+    select a.user_id from tasks.task_assignments a where a.task_id = t.id
     union
     select t.created_by where t.created_by is not null
   loop
     if not (recipient = any(mentioned)) then
-      perform public.push_notification(
+      perform tasks.push_notification(
         recipient, new.user_id, 'task_commented',
         'New comment on a task', left(new.content, 140), t.id, t.project_id
       );
@@ -1392,10 +1385,10 @@ begin
 end;
 $$;
 
-drop trigger if exists comments_notify on public.comments;
+drop trigger if exists comments_notify on tasks.comments;
 create trigger comments_notify
-  after insert on public.comments
-  for each row execute function public.notify_comment();
+  after insert on tasks.comments
+  for each row execute function tasks.notify_comment();
 
 -- --------------------------------------------------------------------------
 -- Realtime — the bell updates without a refresh.
@@ -1411,15 +1404,15 @@ begin
   if not exists (
     select 1 from pg_publication_tables
     where pubname = 'supabase_realtime'
-      and schemaname = 'public'
+      and schemaname = 'tasks'
       and tablename = 'notifications'
   ) then
-    alter publication supabase_realtime add table public.notifications;
+    alter publication supabase_realtime add table tasks.notifications;
   end if;
 end $$;
 
 -- =========================================================================
--- 20260913000009_member_view_only_details.sql
+-- 20260913000009_member_view_only_details.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -1449,14 +1442,14 @@ end $$;
 -- the previous row.
 -- --------------------------------------------------------------------------
 
-create or replace function public.enforce_task_field_permissions()
+create or replace function tasks.enforce_task_field_permissions()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 begin
-  if public.is_manager_or_admin() then
+  if tasks.is_manager_or_admin() then
     return new;
   end if;
 
@@ -1476,28 +1469,28 @@ begin
 end;
 $$;
 
-drop trigger if exists tasks_enforce_field_permissions on public.tasks;
+drop trigger if exists tasks_enforce_field_permissions on tasks.tasks;
 create trigger tasks_enforce_field_permissions
-  before update on public.tasks
-  for each row execute function public.enforce_task_field_permissions();
+  before update on tasks.tasks
+  for each row execute function tasks.enforce_task_field_permissions();
 
 -- --------------------------------------------------------------------------
 -- Assignments — managers and admins decide who works on what.
 -- --------------------------------------------------------------------------
 
-drop policy if exists "task editors add assignees" on public.task_assignments;
-drop policy if exists "managers and admins add assignees" on public.task_assignments;
+drop policy if exists "task editors add assignees" on tasks.task_assignments;
+drop policy if exists "managers and admins add assignees" on tasks.task_assignments;
 create policy "managers and admins add assignees"
-  on public.task_assignments for insert
+  on tasks.task_assignments for insert
   to authenticated
-  with check (public.is_manager_or_admin());
+  with check (tasks.is_manager_or_admin());
 
-drop policy if exists "task editors remove assignees" on public.task_assignments;
-drop policy if exists "managers and admins remove assignees" on public.task_assignments;
+drop policy if exists "task editors remove assignees" on tasks.task_assignments;
+drop policy if exists "managers and admins remove assignees" on tasks.task_assignments;
 create policy "managers and admins remove assignees"
-  on public.task_assignments for delete
+  on tasks.task_assignments for delete
   to authenticated
-  using (public.is_manager_or_admin());
+  using (tasks.is_manager_or_admin());
 
 -- --------------------------------------------------------------------------
 -- Comments — append-only for members.
@@ -1506,51 +1499,51 @@ create policy "managers and admins remove assignees"
 -- member blank a comment, which is a deletion by another name.
 -- --------------------------------------------------------------------------
 
-drop policy if exists "users edit their own comments" on public.comments;
-drop policy if exists "managers and admins edit comments" on public.comments;
+drop policy if exists "users edit their own comments" on tasks.comments;
+drop policy if exists "managers and admins edit comments" on tasks.comments;
 create policy "managers and admins edit comments"
-  on public.comments for update
+  on tasks.comments for update
   to authenticated
-  using (public.is_manager_or_admin())
-  with check (public.is_manager_or_admin());
+  using (tasks.is_manager_or_admin())
+  with check (tasks.is_manager_or_admin());
 
-drop policy if exists "authors and admins delete comments" on public.comments;
-drop policy if exists "managers and admins delete comments" on public.comments;
+drop policy if exists "authors and admins delete comments" on tasks.comments;
+drop policy if exists "managers and admins delete comments" on tasks.comments;
 create policy "managers and admins delete comments"
-  on public.comments for delete
+  on tasks.comments for delete
   to authenticated
-  using (public.is_manager_or_admin());
+  using (tasks.is_manager_or_admin());
 
 -- --------------------------------------------------------------------------
 -- Deleting a task is a planning action too.
 -- --------------------------------------------------------------------------
 
-drop policy if exists "managers admins and creators delete tasks" on public.tasks;
-drop policy if exists "managers and admins delete tasks" on public.tasks;
+drop policy if exists "managers admins and creators delete tasks" on tasks.tasks;
+drop policy if exists "managers and admins delete tasks" on tasks.tasks;
 create policy "managers and admins delete tasks"
-  on public.tasks for delete
+  on tasks.tasks for delete
   to authenticated
-  using (public.is_manager_or_admin());
+  using (tasks.is_manager_or_admin());
 
 -- --------------------------------------------------------------------------
 -- Exposed so the UI can render details read-only rather than letting someone
 -- type into a field whose save is going to be refused.
 -- --------------------------------------------------------------------------
 
-create or replace function public.can_manage_task_details()
+create or replace function tasks.can_manage_task_details()
 returns boolean
 language sql
 stable
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
-  select public.is_manager_or_admin();
+  select tasks.is_manager_or_admin();
 $$;
 
-grant execute on function public.can_manage_task_details() to authenticated;
+grant execute on function tasks.can_manage_task_details() to authenticated;
 
 -- =========================================================================
--- 20260913000010_fix_delete_task_audit.sql
+-- 20260913000010_fix_delete_task_audit.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -1571,11 +1564,11 @@ grant execute on function public.can_manage_task_details() to authenticated;
 -- notify_assignment already guarded this case; log_assignment_change did not.
 -- ---------------------------------------------------------------------------
 
-create or replace function public.log_assignment_change()
+create or replace function tasks.log_assignment_change()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 declare
   target    uuid;
@@ -1585,20 +1578,20 @@ begin
   parent_id := case when tg_op = 'INSERT' then new.task_id else old.task_id end;
 
   -- The assignment is cascading away with its task; there is nothing to log.
-  if not exists (select 1 from public.tasks where id = parent_id) then
+  if not exists (select 1 from tasks.tasks where id = parent_id) then
     return null;
   end if;
 
   target := case when tg_op = 'INSERT' then new.user_id else old.user_id end;
 
   select coalesce(p.full_name, p.email) into label
-  from public.profiles p where p.id = target;
+  from tasks.profiles p where p.id = target;
 
   if tg_op = 'INSERT' then
-    insert into public.task_activity (task_id, actor_id, action, field, new_value)
+    insert into tasks.task_activity (task_id, actor_id, action, field, new_value)
     values (new.task_id, auth.uid(), 'assignee_added', 'assignees', label);
   else
-    insert into public.task_activity (task_id, actor_id, action, field, old_value)
+    insert into tasks.task_activity (task_id, actor_id, action, field, old_value)
     values (old.task_id, auth.uid(), 'assignee_removed', 'assignees', label);
   end if;
 
@@ -1607,7 +1600,7 @@ end;
 $$;
 
 -- =========================================================================
--- 20260913000011_due_time_and_positions.sql
+-- 20260913000011_due_time_and_positions.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -1626,56 +1619,56 @@ do $$
 begin
   if exists (
     select 1 from information_schema.columns
-    where table_schema = 'public' and table_name = 'tasks' and column_name = 'due_date'
+    where table_schema = 'tasks' and table_name = 'tasks' and column_name = 'due_date'
   ) then
-    alter table public.tasks
+    alter table tasks.tasks
       alter column due_date type timestamptz
       using (due_date::timestamp + interval '23 hours 59 minutes');
 
-    alter table public.tasks rename column due_date to due_at;
+    alter table tasks.tasks rename column due_date to due_at;
   end if;
 end $$;
 
-comment on column public.tasks.due_at is
+comment on column tasks.tasks.due_at is
   'When the task is due, including time of day. Stored as an absolute instant.';
 
-drop index if exists public.tasks_open_due_date_idx;
+drop index if exists tasks.tasks_open_due_date_idx;
 create index if not exists tasks_open_due_at_idx
-  on public.tasks (due_at)
+  on tasks.tasks (due_at)
   where status <> 'done' and due_at is not null;
 
 -- The audit trigger references the old column name.
-create or replace function public.log_task_update()
+create or replace function tasks.log_task_update()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 declare
   actor uuid := auth.uid();
 begin
   if new.status is distinct from old.status then
-    insert into public.task_activity (task_id, actor_id, action, field, old_value, new_value)
+    insert into tasks.task_activity (task_id, actor_id, action, field, old_value, new_value)
     values (new.id, actor, 'status_changed', 'status', old.status::text, new.status::text);
   end if;
 
   if new.priority is distinct from old.priority then
-    insert into public.task_activity (task_id, actor_id, action, field, old_value, new_value)
+    insert into tasks.task_activity (task_id, actor_id, action, field, old_value, new_value)
     values (new.id, actor, 'priority_changed', 'priority', old.priority::text, new.priority::text);
   end if;
 
   if new.due_at is distinct from old.due_at then
-    insert into public.task_activity (task_id, actor_id, action, field, old_value, new_value)
+    insert into tasks.task_activity (task_id, actor_id, action, field, old_value, new_value)
     values (new.id, actor, 'due_date_changed', 'due_at', old.due_at::text, new.due_at::text);
   end if;
 
   if new.title is distinct from old.title then
-    insert into public.task_activity (task_id, actor_id, action, field, old_value, new_value)
+    insert into tasks.task_activity (task_id, actor_id, action, field, old_value, new_value)
     values (new.id, actor, 'updated', 'title', old.title, new.title);
   end if;
 
   if new.description is distinct from old.description then
-    insert into public.task_activity (task_id, actor_id, action, field)
+    insert into tasks.task_activity (task_id, actor_id, action, field)
     values (new.id, actor, 'updated', 'description');
   end if;
 
@@ -1684,14 +1677,14 @@ end;
 $$;
 
 -- The member field guard references it too.
-create or replace function public.enforce_task_field_permissions()
+create or replace function tasks.enforce_task_field_permissions()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 begin
-  if public.is_manager_or_admin() then
+  if tasks.is_manager_or_admin() then
     return new;
   end if;
 
@@ -1717,30 +1710,30 @@ $$;
 -- The UI labels it "Position".
 -- --------------------------------------------------------------------------
 
-alter table public.profiles
+alter table tasks.profiles
   add column if not exists job_title text;
 
-alter table public.profiles
+alter table tasks.profiles
   drop constraint if exists profiles_job_title_length;
-alter table public.profiles
+alter table tasks.profiles
   add constraint profiles_job_title_length
-  check (job_title is null or length(btrim(job_title)) between 1 and 60);
+  check (job_title is null or length(btrim(job_title)) between 1 and 60) not valid;
 
 -- Positions are assigned, not self-declared: the same guard that blocks
 -- self-promotion now also pins job_title for anyone who is not an admin.
-create or replace function public.guard_profile_role_change()
+create or replace function tasks.guard_profile_role_change()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 begin
-  if new.role is distinct from old.role and not public.is_admin() then
+  if new.role is distinct from old.role and not tasks.is_admin() then
     raise exception 'Only an admin can change a profile role'
       using errcode = 'insufficient_privilege';
   end if;
 
-  if new.job_title is distinct from old.job_title and not public.is_admin() then
+  if new.job_title is distinct from old.job_title and not tasks.is_admin() then
     raise exception 'Only an admin can change a job position'
       using errcode = 'insufficient_privilege';
   end if;
@@ -1771,7 +1764,7 @@ begin
   end if;
 
   insert into storage.buckets (id, name, public, file_size_limit)
-  values ('avatars', 'avatars', true, 2097152)
+  values ('tasks-avatars', 'tasks-avatars', true, 2097152)
   on conflict (id) do update
     set public = true,
         file_size_limit = excluded.file_size_limit;
@@ -1779,14 +1772,14 @@ begin
   execute $p$drop policy if exists "avatars are publicly readable" on storage.objects$p$;
   execute $p$create policy "avatars are publicly readable"
     on storage.objects for select
-    using (bucket_id = 'avatars')$p$;
+    using (bucket_id = 'tasks-avatars')$p$;
 
   execute $p$drop policy if exists "users upload their own avatar" on storage.objects$p$;
   execute $p$create policy "users upload their own avatar"
     on storage.objects for insert
     to authenticated
     with check (
-      bucket_id = 'avatars'
+      bucket_id = 'tasks-avatars'
       and nullif(split_part(name, '/', 1), '') = auth.uid()::text
     )$p$;
 
@@ -1795,7 +1788,7 @@ begin
     on storage.objects for update
     to authenticated
     using (
-      bucket_id = 'avatars'
+      bucket_id = 'tasks-avatars'
       and nullif(split_part(name, '/', 1), '') = auth.uid()::text
     )$p$;
 
@@ -1804,16 +1797,16 @@ begin
     on storage.objects for delete
     to authenticated
     using (
-      bucket_id = 'avatars'
+      bucket_id = 'tasks-avatars'
       and (
         nullif(split_part(name, '/', 1), '') = auth.uid()::text
-        or public.is_admin()
+        or tasks.is_admin()
       )
     )$p$;
 end $$;
 
 -- =========================================================================
--- 20260913000012_project_membership.sql
+-- 20260913000012_project_membership.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -1837,19 +1830,19 @@ end $$;
 -- creator see them, and so do managers and admins.
 -- ---------------------------------------------------------------------------
 
-create table if not exists public.project_members (
-  project_id uuid not null references public.projects (id) on delete cascade,
-  user_id    uuid not null references public.profiles (id) on delete cascade,
-  added_by   uuid references public.profiles (id) on delete set null,
+create table if not exists tasks.project_members (
+  project_id uuid not null references tasks.projects (id) on delete cascade,
+  user_id    uuid not null references tasks.profiles (id) on delete cascade,
+  added_by   uuid references tasks.profiles (id) on delete set null,
   added_at   timestamptz not null default now(),
 
   primary key (project_id, user_id)
 );
 
 create index if not exists project_members_user_idx
-  on public.project_members (user_id);
+  on tasks.project_members (user_id);
 
-comment on table public.project_members is
+comment on table tasks.project_members is
   'Who can see a project. Membership is the unit of project visibility.';
 
 -- --------------------------------------------------------------------------
@@ -1859,23 +1852,23 @@ comment on table public.project_members is
 -- policies that are themselves defined in terms of these functions.
 -- --------------------------------------------------------------------------
 
-create or replace function public.can_view_project(project uuid)
+create or replace function tasks.can_view_project(project uuid)
 returns boolean
 language sql
 stable
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
   select
     project is not null
     and (
-      public.is_admin()
+      tasks.is_admin()
       or exists (
-        select 1 from public.project_members m
+        select 1 from tasks.project_members m
         where m.project_id = project and m.user_id = auth.uid()
       )
       or exists (
-        select 1 from public.projects p
+        select 1 from tasks.projects p
         where p.id = project and p.created_by = auth.uid()
       )
     );
@@ -1883,24 +1876,24 @@ $$;
 
 -- A task is visible when its project is, or — for a general task — when the
 -- caller is its creator, an assignee, or a manager or admin.
-create or replace function public.can_view_task(task uuid)
+create or replace function tasks.can_view_task(task uuid)
 returns boolean
 language sql
 stable
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
   select exists (
-    select 1 from public.tasks t
+    select 1 from tasks.tasks t
     where t.id = task
       and (
         case
-          when t.project_id is not null then public.can_view_project(t.project_id)
+          when t.project_id is not null then tasks.can_view_project(t.project_id)
           else
-            public.is_manager_or_admin()
+            tasks.is_manager_or_admin()
             or t.created_by = auth.uid()
             or exists (
-              select 1 from public.task_assignments a
+              select 1 from tasks.task_assignments a
               where a.task_id = t.id and a.user_id = auth.uid()
             )
         end
@@ -1908,23 +1901,23 @@ as $$
   );
 $$;
 
-grant execute on function public.can_view_project(uuid) to authenticated;
-grant execute on function public.can_view_task(uuid) to authenticated;
+grant execute on function tasks.can_view_project(uuid) to authenticated;
+grant execute on function tasks.can_view_task(uuid) to authenticated;
 
 -- --------------------------------------------------------------------------
 -- Keeping membership in step
 -- --------------------------------------------------------------------------
 
 -- Whoever creates a project is on it.
-create or replace function public.add_project_creator_as_member()
+create or replace function tasks.add_project_creator_as_member()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 begin
   if new.created_by is not null then
-    insert into public.project_members (project_id, user_id, added_by)
+    insert into tasks.project_members (project_id, user_id, added_by)
     values (new.id, new.created_by, new.created_by)
     on conflict do nothing;
   end if;
@@ -1932,26 +1925,26 @@ begin
 end;
 $$;
 
-drop trigger if exists projects_add_creator on public.projects;
+drop trigger if exists projects_add_creator on tasks.projects;
 create trigger projects_add_creator
-  after insert on public.projects
-  for each row execute function public.add_project_creator_as_member();
+  after insert on tasks.projects
+  for each row execute function tasks.add_project_creator_as_member();
 
 -- Being given a task in a project puts you on that project. Without this, a
 -- manager could assign work that its assignee is not allowed to open.
-create or replace function public.add_assignee_as_project_member()
+create or replace function tasks.add_assignee_as_project_member()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 declare
   target_project uuid;
 begin
-  select project_id into target_project from public.tasks where id = new.task_id;
+  select project_id into target_project from tasks.tasks where id = new.task_id;
 
   if target_project is not null then
-    insert into public.project_members (project_id, user_id, added_by)
+    insert into tasks.project_members (project_id, user_id, added_by)
     values (target_project, new.user_id, auth.uid())
     on conflict do nothing;
   end if;
@@ -1960,10 +1953,10 @@ begin
 end;
 $$;
 
-drop trigger if exists task_assignments_add_project_member on public.task_assignments;
+drop trigger if exists task_assignments_add_project_member on tasks.task_assignments;
 create trigger task_assignments_add_project_member
-  after insert on public.task_assignments
-  for each row execute function public.add_assignee_as_project_member();
+  after insert on tasks.task_assignments
+  for each row execute function tasks.add_assignee_as_project_member();
 
 -- --------------------------------------------------------------------------
 -- Backfill
@@ -1972,16 +1965,16 @@ create trigger task_assignments_add_project_member
 -- vanish for everyone but admins the moment this migration lands.
 -- --------------------------------------------------------------------------
 
-insert into public.project_members (project_id, user_id, added_by)
+insert into tasks.project_members (project_id, user_id, added_by)
 select p.id, p.created_by, p.created_by
-from public.projects p
+from tasks.projects p
 where p.created_by is not null
 on conflict do nothing;
 
-insert into public.project_members (project_id, user_id)
+insert into tasks.project_members (project_id, user_id)
 select distinct t.project_id, a.user_id
-from public.task_assignments a
-join public.tasks t on t.id = a.task_id
+from tasks.task_assignments a
+join tasks.tasks t on t.id = a.task_id
 where t.project_id is not null
 on conflict do nothing;
 
@@ -1989,114 +1982,114 @@ on conflict do nothing;
 -- RLS on project_members itself
 -- --------------------------------------------------------------------------
 
-alter table public.project_members enable row level security;
-alter table public.project_members force row level security;
+alter table tasks.project_members enable row level security;
+alter table tasks.project_members force row level security;
 
-drop policy if exists "members readable within visible projects" on public.project_members;
+drop policy if exists "members readable within visible projects" on tasks.project_members;
 create policy "members readable within visible projects"
-  on public.project_members for select
+  on tasks.project_members for select
   to authenticated
-  using (public.can_view_project(project_id));
+  using (tasks.can_view_project(project_id));
 
-drop policy if exists "managers and admins add project members" on public.project_members;
+drop policy if exists "managers and admins add project members" on tasks.project_members;
 create policy "managers and admins add project members"
-  on public.project_members for insert
+  on tasks.project_members for insert
   to authenticated
-  with check (public.is_manager_or_admin() and public.can_view_project(project_id));
+  with check (tasks.is_manager_or_admin() and tasks.can_view_project(project_id));
 
-drop policy if exists "managers and admins remove project members" on public.project_members;
+drop policy if exists "managers and admins remove project members" on tasks.project_members;
 create policy "managers and admins remove project members"
-  on public.project_members for delete
+  on tasks.project_members for delete
   to authenticated
-  using (public.is_manager_or_admin() and public.can_view_project(project_id));
+  using (tasks.is_manager_or_admin() and tasks.can_view_project(project_id));
 
-grant select, insert, delete on public.project_members to authenticated;
+grant select, insert, delete on tasks.project_members to authenticated;
 
 -- --------------------------------------------------------------------------
 -- Narrow every read policy to what the caller can actually see
 -- --------------------------------------------------------------------------
 
-drop policy if exists "projects are readable by authenticated users" on public.projects;
-drop policy if exists "projects are readable by members" on public.projects;
+drop policy if exists "projects are readable by authenticated users" on tasks.projects;
+drop policy if exists "projects are readable by members" on tasks.projects;
 create policy "projects are readable by members"
-  on public.projects for select
+  on tasks.projects for select
   to authenticated
-  using (public.can_view_project(id));
+  using (tasks.can_view_project(id));
 
-drop policy if exists "tasks are readable by authenticated users" on public.tasks;
-drop policy if exists "tasks are readable within visible projects" on public.tasks;
+drop policy if exists "tasks are readable by authenticated users" on tasks.tasks;
+drop policy if exists "tasks are readable within visible projects" on tasks.tasks;
 create policy "tasks are readable within visible projects"
-  on public.tasks for select
+  on tasks.tasks for select
   to authenticated
   using (
     case
-      when project_id is not null then public.can_view_project(project_id)
+      when project_id is not null then tasks.can_view_project(project_id)
       else
-        public.is_manager_or_admin()
+        tasks.is_manager_or_admin()
         or created_by = auth.uid()
         or exists (
-          select 1 from public.task_assignments a
+          select 1 from tasks.task_assignments a
           where a.task_id = tasks.id and a.user_id = auth.uid()
         )
     end
   );
 
-drop policy if exists "assignments are readable by authenticated users" on public.task_assignments;
-drop policy if exists "assignments readable within visible tasks" on public.task_assignments;
+drop policy if exists "assignments are readable by authenticated users" on tasks.task_assignments;
+drop policy if exists "assignments readable within visible tasks" on tasks.task_assignments;
 create policy "assignments readable within visible tasks"
-  on public.task_assignments for select
+  on tasks.task_assignments for select
   to authenticated
-  using (public.can_view_task(task_id));
+  using (tasks.can_view_task(task_id));
 
-drop policy if exists "comments are readable by authenticated users" on public.comments;
-drop policy if exists "comments readable within visible tasks" on public.comments;
+drop policy if exists "comments are readable by authenticated users" on tasks.comments;
+drop policy if exists "comments readable within visible tasks" on tasks.comments;
 create policy "comments readable within visible tasks"
-  on public.comments for select
+  on tasks.comments for select
   to authenticated
-  using (public.can_view_task(task_id));
+  using (tasks.can_view_task(task_id));
 
-drop policy if exists "activity is readable by authenticated users" on public.task_activity;
-drop policy if exists "activity readable within visible tasks" on public.task_activity;
+drop policy if exists "activity is readable by authenticated users" on tasks.task_activity;
+drop policy if exists "activity readable within visible tasks" on tasks.task_activity;
 create policy "activity readable within visible tasks"
-  on public.task_activity for select
+  on tasks.task_activity for select
   to authenticated
-  using (public.can_view_task(task_id));
+  using (tasks.can_view_task(task_id));
 
-drop policy if exists "attachments are readable by authenticated users" on public.task_attachments;
-drop policy if exists "attachments readable within visible tasks" on public.task_attachments;
+drop policy if exists "attachments are readable by authenticated users" on tasks.task_attachments;
+drop policy if exists "attachments readable within visible tasks" on tasks.task_attachments;
 create policy "attachments readable within visible tasks"
-  on public.task_attachments for select
+  on tasks.task_attachments for select
   to authenticated
-  using (public.can_view_task(task_id));
+  using (tasks.can_view_task(task_id));
 
 -- Writing follows seeing: you cannot add a task, comment or file to something
 -- you are not allowed to look at.
-drop policy if exists "authenticated users create tasks" on public.tasks;
+drop policy if exists "authenticated users create tasks" on tasks.tasks;
 create policy "authenticated users create tasks"
-  on public.tasks for insert
+  on tasks.tasks for insert
   to authenticated
   with check (
     created_by = auth.uid()
     and (
       case
-        when project_id is not null then public.can_view_project(project_id)
-        else public.is_manager_or_admin()
+        when project_id is not null then tasks.can_view_project(project_id)
+        else tasks.is_manager_or_admin()
       end
     )
   );
 
-drop policy if exists "users write their own comments" on public.comments;
+drop policy if exists "users write their own comments" on tasks.comments;
 create policy "users write their own comments"
-  on public.comments for insert
+  on tasks.comments for insert
   to authenticated
-  with check (user_id = auth.uid() and public.can_view_task(task_id));
+  with check (user_id = auth.uid() and tasks.can_view_task(task_id));
 
 -- profiles stay readable workspace-wide: the assignee picker, @mentions and
 -- the team page all need the directory, and a name and role are not the
 -- sensitive part of a project.
 
 -- =========================================================================
--- 20260913000013_follow_ups.sql
+-- 20260913000013_follow_ups.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -2110,30 +2103,30 @@ create policy "users write their own comments"
 -- the audit trail below.
 -- ---------------------------------------------------------------------------
 
-alter table public.tasks
+alter table tasks.tasks
   add column if not exists follow_up_at timestamptz;
 
-alter table public.tasks
+alter table tasks.tasks
   add column if not exists follow_up_note text;
 
-alter table public.tasks
+alter table tasks.tasks
   drop constraint if exists tasks_follow_up_note_length;
-alter table public.tasks
+alter table tasks.tasks
   add constraint tasks_follow_up_note_length
-  check (follow_up_note is null or length(btrim(follow_up_note)) between 1 and 500);
+  check (follow_up_note is null or length(btrim(follow_up_note)) between 1 and 500) not valid;
 
 -- A note without a date would never surface in the list.
-alter table public.tasks
+alter table tasks.tasks
   drop constraint if exists tasks_follow_up_note_needs_date;
-alter table public.tasks
+alter table tasks.tasks
   add constraint tasks_follow_up_note_needs_date
-  check (follow_up_note is null or follow_up_at is not null);
+  check (follow_up_note is null or follow_up_at is not null) not valid;
 
-comment on column public.tasks.follow_up_at is
+comment on column tasks.tasks.follow_up_at is
   'When this task should next be chased. Drives the follow-up list.';
 
 create index if not exists tasks_follow_up_idx
-  on public.tasks (follow_up_at)
+  on tasks.tasks (follow_up_at)
   where follow_up_at is not null and status <> 'done';
 
 -- --------------------------------------------------------------------------
@@ -2141,14 +2134,14 @@ create index if not exists tasks_follow_up_idx
 -- managers and admins set them, members see them.
 -- --------------------------------------------------------------------------
 
-create or replace function public.enforce_task_field_permissions()
+create or replace function tasks.enforce_task_field_permissions()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 begin
-  if public.is_manager_or_admin() then
+  if tasks.is_manager_or_admin() then
     return new;
   end if;
 
@@ -2173,9 +2166,9 @@ $$;
 -- even though only the next one is stored.
 -- --------------------------------------------------------------------------
 
-alter table public.task_activity
+alter table tasks.task_activity
   drop constraint if exists task_activity_action_known;
-alter table public.task_activity
+alter table tasks.task_activity
   add constraint task_activity_action_known check (
     action in (
       'created',
@@ -2189,39 +2182,39 @@ alter table public.task_activity
       'assignee_removed',
       'commented'
     )
-  );
+  ) not valid;
 
-create or replace function public.log_task_update()
+create or replace function tasks.log_task_update()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 declare
   actor uuid := auth.uid();
 begin
   if new.status is distinct from old.status then
-    insert into public.task_activity (task_id, actor_id, action, field, old_value, new_value)
+    insert into tasks.task_activity (task_id, actor_id, action, field, old_value, new_value)
     values (new.id, actor, 'status_changed', 'status', old.status::text, new.status::text);
   end if;
 
   if new.priority is distinct from old.priority then
-    insert into public.task_activity (task_id, actor_id, action, field, old_value, new_value)
+    insert into tasks.task_activity (task_id, actor_id, action, field, old_value, new_value)
     values (new.id, actor, 'priority_changed', 'priority', old.priority::text, new.priority::text);
   end if;
 
   if new.due_at is distinct from old.due_at then
-    insert into public.task_activity (task_id, actor_id, action, field, old_value, new_value)
+    insert into tasks.task_activity (task_id, actor_id, action, field, old_value, new_value)
     values (new.id, actor, 'due_date_changed', 'due_at', old.due_at::text, new.due_at::text);
   end if;
 
   if new.follow_up_at is distinct from old.follow_up_at
      or new.follow_up_note is distinct from old.follow_up_note then
     if new.follow_up_at is null then
-      insert into public.task_activity (task_id, actor_id, action, field, old_value)
+      insert into tasks.task_activity (task_id, actor_id, action, field, old_value)
       values (new.id, actor, 'follow_up_cleared', 'follow_up_at', old.follow_up_at::text);
     else
-      insert into public.task_activity (task_id, actor_id, action, field, old_value, new_value)
+      insert into tasks.task_activity (task_id, actor_id, action, field, old_value, new_value)
       values (
         new.id, actor, 'follow_up_set', 'follow_up_at',
         old.follow_up_at::text,
@@ -2232,12 +2225,12 @@ begin
   end if;
 
   if new.title is distinct from old.title then
-    insert into public.task_activity (task_id, actor_id, action, field, old_value, new_value)
+    insert into tasks.task_activity (task_id, actor_id, action, field, old_value, new_value)
     values (new.id, actor, 'updated', 'title', old.title, new.title);
   end if;
 
   if new.description is distinct from old.description then
-    insert into public.task_activity (task_id, actor_id, action, field)
+    insert into tasks.task_activity (task_id, actor_id, action, field)
     values (new.id, actor, 'updated', 'description');
   end if;
 
@@ -2246,7 +2239,7 @@ end;
 $$;
 
 -- =========================================================================
--- 20260913000014_reminders.sql
+-- 20260913000014_reminders.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -2268,8 +2261,8 @@ $$;
 -- Preferences
 -- --------------------------------------------------------------------------
 
-create table if not exists public.notification_preferences (
-  user_id uuid primary key references public.profiles (id) on delete cascade,
+create table if not exists tasks.notification_preferences (
+  user_id uuid primary key references tasks.profiles (id) on delete cascade,
 
   -- Channels. Email is on by default because the address is already known and
   -- verified by sign-up; the other two need details the user has to supply.
@@ -2311,46 +2304,46 @@ create table if not exists public.notification_preferences (
 );
 
 create unique index if not exists notification_preferences_link_code_key
-  on public.notification_preferences (telegram_link_code)
+  on tasks.notification_preferences (telegram_link_code)
   where telegram_link_code is not null;
 
-drop trigger if exists notification_preferences_set_updated_at on public.notification_preferences;
+drop trigger if exists notification_preferences_set_updated_at on tasks.notification_preferences;
 create trigger notification_preferences_set_updated_at
-  before update on public.notification_preferences
-  for each row execute function public.set_updated_at();
+  before update on tasks.notification_preferences
+  for each row execute function tasks.set_updated_at();
 
 -- Everyone gets a row, so the dispatcher never has to reason about its absence.
-create or replace function public.ensure_notification_preferences()
+create or replace function tasks.ensure_notification_preferences()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 begin
-  insert into public.notification_preferences (user_id)
+  insert into tasks.notification_preferences (user_id)
   values (new.id)
   on conflict (user_id) do nothing;
   return null;
 end;
 $$;
 
-drop trigger if exists profiles_ensure_notification_preferences on public.profiles;
+drop trigger if exists profiles_ensure_notification_preferences on tasks.profiles;
 create trigger profiles_ensure_notification_preferences
-  after insert on public.profiles
-  for each row execute function public.ensure_notification_preferences();
+  after insert on tasks.profiles
+  for each row execute function tasks.ensure_notification_preferences();
 
-insert into public.notification_preferences (user_id)
-select id from public.profiles
+insert into tasks.notification_preferences (user_id)
+select id from tasks.profiles
 on conflict (user_id) do nothing;
 
 -- --------------------------------------------------------------------------
 -- Outbound queue
 -- --------------------------------------------------------------------------
 
-create table if not exists public.reminder_queue (
+create table if not exists tasks.reminder_queue (
   id         uuid primary key default gen_random_uuid(),
-  user_id    uuid not null references public.profiles (id) on delete cascade,
-  task_id    uuid references public.tasks (id) on delete cascade,
+  user_id    uuid not null references tasks.profiles (id) on delete cascade,
+  task_id    uuid references tasks.tasks (id) on delete cascade,
 
   channel    text not null check (channel in ('email', 'telegram', 'whatsapp')),
   kind       text not null check (kind in ('assigned', 'due_soon', 'overdue', 'follow_up')),
@@ -2376,11 +2369,11 @@ create table if not exists public.reminder_queue (
 
 -- The dispatcher's query: what is pending and due, oldest first.
 create index if not exists reminder_queue_pending_idx
-  on public.reminder_queue (scheduled_for)
+  on tasks.reminder_queue (scheduled_for)
   where status = 'pending';
 
 create index if not exists reminder_queue_user_idx
-  on public.reminder_queue (user_id, created_at desc);
+  on tasks.reminder_queue (user_id, created_at desc);
 
 -- --------------------------------------------------------------------------
 -- Row Level Security
@@ -2390,32 +2383,32 @@ create index if not exists reminder_queue_user_idx
 -- dispatcher, both of which run outside RLS.
 -- --------------------------------------------------------------------------
 
-alter table public.notification_preferences enable row level security;
-alter table public.notification_preferences force row level security;
-alter table public.reminder_queue enable row level security;
-alter table public.reminder_queue force row level security;
+alter table tasks.notification_preferences enable row level security;
+alter table tasks.notification_preferences force row level security;
+alter table tasks.reminder_queue enable row level security;
+alter table tasks.reminder_queue force row level security;
 
-drop policy if exists "users read their own preferences" on public.notification_preferences;
+drop policy if exists "users read their own preferences" on tasks.notification_preferences;
 create policy "users read their own preferences"
-  on public.notification_preferences for select
+  on tasks.notification_preferences for select
   to authenticated
   using (user_id = auth.uid());
 
-drop policy if exists "users update their own preferences" on public.notification_preferences;
+drop policy if exists "users update their own preferences" on tasks.notification_preferences;
 create policy "users update their own preferences"
-  on public.notification_preferences for update
+  on tasks.notification_preferences for update
   to authenticated
   using (user_id = auth.uid())
   with check (user_id = auth.uid());
 
-drop policy if exists "users read their own reminders" on public.reminder_queue;
+drop policy if exists "users read their own reminders" on tasks.reminder_queue;
 create policy "users read their own reminders"
-  on public.reminder_queue for select
+  on tasks.reminder_queue for select
   to authenticated
   using (user_id = auth.uid());
 
-grant select, update on public.notification_preferences to authenticated;
-grant select on public.reminder_queue to authenticated;
+grant select, update on tasks.notification_preferences to authenticated;
+grant select on tasks.reminder_queue to authenticated;
 
 -- --------------------------------------------------------------------------
 -- Scheduling
@@ -2425,11 +2418,11 @@ grant select on public.reminder_queue to authenticated;
 -- something actually changes.
 -- --------------------------------------------------------------------------
 
-create or replace function public.enqueue_task_reminders()
+create or replace function tasks.enqueue_task_reminders()
 returns integer
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 declare
   inserted integer := 0;
@@ -2442,17 +2435,17 @@ begin
       p.email,
       np.email_enabled, np.telegram_enabled, np.whatsapp_enabled,
       np.telegram_chat_id, np.whatsapp_number, np.due_soon_lead_hours
-    from public.tasks t
-    join public.task_assignments a on a.task_id = t.id
-    join public.profiles p on p.id = a.user_id
-    join public.notification_preferences np on np.user_id = a.user_id
+    from tasks.tasks t
+    join tasks.task_assignments a on a.task_id = t.id
+    join tasks.profiles p on p.id = a.user_id
+    join tasks.notification_preferences np on np.user_id = a.user_id
     where t.status <> 'done'
       and t.due_at is not null
       and np.remind_due_soon
       and t.due_at > now()
       and t.due_at <= now() + make_interval(hours => np.due_soon_lead_hours)
   )
-  insert into public.reminder_queue
+  insert into tasks.reminder_queue
     (user_id, task_id, channel, kind, recipient, subject, body, dedupe_key)
   select
     c.user_id, c.task_id, ch.channel, 'due_soon',
@@ -2482,16 +2475,16 @@ begin
       a.user_id, p.email,
       np.email_enabled, np.telegram_enabled, np.whatsapp_enabled,
       np.telegram_chat_id, np.whatsapp_number, np.due_soon_lead_hours
-    from public.tasks t
-    join public.task_assignments a on a.task_id = t.id
-    join public.profiles p on p.id = a.user_id
-    join public.notification_preferences np on np.user_id = a.user_id
+    from tasks.tasks t
+    join tasks.task_assignments a on a.task_id = t.id
+    join tasks.profiles p on p.id = a.user_id
+    join tasks.notification_preferences np on np.user_id = a.user_id
     where t.status <> 'done'
       and t.due_at is not null
       and t.due_at < now()
       and np.remind_overdue
   )
-  insert into public.reminder_queue
+  insert into tasks.reminder_queue
     (user_id, task_id, channel, kind, recipient, subject, body, dedupe_key)
   select
     c.user_id, c.task_id, ch.channel, 'overdue',
@@ -2518,16 +2511,16 @@ begin
       a.user_id, p.email,
       np.email_enabled, np.telegram_enabled, np.whatsapp_enabled,
       np.telegram_chat_id, np.whatsapp_number, np.due_soon_lead_hours
-    from public.tasks t
-    join public.task_assignments a on a.task_id = t.id
-    join public.profiles p on p.id = a.user_id
-    join public.notification_preferences np on np.user_id = a.user_id
+    from tasks.tasks t
+    join tasks.task_assignments a on a.task_id = t.id
+    join tasks.profiles p on p.id = a.user_id
+    join tasks.notification_preferences np on np.user_id = a.user_id
     where t.status <> 'done'
       and t.follow_up_at is not null
       and t.follow_up_at <= now()
       and np.remind_follow_up
   )
-  insert into public.reminder_queue
+  insert into tasks.reminder_queue
     (user_id, task_id, channel, kind, recipient, subject, body, dedupe_key)
   select
     c.user_id, c.task_id, ch.channel, 'follow_up',
@@ -2553,23 +2546,23 @@ $$;
 
 -- Being handed work is worth telling someone about immediately rather than
 -- waiting for the next scheduler run.
-create or replace function public.enqueue_assignment_reminder()
+create or replace function tasks.enqueue_assignment_reminder()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 declare
-  t public.tasks%rowtype;
-  prefs public.notification_preferences%rowtype;
+  t tasks.tasks%rowtype;
+  prefs tasks.notification_preferences%rowtype;
 begin
-  select * into t from public.tasks where id = new.task_id;
+  select * into t from tasks.tasks where id = new.task_id;
   if not found then return null; end if;
 
-  select * into prefs from public.notification_preferences where user_id = new.user_id;
+  select * into prefs from tasks.notification_preferences where user_id = new.user_id;
   if not found or not prefs.remind_assigned then return null; end if;
 
-  insert into public.reminder_queue
+  insert into tasks.reminder_queue
     (user_id, task_id, channel, kind, recipient, subject, body, dedupe_key)
   select
     new.user_id, t.id, ch.channel, 'assigned',
@@ -2579,7 +2572,7 @@ begin
       || coalesce(' - due ' || to_char(t.due_at at time zone 'UTC', 'DD Mon HH24:MI') || ' UTC', '') || '.',
     'assigned:' || t.id || ':' || new.user_id || ':' || ch.channel
   from (
-    select 'email'::text as channel, (select email from public.profiles where id = new.user_id) as recipient
+    select 'email'::text as channel, (select email from tasks.profiles where id = new.user_id) as recipient
       where prefs.email_enabled
     union all
     select 'telegram', prefs.telegram_chat_id
@@ -2595,13 +2588,13 @@ begin
 end;
 $$;
 
-drop trigger if exists task_assignments_enqueue_reminder on public.task_assignments;
+drop trigger if exists task_assignments_enqueue_reminder on tasks.task_assignments;
 create trigger task_assignments_enqueue_reminder
-  after insert on public.task_assignments
-  for each row execute function public.enqueue_assignment_reminder();
+  after insert on tasks.task_assignments
+  for each row execute function tasks.enqueue_assignment_reminder();
 
 -- =========================================================================
--- 20260913000015_members_see_only_assigned.sql
+-- 20260913000015_members_see_only_assigned.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -2628,16 +2621,16 @@ create trigger task_assignments_enqueue_reminder
 -- Creating a task
 -- --------------------------------------------------------------------------
 
-drop policy if exists "authenticated users create tasks" on public.tasks;
-drop policy if exists "managers and admins create tasks" on public.tasks;
+drop policy if exists "authenticated users create tasks" on tasks.tasks;
+drop policy if exists "managers and admins create tasks" on tasks.tasks;
 create policy "managers and admins create tasks"
-  on public.tasks for insert
+  on tasks.tasks for insert
   to authenticated
   with check (
-    public.is_manager_or_admin()
+    tasks.is_manager_or_admin()
     and created_by = auth.uid()
     -- A project task still has to go in a project the creator can see.
-    and (project_id is null or public.can_view_project(project_id))
+    and (project_id is null or tasks.can_view_project(project_id))
   );
 
 -- --------------------------------------------------------------------------
@@ -2648,44 +2641,44 @@ create policy "managers and admins create tasks"
 -- one of them in step.
 -- --------------------------------------------------------------------------
 
-create or replace function public.can_view_task(task uuid)
+create or replace function tasks.can_view_task(task uuid)
 returns boolean
 language sql
 stable
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
   select exists (
-    select 1 from public.tasks t
+    select 1 from tasks.tasks t
     where t.id = task
       and (
         -- Assigned to me: the only route a member has.
         exists (
-          select 1 from public.task_assignments a
+          select 1 from tasks.task_assignments a
           where a.task_id = t.id and a.user_id = auth.uid()
         )
         -- Managers and admins see whole projects; admins see every project.
         or (
-          public.is_manager_or_admin()
-          and (t.project_id is null or public.can_view_project(t.project_id))
+          tasks.is_manager_or_admin()
+          and (t.project_id is null or tasks.can_view_project(t.project_id))
         )
       )
   );
 $$;
 
-drop policy if exists "tasks are readable within visible projects" on public.tasks;
-drop policy if exists "tasks are readable when assigned or managed" on public.tasks;
+drop policy if exists "tasks are readable within visible projects" on tasks.tasks;
+drop policy if exists "tasks are readable when assigned or managed" on tasks.tasks;
 create policy "tasks are readable when assigned or managed"
-  on public.tasks for select
+  on tasks.tasks for select
   to authenticated
   using (
     exists (
-      select 1 from public.task_assignments a
+      select 1 from tasks.task_assignments a
       where a.task_id = tasks.id and a.user_id = auth.uid()
     )
     or (
-      public.is_manager_or_admin()
-      and (project_id is null or public.can_view_project(project_id))
+      tasks.is_manager_or_admin()
+      and (project_id is null or tasks.can_view_project(project_id))
     )
   );
 
@@ -2696,12 +2689,12 @@ create policy "tasks are readable when assigned or managed"
 -- this, the assignee list would leak the existence of tasks they cannot open.
 -- --------------------------------------------------------------------------
 
-drop policy if exists "assignments readable within visible tasks" on public.task_assignments;
-drop policy if exists "assignments readable for visible tasks" on public.task_assignments;
+drop policy if exists "assignments readable within visible tasks" on tasks.task_assignments;
+drop policy if exists "assignments readable for visible tasks" on tasks.task_assignments;
 create policy "assignments readable for visible tasks"
-  on public.task_assignments for select
+  on tasks.task_assignments for select
   to authenticated
-  using (public.can_view_task(task_id));
+  using (tasks.can_view_task(task_id));
 
 -- --------------------------------------------------------------------------
 -- Projects
@@ -2711,11 +2704,11 @@ create policy "assignments readable for visible tasks"
 -- none of its other tasks.
 -- --------------------------------------------------------------------------
 
-comment on function public.can_view_task(uuid) is
+comment on function tasks.can_view_task(uuid) is
   'A task is visible when it is assigned to the caller, or when the caller is a manager or admin who can see its project.';
 
 -- =========================================================================
--- 20260914000016_personal_notes.sql
+-- 20260914000016_personal_notes.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -2732,9 +2725,9 @@ comment on function public.can_view_task(uuid) is
 -- that has to feel instant on a phone — instead of rewriting the note.
 -- ---------------------------------------------------------------------------
 
-create table if not exists public.personal_notes (
+create table if not exists tasks.personal_notes (
   id         uuid primary key default gen_random_uuid(),
-  user_id    uuid not null references public.profiles (id) on delete cascade,
+  user_id    uuid not null references tasks.profiles (id) on delete cascade,
   title      text not null default '',
   body       text not null default '',
   pinned     boolean not null default false,
@@ -2748,14 +2741,14 @@ create table if not exists public.personal_notes (
 -- The list is ordered pinned-first then most recently touched, which is also
 -- the only way it is ever read.
 create index if not exists personal_notes_user_idx
-  on public.personal_notes (user_id, pinned desc, updated_at desc);
+  on tasks.personal_notes (user_id, pinned desc, updated_at desc);
 
-create table if not exists public.personal_note_items (
+create table if not exists tasks.personal_note_items (
   id         uuid primary key default gen_random_uuid(),
-  note_id    uuid not null references public.personal_notes (id) on delete cascade,
+  note_id    uuid not null references tasks.personal_notes (id) on delete cascade,
   -- Denormalised from the note so the RLS policy is a plain column check and
   -- never has to look at another table.
-  user_id    uuid not null references public.profiles (id) on delete cascade,
+  user_id    uuid not null references tasks.profiles (id) on delete cascade,
   content    text not null default '',
   done       boolean not null default false,
   position   double precision not null default 1024,
@@ -2766,114 +2759,114 @@ create table if not exists public.personal_note_items (
 );
 
 create index if not exists personal_note_items_note_idx
-  on public.personal_note_items (note_id, position);
+  on tasks.personal_note_items (note_id, position);
 
 -- ---------------------------------------------------------------------------
 -- Keep updated_at honest, and bubble item edits up to the note so the list
 -- re-sorts when you tick something off.
 -- ---------------------------------------------------------------------------
 
-drop trigger if exists personal_notes_set_updated_at on public.personal_notes;
+drop trigger if exists personal_notes_set_updated_at on tasks.personal_notes;
 create trigger personal_notes_set_updated_at
-  before update on public.personal_notes
-  for each row execute function public.set_updated_at();
+  before update on tasks.personal_notes
+  for each row execute function tasks.set_updated_at();
 
-drop trigger if exists personal_note_items_set_updated_at on public.personal_note_items;
+drop trigger if exists personal_note_items_set_updated_at on tasks.personal_note_items;
 create trigger personal_note_items_set_updated_at
-  before update on public.personal_note_items
-  for each row execute function public.set_updated_at();
+  before update on tasks.personal_note_items
+  for each row execute function tasks.set_updated_at();
 
-create or replace function public.touch_personal_note()
+create or replace function tasks.touch_personal_note()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 begin
-  update public.personal_notes
+  update tasks.personal_notes
      set updated_at = now()
    where id = coalesce(new.note_id, old.note_id);
   return coalesce(new, old);
 end;
 $$;
 
-drop trigger if exists personal_note_items_touch_note on public.personal_note_items;
+drop trigger if exists personal_note_items_touch_note on tasks.personal_note_items;
 create trigger personal_note_items_touch_note
-  after insert or update or delete on public.personal_note_items
-  for each row execute function public.touch_personal_note();
+  after insert or update or delete on tasks.personal_note_items
+  for each row execute function tasks.touch_personal_note();
 
 -- ---------------------------------------------------------------------------
 -- Row Level Security: your own rows, and nothing else.
 -- ---------------------------------------------------------------------------
 
-alter table public.personal_notes enable row level security;
-alter table public.personal_notes force row level security;
-alter table public.personal_note_items enable row level security;
-alter table public.personal_note_items force row level security;
+alter table tasks.personal_notes enable row level security;
+alter table tasks.personal_notes force row level security;
+alter table tasks.personal_note_items enable row level security;
+alter table tasks.personal_note_items force row level security;
 
-drop policy if exists "own notes are readable" on public.personal_notes;
+drop policy if exists "own notes are readable" on tasks.personal_notes;
 create policy "own notes are readable"
-  on public.personal_notes for select
+  on tasks.personal_notes for select
   to authenticated
   using (user_id = auth.uid());
 
-drop policy if exists "own notes are writable" on public.personal_notes;
+drop policy if exists "own notes are writable" on tasks.personal_notes;
 create policy "own notes are writable"
-  on public.personal_notes for insert
+  on tasks.personal_notes for insert
   to authenticated
   with check (user_id = auth.uid());
 
-drop policy if exists "own notes are updatable" on public.personal_notes;
+drop policy if exists "own notes are updatable" on tasks.personal_notes;
 create policy "own notes are updatable"
-  on public.personal_notes for update
+  on tasks.personal_notes for update
   to authenticated
   using (user_id = auth.uid())
   with check (user_id = auth.uid());
 
-drop policy if exists "own notes are deletable" on public.personal_notes;
+drop policy if exists "own notes are deletable" on tasks.personal_notes;
 create policy "own notes are deletable"
-  on public.personal_notes for delete
+  on tasks.personal_notes for delete
   to authenticated
   using (user_id = auth.uid());
 
-drop policy if exists "own note items are readable" on public.personal_note_items;
+drop policy if exists "own note items are readable" on tasks.personal_note_items;
 create policy "own note items are readable"
-  on public.personal_note_items for select
+  on tasks.personal_note_items for select
   to authenticated
   using (user_id = auth.uid());
 
 -- The note must also be yours, so an item cannot be parked on someone else's
 -- note by forging note_id.
-drop policy if exists "own note items are writable" on public.personal_note_items;
+drop policy if exists "own note items are writable" on tasks.personal_note_items;
 create policy "own note items are writable"
-  on public.personal_note_items for insert
+  on tasks.personal_note_items for insert
   to authenticated
   with check (
     user_id = auth.uid()
     and exists (
-      select 1 from public.personal_notes n
+      select 1 from tasks.personal_notes n
        where n.id = note_id and n.user_id = auth.uid()
     )
   );
 
-drop policy if exists "own note items are updatable" on public.personal_note_items;
+drop policy if exists "own note items are updatable" on tasks.personal_note_items;
 create policy "own note items are updatable"
-  on public.personal_note_items for update
+  on tasks.personal_note_items for update
   to authenticated
   using (user_id = auth.uid())
   with check (user_id = auth.uid());
 
-drop policy if exists "own note items are deletable" on public.personal_note_items;
+drop policy if exists "own note items are deletable" on tasks.personal_note_items;
 create policy "own note items are deletable"
-  on public.personal_note_items for delete
+  on tasks.personal_note_items for delete
   to authenticated
   using (user_id = auth.uid());
 
-grant select, insert, update, delete on public.personal_notes to authenticated;
-grant select, insert, update, delete on public.personal_note_items to authenticated;
+grant select, insert, update, delete on tasks.personal_notes to authenticated;
+grant select, insert, update, delete on tasks.personal_note_items to authenticated;
 
 -- =========================================================================
--- 20260914000017_claim_reminders_and_counts.sql
+-- 20260914000017_claim_reminders_and_counts.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -2893,19 +2886,19 @@ grant select, insert, update, delete on public.personal_note_items to authentica
 -- possible and is far better than the alternative of never retrying at all.
 -- ---------------------------------------------------------------------------
 
-alter table public.reminder_queue
+alter table tasks.reminder_queue
   drop constraint if exists reminder_queue_status_check;
 
-alter table public.reminder_queue
+alter table tasks.reminder_queue
   add constraint reminder_queue_status_check
-  check (status in ('pending', 'sending', 'sent', 'failed', 'cancelled'));
+  check (status in ('pending', 'sending', 'sent', 'failed', 'cancelled')) not valid;
 
 -- When the row was picked up, so a stranded claim can be spotted and released.
-alter table public.reminder_queue
+alter table tasks.reminder_queue
   add column if not exists claimed_at timestamptz;
 
 create index if not exists reminder_queue_claimed_idx
-  on public.reminder_queue (claimed_at)
+  on tasks.reminder_queue (claimed_at)
   where status = 'sending';
 
 /**
@@ -2915,16 +2908,16 @@ create index if not exists reminder_queue_claimed_idx
  * must see every user's queue. search_path is pinned so a caller cannot
  * shadow the tables it touches.
  */
-create or replace function public.claim_reminders(batch_size integer default 40)
-returns setof public.reminder_queue
+create or replace function tasks.claim_reminders(batch_size integer default 40)
+returns setof tasks.reminder_queue
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 begin
   -- Release anything left 'sending' by a run that died. Ten minutes is far
   -- longer than any provider call and any function timeout.
-  update public.reminder_queue
+  update tasks.reminder_queue
      set status = 'pending', claimed_at = null
    where status = 'sending'
      and claimed_at < now() - interval '10 minutes';
@@ -2932,7 +2925,7 @@ begin
   return query
   with due as (
     select id
-      from public.reminder_queue
+      from tasks.reminder_queue
      where status = 'pending'
        and scheduled_for <= now()
      order by scheduled_for
@@ -2941,7 +2934,7 @@ begin
      -- blocking on each other and then both sending.
      for update skip locked
   )
-  update public.reminder_queue q
+  update tasks.reminder_queue q
      set status = 'sending', claimed_at = now()
     from due
    where q.id = due.id
@@ -2949,7 +2942,7 @@ begin
 end;
 $$;
 
-revoke all on function public.claim_reminders(integer) from public, anon, authenticated;
+revoke all on function tasks.claim_reminders(integer) from public, anon, authenticated;
 
 -- ---------------------------------------------------------------------------
 -- 2. Count tasks in the database instead of in the browser
@@ -2962,7 +2955,7 @@ revoke all on function public.claim_reminders(integer) from public, anon, authen
 -- the caller's own RLS, exactly as the old query was.
 -- ---------------------------------------------------------------------------
 
-create or replace function public.task_counts()
+create or replace function tasks.task_counts()
 returns table (
   total       bigint,
   done        bigint,
@@ -2974,7 +2967,7 @@ returns table (
 )
 language sql
 stable
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
   select
     count(*)                                                        as total,
@@ -2988,10 +2981,10 @@ as $$
         and due_at >= date_trunc('day', now())
         and due_at <  date_trunc('day', now()) + interval '1 day'
     )                                                               as due_today
-  from public.tasks;
+  from tasks.tasks;
 $$;
 
-grant execute on function public.task_counts() to authenticated;
+grant execute on function tasks.task_counts() to authenticated;
 
 /**
  * Per-assignee workload, for the dashboard's "who is busy" panel.
@@ -3000,7 +2993,7 @@ grant execute on function public.task_counts() to authenticated;
  * and every assignment in JavaScript. SECURITY INVOKER again, so a member
  * sees only their own row and a manager sees their team.
  */
-create or replace function public.workload_counts()
+create or replace function tasks.workload_counts()
 returns table (
   user_id uuid,
   open    bigint,
@@ -3009,22 +3002,22 @@ returns table (
 )
 language sql
 stable
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
   select
     a.user_id,
     count(*) filter (where t.status <> 'done')                     as open,
     count(*) filter (where t.status = 'done')                      as done,
     count(*) filter (where t.status <> 'done' and t.due_at < now()) as overdue
-  from public.task_assignments a
-  join public.tasks t on t.id = a.task_id
+  from tasks.task_assignments a
+  join tasks.tasks t on t.id = a.task_id
   group by a.user_id;
 $$;
 
-grant execute on function public.workload_counts() to authenticated;
+grant execute on function tasks.workload_counts() to authenticated;
 
 -- =========================================================================
--- 20260914000018_task_counts_timezone.sql
+-- 20260914000018_task_counts_timezone.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -3045,9 +3038,9 @@ grant execute on function public.workload_counts() to authenticated;
 
 -- The old signature has to go first: with both defined, task_counts() with no
 -- arguments is ambiguous and Postgres refuses to choose.
-drop function if exists public.task_counts();
+drop function if exists tasks.task_counts();
 
-create or replace function public.task_counts(tz text default 'UTC')
+create or replace function tasks.task_counts(tz text default 'UTC')
 returns table (
   total       bigint,
   done        bigint,
@@ -3059,7 +3052,7 @@ returns table (
 )
 language sql
 stable
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
   with zone as (
     select coalesce(
@@ -3081,17 +3074,17 @@ as $$
         -- compared as dates: exactly what the browser does.
         and (t.due_at at time zone z.name)::date = (now() at time zone z.name)::date
     )                                                               as due_today
-  from public.tasks t
+  from tasks.tasks t
   cross join zone z;
 $$;
 
-comment on function public.task_counts(text) is
+comment on function tasks.task_counts(text) is
   'Dashboard figures under the caller''s RLS. Pass an IANA timezone so "due today" means the viewer''s day; unknown names fall back to UTC.';
 
-grant execute on function public.task_counts(text) to authenticated;
+grant execute on function tasks.task_counts(text) to authenticated;
 
 -- =========================================================================
--- 20260914000019_shared_notes.sql
+-- 20260914000019_shared_notes.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -3116,19 +3109,19 @@ grant execute on function public.task_counts(text) to authenticated;
 -- so a collaborator cannot make a list theirs.
 -- ---------------------------------------------------------------------------
 
-create table if not exists public.personal_note_shares (
-  note_id  uuid not null references public.personal_notes (id) on delete cascade,
-  user_id  uuid not null references public.profiles (id) on delete cascade,
-  added_by uuid references public.profiles (id) on delete set null,
+create table if not exists tasks.personal_note_shares (
+  note_id  uuid not null references tasks.personal_notes (id) on delete cascade,
+  user_id  uuid not null references tasks.profiles (id) on delete cascade,
+  added_by uuid references tasks.profiles (id) on delete set null,
   added_at timestamptz not null default now(),
 
   primary key (note_id, user_id)
 );
 
 create index if not exists personal_note_shares_user_idx
-  on public.personal_note_shares (user_id);
+  on tasks.personal_note_shares (user_id);
 
-comment on table public.personal_note_shares is
+comment on table tasks.personal_note_shares is
   'Who a personal list has been shared with. Absence of a row is privacy.';
 
 -- --------------------------------------------------------------------------
@@ -3138,36 +3131,36 @@ comment on table public.personal_note_shares is
 -- through the policies that are themselves written in terms of them.
 -- --------------------------------------------------------------------------
 
-create or replace function public.owns_note(note uuid)
+create or replace function tasks.owns_note(note uuid)
 returns boolean
 language sql
 stable
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
   select exists (
-    select 1 from public.personal_notes n
+    select 1 from tasks.personal_notes n
      where n.id = note and n.user_id = auth.uid()
   );
 $$;
 
-create or replace function public.can_view_note(note uuid)
+create or replace function tasks.can_view_note(note uuid)
 returns boolean
 language sql
 stable
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
   select
-    public.owns_note(note)
+    tasks.owns_note(note)
     or exists (
-      select 1 from public.personal_note_shares s
+      select 1 from tasks.personal_note_shares s
        where s.note_id = note and s.user_id = auth.uid()
     );
 $$;
 
-grant execute on function public.owns_note(uuid) to authenticated;
-grant execute on function public.can_view_note(uuid) to authenticated;
+grant execute on function tasks.owns_note(uuid) to authenticated;
+grant execute on function tasks.can_view_note(uuid) to authenticated;
 
 -- --------------------------------------------------------------------------
 -- Ownership and parentage are not editable
@@ -3176,7 +3169,7 @@ grant execute on function public.can_view_note(uuid) to authenticated;
 -- or away to somebody else — or move a line onto a different note.
 -- --------------------------------------------------------------------------
 
-create or replace function public.guard_note_owner()
+create or replace function tasks.guard_note_owner()
 returns trigger
 language plpgsql
 as $$
@@ -3186,12 +3179,12 @@ begin
 end;
 $$;
 
-drop trigger if exists personal_notes_guard_owner on public.personal_notes;
+drop trigger if exists personal_notes_guard_owner on tasks.personal_notes;
 create trigger personal_notes_guard_owner
-  before update on public.personal_notes
-  for each row execute function public.guard_note_owner();
+  before update on tasks.personal_notes
+  for each row execute function tasks.guard_note_owner();
 
-create or replace function public.guard_note_item_parent()
+create or replace function tasks.guard_note_item_parent()
 returns trigger
 language plpgsql
 as $$
@@ -3202,39 +3195,39 @@ begin
 end;
 $$;
 
-drop trigger if exists personal_note_items_guard_parent on public.personal_note_items;
+drop trigger if exists personal_note_items_guard_parent on tasks.personal_note_items;
 create trigger personal_note_items_guard_parent
-  before update on public.personal_note_items
-  for each row execute function public.guard_note_item_parent();
+  before update on tasks.personal_note_items
+  for each row execute function tasks.guard_note_item_parent();
 
 -- --------------------------------------------------------------------------
 -- Notes: read and write for everyone on the list, delete for its owner
 -- --------------------------------------------------------------------------
 
-alter table public.personal_note_shares enable row level security;
-alter table public.personal_note_shares force row level security;
+alter table tasks.personal_note_shares enable row level security;
+alter table tasks.personal_note_shares force row level security;
 
-drop policy if exists "own notes are readable" on public.personal_notes;
-drop policy if exists "notes are readable by their people" on public.personal_notes;
+drop policy if exists "own notes are readable" on tasks.personal_notes;
+drop policy if exists "notes are readable by their people" on tasks.personal_notes;
 create policy "notes are readable by their people"
-  on public.personal_notes for select
+  on tasks.personal_notes for select
   to authenticated
-  using (public.can_view_note(id));
+  using (tasks.can_view_note(id));
 
-drop policy if exists "own notes are updatable" on public.personal_notes;
-drop policy if exists "notes are writable by their people" on public.personal_notes;
+drop policy if exists "own notes are updatable" on tasks.personal_notes;
+drop policy if exists "notes are writable by their people" on tasks.personal_notes;
 create policy "notes are writable by their people"
-  on public.personal_notes for update
+  on tasks.personal_notes for update
   to authenticated
-  using (public.can_view_note(id))
-  with check (public.can_view_note(id));
+  using (tasks.can_view_note(id))
+  with check (tasks.can_view_note(id));
 
 -- Deleting somebody's list is not collaboration. A collaborator leaves by
 -- removing their own share row instead.
-drop policy if exists "own notes are deletable" on public.personal_notes;
-drop policy if exists "notes are deletable by their owner" on public.personal_notes;
+drop policy if exists "own notes are deletable" on tasks.personal_notes;
+drop policy if exists "notes are deletable by their owner" on tasks.personal_notes;
 create policy "notes are deletable by their owner"
-  on public.personal_notes for delete
+  on tasks.personal_notes for delete
   to authenticated
   using (user_id = auth.uid());
 
@@ -3247,65 +3240,65 @@ create policy "notes are deletable by their owner"
 -- a shared list the lines are not all the same person's.
 -- --------------------------------------------------------------------------
 
-drop policy if exists "own note items are readable" on public.personal_note_items;
-drop policy if exists "note items are readable by their people" on public.personal_note_items;
+drop policy if exists "own note items are readable" on tasks.personal_note_items;
+drop policy if exists "note items are readable by their people" on tasks.personal_note_items;
 create policy "note items are readable by their people"
-  on public.personal_note_items for select
+  on tasks.personal_note_items for select
   to authenticated
-  using (public.can_view_note(note_id));
+  using (tasks.can_view_note(note_id));
 
-drop policy if exists "own note items are writable" on public.personal_note_items;
-drop policy if exists "note items are writable by their people" on public.personal_note_items;
+drop policy if exists "own note items are writable" on tasks.personal_note_items;
+drop policy if exists "note items are writable by their people" on tasks.personal_note_items;
 create policy "note items are writable by their people"
-  on public.personal_note_items for insert
+  on tasks.personal_note_items for insert
   to authenticated
-  with check (user_id = auth.uid() and public.can_view_note(note_id));
+  with check (user_id = auth.uid() and tasks.can_view_note(note_id));
 
-drop policy if exists "own note items are updatable" on public.personal_note_items;
-drop policy if exists "note items are updatable by their people" on public.personal_note_items;
+drop policy if exists "own note items are updatable" on tasks.personal_note_items;
+drop policy if exists "note items are updatable by their people" on tasks.personal_note_items;
 create policy "note items are updatable by their people"
-  on public.personal_note_items for update
+  on tasks.personal_note_items for update
   to authenticated
-  using (public.can_view_note(note_id))
-  with check (public.can_view_note(note_id));
+  using (tasks.can_view_note(note_id))
+  with check (tasks.can_view_note(note_id));
 
-drop policy if exists "own note items are deletable" on public.personal_note_items;
-drop policy if exists "note items are deletable by their people" on public.personal_note_items;
+drop policy if exists "own note items are deletable" on tasks.personal_note_items;
+drop policy if exists "note items are deletable by their people" on tasks.personal_note_items;
 create policy "note items are deletable by their people"
-  on public.personal_note_items for delete
+  on tasks.personal_note_items for delete
   to authenticated
-  using (public.can_view_note(note_id));
+  using (tasks.can_view_note(note_id));
 
 -- --------------------------------------------------------------------------
 -- The share rows themselves
 -- --------------------------------------------------------------------------
 
-drop policy if exists "shares are readable by their people" on public.personal_note_shares;
+drop policy if exists "shares are readable by their people" on tasks.personal_note_shares;
 create policy "shares are readable by their people"
-  on public.personal_note_shares for select
+  on tasks.personal_note_shares for select
   to authenticated
-  using (public.can_view_note(note_id));
+  using (tasks.can_view_note(note_id));
 
 -- Only the owner invites, and never themselves — they are already on it.
-drop policy if exists "owners share their notes" on public.personal_note_shares;
+drop policy if exists "owners share their notes" on tasks.personal_note_shares;
 create policy "owners share their notes"
-  on public.personal_note_shares for insert
+  on tasks.personal_note_shares for insert
   to authenticated
   with check (
-    public.owns_note(note_id)
+    tasks.owns_note(note_id)
     and added_by = auth.uid()
     and user_id <> auth.uid()
   );
 
 -- The owner removes anybody; everybody else may remove themselves, which is
 -- what leaving a list means.
-drop policy if exists "owners and leavers remove shares" on public.personal_note_shares;
+drop policy if exists "owners and leavers remove shares" on tasks.personal_note_shares;
 create policy "owners and leavers remove shares"
-  on public.personal_note_shares for delete
+  on tasks.personal_note_shares for delete
   to authenticated
-  using (public.owns_note(note_id) or user_id = auth.uid());
+  using (tasks.owns_note(note_id) or user_id = auth.uid());
 
-grant select, insert, delete on public.personal_note_shares to authenticated;
+grant select, insert, delete on tasks.personal_note_shares to authenticated;
 
 -- --------------------------------------------------------------------------
 -- Realtime
@@ -3329,20 +3322,20 @@ begin
     if not exists (
       select 1 from pg_publication_tables
       where pubname = 'supabase_realtime'
-        and schemaname = 'public'
+        and schemaname = 'tasks'
         and tablename = target
     ) then
-      execute format('alter publication supabase_realtime add table public.%I', target);
+      execute format('alter publication supabase_realtime add table tasks.%I', target);
     end if;
   end loop;
 end $$;
 
 -- A deleted line has to say which note it belonged to, and the payload for a
 -- delete carries only the identifying columns unless the whole row is kept.
-alter table public.personal_note_items replica identity full;
+alter table tasks.personal_note_items replica identity full;
 
 -- =========================================================================
--- 20260914000020_trash_tasks.sql
+-- 20260914000020_trash_tasks.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -3363,33 +3356,33 @@ alter table public.personal_note_items replica identity full;
 -- Who may bin or restore is exactly who could delete: managers and admins.
 -- ---------------------------------------------------------------------------
 
-alter table public.tasks add column if not exists deleted_at timestamptz;
+alter table tasks.tasks add column if not exists deleted_at timestamptz;
 
-comment on column public.tasks.deleted_at is
+comment on column tasks.tasks.deleted_at is
   'Set when trashed; cleared on restore. The read policy hides the row while it is set.';
 
 create index if not exists tasks_deleted_idx
-  on public.tasks (deleted_at)
+  on tasks.tasks (deleted_at)
   where deleted_at is not null;
 
 -- --------------------------------------------------------------------------
 -- The read policy from migration 0015, with the bin excluded
 -- --------------------------------------------------------------------------
 
-drop policy if exists "tasks are readable when assigned or managed" on public.tasks;
+drop policy if exists "tasks are readable when assigned or managed" on tasks.tasks;
 create policy "tasks are readable when assigned or managed"
-  on public.tasks for select
+  on tasks.tasks for select
   to authenticated
   using (
     deleted_at is null
     and (
       exists (
-        select 1 from public.task_assignments a
+        select 1 from tasks.task_assignments a
         where a.task_id = tasks.id and a.user_id = auth.uid()
       )
       or (
-        public.is_manager_or_admin()
-        and (project_id is null or public.can_view_project(project_id))
+        tasks.is_manager_or_admin()
+        and (project_id is null or tasks.can_view_project(project_id))
       )
     )
   );
@@ -3398,9 +3391,9 @@ create policy "tasks are readable when assigned or managed"
 -- Two more things the history can say
 -- --------------------------------------------------------------------------
 
-alter table public.task_activity
+alter table tasks.task_activity
   drop constraint if exists task_activity_action_known;
-alter table public.task_activity
+alter table tasks.task_activity
   add constraint task_activity_action_known check (
     action in (
       'created',
@@ -3416,7 +3409,7 @@ alter table public.task_activity
       'deleted',
       'restored'
     )
-  );
+  ) not valid;
 
 -- --------------------------------------------------------------------------
 -- Bin, restore, purge
@@ -3427,65 +3420,65 @@ alter table public.task_activity
 -- in the bin.
 -- --------------------------------------------------------------------------
 
-create or replace function public.trash_task(task uuid)
+create or replace function tasks.trash_task(task uuid)
 returns boolean
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 declare
-  target public.tasks%rowtype;
+  target tasks.tasks%rowtype;
 begin
-  select * into target from public.tasks where id = task;
+  select * into target from tasks.tasks where id = task;
   if not found or target.deleted_at is not null then
     return false;
   end if;
 
-  if not public.is_manager_or_admin() then
+  if not tasks.is_manager_or_admin() then
     return false;
   end if;
-  if target.project_id is not null and not public.can_view_project(target.project_id) then
+  if target.project_id is not null and not tasks.can_view_project(target.project_id) then
     return false;
   end if;
 
-  update public.tasks set deleted_at = now() where id = task;
+  update tasks.tasks set deleted_at = now() where id = task;
 
   -- Nothing should nag about a task that is in the bin.
-  update public.reminder_queue
+  update tasks.reminder_queue
      set status = 'cancelled'
    where task_id = task and status = 'pending';
 
-  insert into public.task_activity (task_id, actor_id, action)
+  insert into tasks.task_activity (task_id, actor_id, action)
   values (task, auth.uid(), 'deleted');
 
   return true;
 end;
 $$;
 
-create or replace function public.restore_task(task uuid)
+create or replace function tasks.restore_task(task uuid)
 returns boolean
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 declare
-  target public.tasks%rowtype;
+  target tasks.tasks%rowtype;
 begin
-  select * into target from public.tasks where id = task;
+  select * into target from tasks.tasks where id = task;
   if not found or target.deleted_at is null then
     return false;
   end if;
 
-  if not public.is_manager_or_admin() then
+  if not tasks.is_manager_or_admin() then
     return false;
   end if;
-  if target.project_id is not null and not public.can_view_project(target.project_id) then
+  if target.project_id is not null and not tasks.can_view_project(target.project_id) then
     return false;
   end if;
 
-  update public.tasks set deleted_at = null where id = task;
+  update tasks.tasks set deleted_at = null where id = task;
 
-  insert into public.task_activity (task_id, actor_id, action)
+  insert into tasks.task_activity (task_id, actor_id, action)
   values (task, auth.uid(), 'restored');
 
   return true;
@@ -3494,16 +3487,16 @@ $$;
 
 -- Run by the daily dispatcher with the service key. Deliberately not granted
 -- to authenticated: purging is housekeeping, not a user action.
-create or replace function public.purge_trashed_tasks(older_than interval default '30 days')
+create or replace function tasks.purge_trashed_tasks(older_than interval default '30 days')
 returns integer
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 declare
   removed integer;
 begin
-  delete from public.tasks
+  delete from tasks.tasks
    where deleted_at is not null
      and deleted_at < now() - older_than;
   get diagnostics removed = row_count;
@@ -3511,9 +3504,9 @@ begin
 end;
 $$;
 
-grant execute on function public.trash_task(uuid) to authenticated;
-grant execute on function public.restore_task(uuid) to authenticated;
-revoke execute on function public.purge_trashed_tasks(interval) from authenticated, anon;
+grant execute on function tasks.trash_task(uuid) to authenticated;
+grant execute on function tasks.restore_task(uuid) to authenticated;
+revoke execute on function tasks.purge_trashed_tasks(interval) from authenticated, anon;
 
 -- --------------------------------------------------------------------------
 -- Reminders skip the bin
@@ -3524,11 +3517,11 @@ revoke execute on function public.purge_trashed_tasks(interval) from authenticat
 -- file rather than retyped so the two cannot drift.
 -- --------------------------------------------------------------------------
 
-create or replace function public.enqueue_task_reminders()
+create or replace function tasks.enqueue_task_reminders()
 returns integer
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 declare
   inserted integer := 0;
@@ -3541,10 +3534,10 @@ begin
       p.email,
       np.email_enabled, np.telegram_enabled, np.whatsapp_enabled,
       np.telegram_chat_id, np.whatsapp_number, np.due_soon_lead_hours
-    from public.tasks t
-    join public.task_assignments a on a.task_id = t.id
-    join public.profiles p on p.id = a.user_id
-    join public.notification_preferences np on np.user_id = a.user_id
+    from tasks.tasks t
+    join tasks.task_assignments a on a.task_id = t.id
+    join tasks.profiles p on p.id = a.user_id
+    join tasks.notification_preferences np on np.user_id = a.user_id
     where t.status <> 'done'
       and t.deleted_at is null
       and t.due_at is not null
@@ -3552,7 +3545,7 @@ begin
       and t.due_at > now()
       and t.due_at <= now() + make_interval(hours => np.due_soon_lead_hours)
   )
-  insert into public.reminder_queue
+  insert into tasks.reminder_queue
     (user_id, task_id, channel, kind, recipient, subject, body, dedupe_key)
   select
     c.user_id, c.task_id, ch.channel, 'due_soon',
@@ -3582,17 +3575,17 @@ begin
       a.user_id, p.email,
       np.email_enabled, np.telegram_enabled, np.whatsapp_enabled,
       np.telegram_chat_id, np.whatsapp_number, np.due_soon_lead_hours
-    from public.tasks t
-    join public.task_assignments a on a.task_id = t.id
-    join public.profiles p on p.id = a.user_id
-    join public.notification_preferences np on np.user_id = a.user_id
+    from tasks.tasks t
+    join tasks.task_assignments a on a.task_id = t.id
+    join tasks.profiles p on p.id = a.user_id
+    join tasks.notification_preferences np on np.user_id = a.user_id
     where t.status <> 'done'
       and t.deleted_at is null
       and t.due_at is not null
       and t.due_at < now()
       and np.remind_overdue
   )
-  insert into public.reminder_queue
+  insert into tasks.reminder_queue
     (user_id, task_id, channel, kind, recipient, subject, body, dedupe_key)
   select
     c.user_id, c.task_id, ch.channel, 'overdue',
@@ -3619,17 +3612,17 @@ begin
       a.user_id, p.email,
       np.email_enabled, np.telegram_enabled, np.whatsapp_enabled,
       np.telegram_chat_id, np.whatsapp_number, np.due_soon_lead_hours
-    from public.tasks t
-    join public.task_assignments a on a.task_id = t.id
-    join public.profiles p on p.id = a.user_id
-    join public.notification_preferences np on np.user_id = a.user_id
+    from tasks.tasks t
+    join tasks.task_assignments a on a.task_id = t.id
+    join tasks.profiles p on p.id = a.user_id
+    join tasks.notification_preferences np on np.user_id = a.user_id
     where t.status <> 'done'
       and t.deleted_at is null
       and t.follow_up_at is not null
       and t.follow_up_at <= now()
       and np.remind_follow_up
   )
-  insert into public.reminder_queue
+  insert into tasks.reminder_queue
     (user_id, task_id, channel, kind, recipient, subject, body, dedupe_key)
   select
     c.user_id, c.task_id, ch.channel, 'follow_up',
@@ -3654,7 +3647,7 @@ end;
 $$;
 
 -- =========================================================================
--- 20260916000021_notify_missing_recipient.sql
+-- 20260916000021_notify_missing_recipient.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -3685,7 +3678,7 @@ $$;
 -- future one is covered without being remembered.
 -- ---------------------------------------------------------------------------
 
-create or replace function public.push_notification(
+create or replace function tasks.push_notification(
   recipient uuid,
   actor uuid,
   kind text,
@@ -3697,7 +3690,7 @@ create or replace function public.push_notification(
 returns void
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 begin
   -- Never notify someone about their own action.
@@ -3708,17 +3701,17 @@ begin
   -- Never notify someone who is not there any more. During a cascading delete
   -- the profile is already gone by the time the triggers on its children run,
   -- and a message to a deleted account is not worth failing the delete for.
-  if not exists (select 1 from public.profiles where id = recipient) then
+  if not exists (select 1 from tasks.profiles where id = recipient) then
     return;
   end if;
 
-  insert into public.notifications (user_id, actor_id, type, title, body, task_id, project_id)
+  insert into tasks.notifications (user_id, actor_id, type, title, body, task_id, project_id)
   values (recipient, actor, kind, heading, detail, task, project);
 end;
 $$;
 
 -- =========================================================================
--- 20260916000022_claim_task_reminders.sql
+-- 20260916000022_claim_task_reminders.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -3743,11 +3736,11 @@ $$;
 -- stranded by a dead function is released after ten minutes.
 -- ---------------------------------------------------------------------------
 
-create or replace function public.claim_task_reminders(task uuid)
-returns setof public.reminder_queue
+create or replace function tasks.claim_task_reminders(task uuid)
+returns setof tasks.reminder_queue
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 begin
   if task is null then
@@ -3755,7 +3748,7 @@ begin
   end if;
 
   -- Release anything this task left 'sending' in a run that died.
-  update public.reminder_queue
+  update tasks.reminder_queue
      set status = 'pending', claimed_at = null
    where task_id = task
      and status = 'sending'
@@ -3764,7 +3757,7 @@ begin
   return query
   with due as (
     select id
-      from public.reminder_queue
+      from tasks.reminder_queue
      where task_id = task
        and status = 'pending'
        and scheduled_for <= now()
@@ -3773,7 +3766,7 @@ begin
      limit 40
      for update skip locked
   )
-  update public.reminder_queue q
+  update tasks.reminder_queue q
      set status = 'sending', claimed_at = now()
     from due
    where q.id = due.id
@@ -3782,10 +3775,10 @@ end;
 $$;
 
 -- Only the service-role dispatcher calls this; it reads every user's queue.
-revoke all on function public.claim_task_reminders(uuid) from public, anon, authenticated;
+revoke all on function tasks.claim_task_reminders(uuid) from public, anon, authenticated;
 
 -- =========================================================================
--- 20260916000023_team_chat.sql
+-- 20260916000023_team_chat.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -3801,9 +3794,9 @@ revoke all on function public.claim_task_reminders(uuid) from public, anon, auth
 -- by the person who wrote it.
 -- ---------------------------------------------------------------------------
 
-create table if not exists public.team_messages (
+create table if not exists tasks.team_messages (
   id        uuid primary key default gen_random_uuid(),
-  author_id uuid not null references public.profiles (id) on delete cascade,
+  author_id uuid not null references tasks.profiles (id) on delete cascade,
   body      text not null,
 
   created_at timestamptz not null default now(),
@@ -3818,49 +3811,49 @@ create table if not exists public.team_messages (
 
 -- The room is read newest-last and paged from the end.
 create index if not exists team_messages_created_idx
-  on public.team_messages (created_at desc);
+  on tasks.team_messages (created_at desc);
 
-alter table public.team_messages enable row level security;
+alter table tasks.team_messages enable row level security;
 
 -- Everyone signed in is on the team, so everyone reads the room. There is no
 -- narrower rule to write: a shared room whose messages some members cannot see
 -- is not a shared room.
-drop policy if exists "team messages are readable by the team" on public.team_messages;
+drop policy if exists "team messages are readable by the team" on tasks.team_messages;
 create policy "team messages are readable by the team"
-  on public.team_messages for select
+  on tasks.team_messages for select
   to authenticated
   using (true);
 
 -- You may only speak as yourself. Without the `author_id` check a member could
 -- post a message attributed to somebody else, which is the one thing a chat
 -- must not allow.
-drop policy if exists "members write their own messages" on public.team_messages;
+drop policy if exists "members write their own messages" on tasks.team_messages;
 create policy "members write their own messages"
-  on public.team_messages for insert
+  on tasks.team_messages for insert
   to authenticated
   with check (author_id = auth.uid());
 
-drop policy if exists "authors edit their own messages" on public.team_messages;
+drop policy if exists "authors edit their own messages" on tasks.team_messages;
 create policy "authors edit their own messages"
-  on public.team_messages for update
+  on tasks.team_messages for update
   to authenticated
   using (author_id = auth.uid())
   with check (author_id = auth.uid());
 
 -- An author can delete what they said; an admin can delete anything, because
 -- somebody has to be able to remove what should not have been posted.
-drop policy if exists "authors and admins delete messages" on public.team_messages;
+drop policy if exists "authors and admins delete messages" on tasks.team_messages;
 create policy "authors and admins delete messages"
-  on public.team_messages for delete
+  on tasks.team_messages for delete
   to authenticated
-  using (author_id = auth.uid() or public.is_admin());
+  using (author_id = auth.uid() or tasks.is_admin());
 
 -- Row-level security decides *which* rows; the grant decides whether the role
 -- may touch the table at all, and both are needed. Every other table in this
 -- schema grants explicitly rather than leaning on the default privileges of
 -- the `public` schema — this one was the exception, and the symptom was a
 -- room that answered "permission denied for table team_messages".
-grant select, insert, update, delete on public.team_messages to authenticated;
+grant select, insert, update, delete on tasks.team_messages to authenticated;
 
 -- ---------------------------------------------------------------------------
 -- Realtime
@@ -3879,19 +3872,19 @@ begin
   if not exists (
     select 1 from pg_publication_tables
     where pubname = 'supabase_realtime'
-      and schemaname = 'public'
+      and schemaname = 'tasks'
       and tablename = 'team_messages'
   ) then
-    alter publication supabase_realtime add table public.team_messages;
+    alter publication supabase_realtime add table tasks.team_messages;
   end if;
 end $$;
 
 -- A delete payload carries only the identifying columns unless the replica
 -- identity is full, and the room needs to know which message went.
-alter table public.team_messages replica identity full;
+alter table tasks.team_messages replica identity full;
 
 -- =========================================================================
--- 20260919000024_direct_messages.sql
+-- 20260919000024_direct_messages.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -3901,7 +3894,7 @@ alter table public.team_messages replica identity full;
 -- literally `using (true)`. This is the opposite: a conversation is readable
 -- only by the people in it, and there is no admin override anywhere in this
 -- file. An admin can remove a message from the shared room because somebody
--- has to be able to take down what should not have been posted in public.
+-- has to be able to take down what should not have been posted in tasks.
 -- Nothing here is public, so that reason does not apply, and "private unless
 -- an admin is curious" is not private.
 --
@@ -3912,7 +3905,7 @@ alter table public.team_messages replica identity full;
 -- anything that is not a pair.
 -- ---------------------------------------------------------------------------
 
-create table if not exists public.conversations (
+create table if not exists tasks.conversations (
   id         uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
 
@@ -3921,8 +3914,8 @@ create table if not exists public.conversations (
   last_message_at timestamptz not null default now(),
 
   -- The two people, smaller id first, so (a,b) and (b,a) are the same row.
-  member_low  uuid references public.profiles (id) on delete cascade,
-  member_high uuid references public.profiles (id) on delete cascade,
+  member_low  uuid references tasks.profiles (id) on delete cascade,
+  member_high uuid references tasks.profiles (id) on delete cascade,
 
   constraint conversations_pair_ordered check (
     (member_low is null and member_high is null) or member_low < member_high
@@ -3932,15 +3925,15 @@ create table if not exists public.conversations (
 -- One thread per pair. Partial, so future group conversations — which leave
 -- both columns null — are not forced into a single row between them.
 create unique index if not exists conversations_pair_idx
-  on public.conversations (member_low, member_high)
+  on tasks.conversations (member_low, member_high)
   where member_low is not null;
 
 create index if not exists conversations_recent_idx
-  on public.conversations (last_message_at desc);
+  on tasks.conversations (last_message_at desc);
 
-create table if not exists public.conversation_participants (
-  conversation_id uuid not null references public.conversations (id) on delete cascade,
-  user_id         uuid not null references public.profiles (id) on delete cascade,
+create table if not exists tasks.conversation_participants (
+  conversation_id uuid not null references tasks.conversations (id) on delete cascade,
+  user_id         uuid not null references tasks.profiles (id) on delete cascade,
 
   -- How far this person has read. The unread count is everything after it.
   last_read_at timestamptz not null default now(),
@@ -3949,12 +3942,12 @@ create table if not exists public.conversation_participants (
 );
 
 create index if not exists conversation_participants_user_idx
-  on public.conversation_participants (user_id);
+  on tasks.conversation_participants (user_id);
 
-create table if not exists public.direct_messages (
+create table if not exists tasks.direct_messages (
   id              uuid primary key default gen_random_uuid(),
-  conversation_id uuid not null references public.conversations (id) on delete cascade,
-  author_id       uuid not null references public.profiles (id) on delete cascade,
+  conversation_id uuid not null references tasks.conversations (id) on delete cascade,
+  author_id       uuid not null references tasks.profiles (id) on delete cascade,
   body            text not null,
 
   created_at timestamptz not null default now(),
@@ -3966,7 +3959,7 @@ create table if not exists public.direct_messages (
 );
 
 create index if not exists direct_messages_thread_idx
-  on public.direct_messages (conversation_id, created_at desc);
+  on tasks.direct_messages (conversation_id, created_at desc);
 
 -- ---------------------------------------------------------------------------
 -- Membership, asked without recursion
@@ -3977,16 +3970,16 @@ create index if not exists direct_messages_thread_idx
 -- policy in this file is built on, which is what breaks the loop.
 -- ---------------------------------------------------------------------------
 
-create or replace function public.in_conversation(conversation uuid)
+create or replace function tasks.in_conversation(conversation uuid)
 returns boolean
 language sql
 stable
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
   select conversation is not null and exists (
     select 1
-      from public.conversation_participants p
+      from tasks.conversation_participants p
      where p.conversation_id = conversation
        and p.user_id = auth.uid()
   );
@@ -4002,11 +3995,11 @@ $$;
 -- the unique index decides it and the loser reads the winner's row.
 -- ---------------------------------------------------------------------------
 
-create or replace function public.start_direct_conversation(other uuid)
+create or replace function tasks.start_direct_conversation(other uuid)
 returns uuid
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 declare
   me   uuid := auth.uid();
@@ -4020,7 +4013,7 @@ begin
   if other is null or other = me then
     raise exception 'pick somebody else to message';
   end if;
-  if not exists (select 1 from public.profiles where id = other) then
+  if not exists (select 1 from tasks.profiles where id = other) then
     raise exception 'that person is not on the team';
   end if;
 
@@ -4028,14 +4021,14 @@ begin
   high := greatest(me, other);
 
   select id into found
-    from public.conversations
+    from tasks.conversations
    where member_low = low and member_high = high;
 
   if found is not null then
     return found;
   end if;
 
-  insert into public.conversations (member_low, member_high)
+  insert into tasks.conversations (member_low, member_high)
        values (low, high)
   on conflict (member_low, member_high) where member_low is not null
   do nothing
@@ -4044,12 +4037,12 @@ begin
   -- Somebody else won the race; their row is the thread.
   if found is null then
     select id into found
-      from public.conversations
+      from tasks.conversations
      where member_low = low and member_high = high;
     return found;
   end if;
 
-  insert into public.conversation_participants (conversation_id, user_id)
+  insert into tasks.conversation_participants (conversation_id, user_id)
        values (found, me), (found, other);
 
   return found;
@@ -4060,32 +4053,32 @@ $$;
 -- Keeping the list in order, and telling the other person
 -- ---------------------------------------------------------------------------
 
-create or replace function public.touch_conversation()
+create or replace function tasks.touch_conversation()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 declare
   recipient uuid;
   sender    text;
 begin
-  update public.conversations
+  update tasks.conversations
      set last_message_at = new.created_at
    where id = new.conversation_id;
 
   -- A message nobody is told about is a message nobody reads. Everyone in the
   -- conversation except whoever wrote it.
   select coalesce(p.full_name, p.email) into sender
-    from public.profiles p where p.id = new.author_id;
+    from tasks.profiles p where p.id = new.author_id;
 
   for recipient in
     select user_id
-      from public.conversation_participants
+      from tasks.conversation_participants
      where conversation_id = new.conversation_id
        and user_id <> new.author_id
   loop
-    perform public.push_direct_notification(
+    perform tasks.push_direct_notification(
       recipient, new.author_id, sender, new.body, new.conversation_id
     );
   end loop;
@@ -4096,7 +4089,7 @@ $$;
 
 -- `push_notification` writes a notification about a task; this one is about a
 -- conversation, which has no task and no project to point at.
-create or replace function public.push_direct_notification(
+create or replace function tasks.push_direct_notification(
   recipient uuid,
   actor uuid,
   heading text,
@@ -4106,7 +4099,7 @@ create or replace function public.push_direct_notification(
 returns void
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 begin
   if recipient is null or recipient = actor then
@@ -4114,32 +4107,32 @@ begin
   end if;
   -- Same guard as `push_notification`: never address a profile that has been
   -- deleted, or a cascading delete cannot finish.
-  if not exists (select 1 from public.profiles where id = recipient) then
+  if not exists (select 1 from tasks.profiles where id = recipient) then
     return;
   end if;
 
-  insert into public.notifications
+  insert into tasks.notifications
     (user_id, actor_id, type, title, body, conversation_id)
   values
     (recipient, actor, 'direct_message', heading, left(btrim(detail), 140), conversation);
 end;
 $$;
 
-drop trigger if exists direct_messages_touch on public.direct_messages;
+drop trigger if exists direct_messages_touch on tasks.direct_messages;
 create trigger direct_messages_touch
-  after insert on public.direct_messages
-  for each row execute function public.touch_conversation();
+  after insert on tasks.direct_messages
+  for each row execute function tasks.touch_conversation();
 
 -- ---------------------------------------------------------------------------
 -- A notification can now be about a conversation
 -- ---------------------------------------------------------------------------
 
-alter table public.notifications
+alter table tasks.notifications
   add column if not exists conversation_id uuid
-  references public.conversations (id) on delete cascade;
+  references tasks.conversations (id) on delete cascade;
 
-alter table public.notifications drop constraint if exists notifications_type_known;
-alter table public.notifications add constraint notifications_type_known check (
+alter table tasks.notifications drop constraint if exists notifications_type_known;
+alter table tasks.notifications add constraint notifications_type_known check (
   type in (
     'task_assigned',
     'task_unassigned',
@@ -4149,81 +4142,81 @@ alter table public.notifications add constraint notifications_type_known check (
     'task_completed',
     'direct_message'
   )
-);
+) not valid;
 
 -- ---------------------------------------------------------------------------
 -- Row-level security
 -- ---------------------------------------------------------------------------
 
-alter table public.conversations              enable row level security;
-alter table public.conversation_participants  enable row level security;
-alter table public.direct_messages            enable row level security;
+alter table tasks.conversations              enable row level security;
+alter table tasks.conversation_participants  enable row level security;
+alter table tasks.direct_messages            enable row level security;
 
 -- `force` so the rule holds for the table's owner too. A private conversation
 -- is the one place in this schema where that distinction is worth the cost.
-alter table public.conversations              force row level security;
-alter table public.conversation_participants  force row level security;
-alter table public.direct_messages            force row level security;
+alter table tasks.conversations              force row level security;
+alter table tasks.conversation_participants  force row level security;
+alter table tasks.direct_messages            force row level security;
 
-drop policy if exists "participants read their conversations" on public.conversations;
+drop policy if exists "participants read their conversations" on tasks.conversations;
 create policy "participants read their conversations"
-  on public.conversations for select
+  on tasks.conversations for select
   to authenticated
-  using (public.in_conversation(id));
+  using (tasks.in_conversation(id));
 
 -- No insert policy on purpose: conversations are opened through
 -- `start_direct_conversation`, which decides who is in one.
 
-drop policy if exists "participants see who is in the room" on public.conversation_participants;
+drop policy if exists "participants see who is in the room" on tasks.conversation_participants;
 create policy "participants see who is in the room"
-  on public.conversation_participants for select
+  on tasks.conversation_participants for select
   to authenticated
-  using (public.in_conversation(conversation_id));
+  using (tasks.in_conversation(conversation_id));
 
 -- Marking your own place, and nobody else's.
-drop policy if exists "participants mark their own place" on public.conversation_participants;
+drop policy if exists "participants mark their own place" on tasks.conversation_participants;
 create policy "participants mark their own place"
-  on public.conversation_participants for update
+  on tasks.conversation_participants for update
   to authenticated
   using (user_id = auth.uid())
   with check (user_id = auth.uid());
 
-drop policy if exists "participants read the thread" on public.direct_messages;
+drop policy if exists "participants read the thread" on tasks.direct_messages;
 create policy "participants read the thread"
-  on public.direct_messages for select
+  on tasks.direct_messages for select
   to authenticated
-  using (public.in_conversation(conversation_id));
+  using (tasks.in_conversation(conversation_id));
 
 -- You may only speak as yourself, and only where you are.
-drop policy if exists "participants write as themselves" on public.direct_messages;
+drop policy if exists "participants write as themselves" on tasks.direct_messages;
 create policy "participants write as themselves"
-  on public.direct_messages for insert
+  on tasks.direct_messages for insert
   to authenticated
   with check (
-    author_id = auth.uid() and public.in_conversation(conversation_id)
+    author_id = auth.uid() and tasks.in_conversation(conversation_id)
   );
 
-drop policy if exists "authors edit their own messages" on public.direct_messages;
+drop policy if exists "authors edit their own messages" on tasks.direct_messages;
 create policy "authors edit their own messages"
-  on public.direct_messages for update
+  on tasks.direct_messages for update
   to authenticated
   using (author_id = auth.uid())
   with check (author_id = auth.uid());
 
 -- Authors only. There is deliberately no admin clause here.
-drop policy if exists "authors delete their own messages" on public.direct_messages;
+drop policy if exists "authors delete their own messages" on tasks.direct_messages;
 create policy "authors delete their own messages"
-  on public.direct_messages for delete
+  on tasks.direct_messages for delete
   to authenticated
   using (author_id = auth.uid());
 
 -- Row-level security decides which rows; the grant decides whether the role
 -- may touch the table at all, and this schema says so explicitly everywhere.
-grant select                       on public.conversations             to authenticated;
-grant select, update               on public.conversation_participants to authenticated;
-grant select, insert, update, delete on public.direct_messages         to authenticated;
-grant execute on function public.in_conversation(uuid)            to authenticated;
-grant execute on function public.start_direct_conversation(uuid)  to authenticated;
+grant select                       on tasks.conversations             to authenticated;
+grant select, update               on tasks.conversation_participants to authenticated;
+grant select, insert, update, delete on tasks.direct_messages         to authenticated;
+grant execute on function tasks.in_conversation(uuid)            to authenticated;
+grant execute on function tasks.start_direct_conversation(uuid)  to authenticated;
 
 -- ---------------------------------------------------------------------------
 -- The list, in one question
@@ -4240,7 +4233,7 @@ grant execute on function public.start_direct_conversation(uuid)  to authenticat
 -- explicit `user_id = auth.uid()` join is the belt to that pair of braces.
 -- ---------------------------------------------------------------------------
 
-create or replace function public.my_conversations()
+create or replace function tasks.my_conversations()
 returns table (
   id              uuid,
   last_message_at timestamptz,
@@ -4255,12 +4248,12 @@ returns table (
 )
 language sql
 stable
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
   with mine as (
     select c.id, c.last_message_at, p.last_read_at
-      from public.conversations c
-      join public.conversation_participants p
+      from tasks.conversations c
+      join tasks.conversation_participants p
         on p.conversation_id = c.id
        and p.user_id = auth.uid()
   )
@@ -4278,22 +4271,22 @@ as $$
   from mine m
   left join lateral (
     select pr.id, pr.full_name, pr.email, pr.avatar_url, pr.job_title
-      from public.conversation_participants p
-      join public.profiles pr on pr.id = p.user_id
+      from tasks.conversation_participants p
+      join tasks.profiles pr on pr.id = p.user_id
      where p.conversation_id = m.id
        and p.user_id <> auth.uid()
      limit 1
   ) other on true
   left join lateral (
     select d.body, d.author_id
-      from public.direct_messages d
+      from tasks.direct_messages d
      where d.conversation_id = m.id
      order by d.created_at desc
      limit 1
   ) recent on true
   left join lateral (
     select count(*) as n
-      from public.direct_messages d
+      from tasks.direct_messages d
      where d.conversation_id = m.id
        and d.author_id <> auth.uid()
        and d.created_at > m.last_read_at
@@ -4304,23 +4297,23 @@ $$;
 -- Just the number, for the badge the shell draws on every page. Counting it
 -- here rather than summing the list above is one small query instead of one
 -- large one, on pages that will never show a conversation.
-create or replace function public.unread_direct_count()
+create or replace function tasks.unread_direct_count()
 returns bigint
 language sql
 stable
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
   select coalesce(count(d.*), 0)
-    from public.conversation_participants p
-    join public.direct_messages d
+    from tasks.conversation_participants p
+    join tasks.direct_messages d
       on d.conversation_id = p.conversation_id
      and d.author_id <> p.user_id
      and d.created_at > p.last_read_at
    where p.user_id = auth.uid();
 $$;
 
-grant execute on function public.my_conversations()      to authenticated;
-grant execute on function public.unread_direct_count()   to authenticated;
+grant execute on function tasks.my_conversations()      to authenticated;
+grant execute on function tasks.unread_direct_count()   to authenticated;
 
 -- ---------------------------------------------------------------------------
 -- Realtime
@@ -4338,19 +4331,19 @@ begin
 
   if not exists (
     select 1 from pg_publication_tables
-     where pubname = 'supabase_realtime' and schemaname = 'public'
+     where pubname = 'supabase_realtime' and schemaname = 'tasks'
        and tablename = 'direct_messages'
   ) then
-    alter publication supabase_realtime add table public.direct_messages;
+    alter publication supabase_realtime add table tasks.direct_messages;
   end if;
 end $$;
 
 -- A delete payload carries only the identifying columns unless the replica
 -- identity is full, and the thread needs to know which message went.
-alter table public.direct_messages replica identity full;
+alter table tasks.direct_messages replica identity full;
 
 -- =========================================================================
--- 20260921000025_recurring_tasks.sql
+-- 20260921000025_recurring_tasks.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -4376,7 +4369,7 @@ alter table public.direct_messages replica identity full;
 -- worth its weight until somebody asks.
 -- ---------------------------------------------------------------------------
 
-alter table public.tasks
+alter table tasks.tasks
   add column if not exists repeat_every text,
   add column if not exists repeat_interval integer not null default 1;
 
@@ -4385,32 +4378,32 @@ begin
   if not exists (
     select 1 from pg_constraint where conname = 'tasks_repeat_every_check'
   ) then
-    alter table public.tasks
+    alter table tasks.tasks
       add constraint tasks_repeat_every_check
-      check (repeat_every is null or repeat_every in ('day', 'week', 'month', 'year'));
+      check (repeat_every is null or repeat_every in ('day', 'week', 'month', 'year')) not valid;
   end if;
 
   if not exists (
     select 1 from pg_constraint where conname = 'tasks_repeat_interval_check'
   ) then
-    alter table public.tasks
+    alter table tasks.tasks
       add constraint tasks_repeat_interval_check
-      check (repeat_interval between 1 and 365);
+      check (repeat_interval between 1 and 365) not valid;
   end if;
 
   -- A repeat with no due date has nothing to advance, so it is not a repeat.
   if not exists (
     select 1 from pg_constraint where conname = 'tasks_repeat_needs_due_check'
   ) then
-    alter table public.tasks
+    alter table tasks.tasks
       add constraint tasks_repeat_needs_due_check
-      check (repeat_every is null or due_at is not null);
+      check (repeat_every is null or due_at is not null) not valid;
   end if;
 end $$;
 
-comment on column public.tasks.repeat_every is
+comment on column tasks.tasks.repeat_every is
   'Unit of the repeat rule: day, week, month or year. Null means the task happens once.';
-comment on column public.tasks.repeat_interval is
+comment on column tasks.tasks.repeat_interval is
   'How many of those units between occurrences. 2 with repeat_every = week is fortnightly.';
 
 -- ---------------------------------------------------------------------------
@@ -4427,11 +4420,11 @@ comment on column public.tasks.repeat_interval is
 -- is already overdue.
 -- ---------------------------------------------------------------------------
 
-create or replace function public.spawn_next_occurrence()
+create or replace function tasks.spawn_next_occurrence()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $fn$
 declare
   step     interval;
@@ -4457,7 +4450,7 @@ begin
     next_due := next_due + step;
   end loop;
 
-  insert into public.tasks (
+  insert into tasks.tasks (
     project_id, title, description, status, priority,
     due_at, position, created_by, repeat_every, repeat_interval
   )
@@ -4468,14 +4461,14 @@ begin
   returning id into copy_id;
 
   -- The same people, on the same job.
-  insert into public.task_assignments (task_id, user_id)
+  insert into tasks.task_assignments (task_id, user_id)
   select copy_id, user_id
-    from public.task_assignments
+    from tasks.task_assignments
    where task_id = new.id;
 
   -- The rule travels with the occurrence that is still open, so the closed
   -- one reads as what it is: a thing that was done on a date.
-  update public.tasks
+  update tasks.tasks
      set repeat_every = null
    where id = new.id;
 
@@ -4483,18 +4476,18 @@ begin
 end;
 $fn$;
 
-comment on function public.spawn_next_occurrence() is
+comment on function tasks.spawn_next_occurrence() is
   'Opens the next occurrence of a repeating task when one is closed, and moves the rule onto it.';
 
-drop trigger if exists tasks_spawn_next_occurrence on public.tasks;
+drop trigger if exists tasks_spawn_next_occurrence on tasks.tasks;
 
 create trigger tasks_spawn_next_occurrence
-  after update of status on public.tasks
+  after update of status on tasks.tasks
   for each row
-  execute function public.spawn_next_occurrence();
+  execute function tasks.spawn_next_occurrence();
 
 -- =========================================================================
--- 20260921000026_web_push.sql
+-- 20260921000026_web_push.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -4518,9 +4511,9 @@ create trigger tasks_spawn_next_occurrence
 -- the secret is never written down anywhere a person could paste it.
 -- ---------------------------------------------------------------------------
 
-create table if not exists public.push_subscriptions (
+create table if not exists tasks.push_subscriptions (
   id          uuid primary key default gen_random_uuid(),
-  user_id     uuid not null references public.profiles (id) on delete cascade,
+  user_id     uuid not null references tasks.profiles (id) on delete cascade,
   -- The browser's own address for this device. Unique across everybody: it is
   -- issued by the push service and two people cannot hold the same one.
   endpoint    text not null unique,
@@ -4534,36 +4527,36 @@ create table if not exists public.push_subscriptions (
 );
 
 create index if not exists push_subscriptions_user_idx
-  on public.push_subscriptions (user_id);
+  on tasks.push_subscriptions (user_id);
 
-alter table public.push_subscriptions enable row level security;
-alter table public.push_subscriptions force row level security;
+alter table tasks.push_subscriptions enable row level security;
+alter table tasks.push_subscriptions force row level security;
 
-drop policy if exists "people see their own devices" on public.push_subscriptions;
+drop policy if exists "people see their own devices" on tasks.push_subscriptions;
 create policy "people see their own devices"
-  on public.push_subscriptions for select
+  on tasks.push_subscriptions for select
   using (user_id = auth.uid());
 
-drop policy if exists "people register their own devices" on public.push_subscriptions;
+drop policy if exists "people register their own devices" on tasks.push_subscriptions;
 create policy "people register their own devices"
-  on public.push_subscriptions for insert
+  on tasks.push_subscriptions for insert
   with check (user_id = auth.uid());
 
-drop policy if exists "people update their own devices" on public.push_subscriptions;
+drop policy if exists "people update their own devices" on tasks.push_subscriptions;
 create policy "people update their own devices"
-  on public.push_subscriptions for update
+  on tasks.push_subscriptions for update
   using (user_id = auth.uid())
   with check (user_id = auth.uid());
 
 -- No admin clause, deliberately: which devices somebody carries is theirs.
-drop policy if exists "people remove their own devices" on public.push_subscriptions;
+drop policy if exists "people remove their own devices" on tasks.push_subscriptions;
 create policy "people remove their own devices"
-  on public.push_subscriptions for delete
+  on tasks.push_subscriptions for delete
   using (user_id = auth.uid());
 
-grant select, insert, update, delete on public.push_subscriptions to authenticated;
+grant select, insert, update, delete on tasks.push_subscriptions to authenticated;
 
-comment on table public.push_subscriptions is
+comment on table tasks.push_subscriptions is
   'One row per device that has agreed to notifications. The dispatcher sends to these with the service role.';
 
 -- ---------------------------------------------------------------------------
@@ -4574,38 +4567,38 @@ comment on table public.push_subscriptions is
 -- the devices are subscribed to.
 -- ---------------------------------------------------------------------------
 
-create table if not exists public.web_push_keys (
+create table if not exists tasks.web_push_keys (
   id          boolean primary key default true check (id),
   public_key  text not null,
   private_key text not null,
   created_at  timestamptz not null default now()
 );
 
-alter table public.web_push_keys enable row level security;
-alter table public.web_push_keys force row level security;
+alter table tasks.web_push_keys enable row level security;
+alter table tasks.web_push_keys force row level security;
 -- No policies and no grants: the service role bypasses both, everybody else
 -- is refused. The public half is handed to the browser by the app, which
 -- reads this row on the server.
 
-comment on table public.web_push_keys is
+comment on table tasks.web_push_keys is
   'The VAPID key pair, generated on first use. Unreadable with a user session by design.';
 
 -- ---------------------------------------------------------------------------
 -- The channel
 -- ---------------------------------------------------------------------------
 
-alter table public.notification_preferences
+alter table tasks.notification_preferences
   add column if not exists push_enabled boolean not null default false;
 
-comment on column public.notification_preferences.push_enabled is
+comment on column tasks.notification_preferences.push_enabled is
   'Whether reminders are also pushed to this person''s registered devices.';
 
-alter table public.reminder_queue
+alter table tasks.reminder_queue
   drop constraint if exists reminder_queue_channel_check;
 
-alter table public.reminder_queue
+alter table tasks.reminder_queue
   add constraint reminder_queue_channel_check
-  check (channel in ('email', 'telegram', 'whatsapp', 'push'));
+  check (channel in ('email', 'telegram', 'whatsapp', 'push')) not valid;
 
 -- ---------------------------------------------------------------------------
 -- Queueing to devices
@@ -4621,11 +4614,11 @@ alter table public.reminder_queue
 -- keeps its exact spelling and nothing that has been sent is sent again.
 -- ---------------------------------------------------------------------------
 
-create or replace function public.enqueue_task_reminders()
+create or replace function tasks.enqueue_task_reminders()
 returns integer
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 declare
   inserted integer := 0;
@@ -4638,10 +4631,10 @@ begin
       p.email,
       np.email_enabled, np.telegram_enabled, np.whatsapp_enabled, np.push_enabled,
       np.telegram_chat_id, np.whatsapp_number, np.due_soon_lead_hours
-    from public.tasks t
-    join public.task_assignments a on a.task_id = t.id
-    join public.profiles p on p.id = a.user_id
-    join public.notification_preferences np on np.user_id = a.user_id
+    from tasks.tasks t
+    join tasks.task_assignments a on a.task_id = t.id
+    join tasks.profiles p on p.id = a.user_id
+    join tasks.notification_preferences np on np.user_id = a.user_id
     where t.status <> 'done'
       and t.deleted_at is null
       and t.due_at is not null
@@ -4649,7 +4642,7 @@ begin
       and t.due_at > now()
       and t.due_at <= now() + make_interval(hours => np.due_soon_lead_hours)
   )
-  insert into public.reminder_queue
+  insert into tasks.reminder_queue
     (user_id, task_id, channel, kind, recipient, subject, body, dedupe_key)
   select
     c.user_id, c.task_id, ch.channel, 'due_soon',
@@ -4672,7 +4665,7 @@ begin
     -- both. The others have exactly one address each, which is why they were
     -- a plain case expression until now.
     select 'push', s.endpoint
-      from public.push_subscriptions s
+      from tasks.push_subscriptions s
      where c.push_enabled and s.user_id = c.user_id
   ) ch
   on conflict (dedupe_key) do nothing;
@@ -4687,17 +4680,17 @@ begin
       a.user_id, p.email,
       np.email_enabled, np.telegram_enabled, np.whatsapp_enabled, np.push_enabled,
       np.telegram_chat_id, np.whatsapp_number, np.due_soon_lead_hours
-    from public.tasks t
-    join public.task_assignments a on a.task_id = t.id
-    join public.profiles p on p.id = a.user_id
-    join public.notification_preferences np on np.user_id = a.user_id
+    from tasks.tasks t
+    join tasks.task_assignments a on a.task_id = t.id
+    join tasks.profiles p on p.id = a.user_id
+    join tasks.notification_preferences np on np.user_id = a.user_id
     where t.status <> 'done'
       and t.deleted_at is null
       and t.due_at is not null
       and t.due_at < now()
       and np.remind_overdue
   )
-  insert into public.reminder_queue
+  insert into tasks.reminder_queue
     (user_id, task_id, channel, kind, recipient, subject, body, dedupe_key)
   select
     c.user_id, c.task_id, ch.channel, 'overdue',
@@ -4720,7 +4713,7 @@ begin
     -- both. The others have exactly one address each, which is why they were
     -- a plain case expression until now.
     select 'push', s.endpoint
-      from public.push_subscriptions s
+      from tasks.push_subscriptions s
      where c.push_enabled and s.user_id = c.user_id
   ) ch
   on conflict (dedupe_key) do nothing;
@@ -4732,17 +4725,17 @@ begin
       a.user_id, p.email,
       np.email_enabled, np.telegram_enabled, np.whatsapp_enabled, np.push_enabled,
       np.telegram_chat_id, np.whatsapp_number, np.due_soon_lead_hours
-    from public.tasks t
-    join public.task_assignments a on a.task_id = t.id
-    join public.profiles p on p.id = a.user_id
-    join public.notification_preferences np on np.user_id = a.user_id
+    from tasks.tasks t
+    join tasks.task_assignments a on a.task_id = t.id
+    join tasks.profiles p on p.id = a.user_id
+    join tasks.notification_preferences np on np.user_id = a.user_id
     where t.status <> 'done'
       and t.deleted_at is null
       and t.follow_up_at is not null
       and t.follow_up_at <= now()
       and np.remind_follow_up
   )
-  insert into public.reminder_queue
+  insert into tasks.reminder_queue
     (user_id, task_id, channel, kind, recipient, subject, body, dedupe_key)
   select
     c.user_id, c.task_id, ch.channel, 'follow_up',
@@ -4765,7 +4758,7 @@ begin
     -- both. The others have exactly one address each, which is why they were
     -- a plain case expression until now.
     select 'push', s.endpoint
-      from public.push_subscriptions s
+      from tasks.push_subscriptions s
      where c.push_enabled and s.user_id = c.user_id
   ) ch
   on conflict (dedupe_key) do nothing;
@@ -4784,23 +4777,23 @@ $$;
 -- The dedupe key gains the endpoint for push only, as above.
 -- ---------------------------------------------------------------------------
 
-create or replace function public.enqueue_assignment_reminder()
+create or replace function tasks.enqueue_assignment_reminder()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $fn$
 declare
-  t public.tasks%rowtype;
-  prefs public.notification_preferences%rowtype;
+  t tasks.tasks%rowtype;
+  prefs tasks.notification_preferences%rowtype;
 begin
-  select * into t from public.tasks where id = new.task_id;
+  select * into t from tasks.tasks where id = new.task_id;
   if not found then return null; end if;
 
-  select * into prefs from public.notification_preferences where user_id = new.user_id;
+  select * into prefs from tasks.notification_preferences where user_id = new.user_id;
   if not found or not prefs.remind_assigned then return null; end if;
 
-  insert into public.reminder_queue
+  insert into tasks.reminder_queue
     (user_id, task_id, channel, kind, recipient, subject, body, dedupe_key)
   select
     new.user_id, t.id, ch.channel, 'assigned',
@@ -4811,7 +4804,7 @@ begin
     'assigned:' || t.id || ':' || new.user_id || ':' || ch.channel
       || case when ch.channel = 'push' then ':' || ch.recipient else '' end
   from (
-    select 'email'::text as channel, (select email from public.profiles where id = new.user_id) as recipient
+    select 'email'::text as channel, (select email from tasks.profiles where id = new.user_id) as recipient
       where prefs.email_enabled
     union all
     select 'telegram', prefs.telegram_chat_id
@@ -4821,7 +4814,7 @@ begin
       where prefs.whatsapp_enabled and prefs.whatsapp_number is not null
     union all
     select 'push', s.endpoint
-      from public.push_subscriptions s
+      from tasks.push_subscriptions s
      where prefs.push_enabled and s.user_id = new.user_id
   ) ch
   where ch.recipient is not null
@@ -4832,7 +4825,7 @@ end;
 $fn$;
 
 -- =========================================================================
--- 20260927000027_reminder_failures.sql
+-- 20260927000027_reminder_failures.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -4853,14 +4846,14 @@ $fn$;
 -- queued: for a reminder that spent an hour being retried those are an hour
 -- apart, and "why did nobody hear about this" is a question about the second
 -- one. Old rows keep their queued time as the best available answer.
-alter table public.reminder_queue
+alter table tasks.reminder_queue
   add column if not exists failed_at timestamptz;
 
-comment on column public.reminder_queue.failed_at is
+comment on column tasks.reminder_queue.failed_at is
   'When delivery was given up on. Null while the row is still pending or was sent.';
 
-alter table public.notifications drop constraint if exists notifications_type_known;
-alter table public.notifications add constraint notifications_type_known check (
+alter table tasks.notifications drop constraint if exists notifications_type_known;
+alter table tasks.notifications add constraint notifications_type_known check (
   type in (
     'task_assigned',
     'task_unassigned',
@@ -4871,7 +4864,7 @@ alter table public.notifications add constraint notifications_type_known check (
     'direct_message',
     'reminder_failed'
   )
-);
+) not valid;
 
 -- ---------------------------------------------------------------------------
 -- The team's delivery failures, for somebody who can act on them
@@ -4884,7 +4877,7 @@ alter table public.notifications add constraint notifications_type_known check (
 -- it as anybody else is refused rather than quietly returning nothing.
 -- ---------------------------------------------------------------------------
 
-create or replace function public.reminder_failures(since_hours integer default 168)
+create or replace function tasks.reminder_failures(since_hours integer default 168)
 returns table (
   user_id     uuid,
   person      text,
@@ -4897,10 +4890,10 @@ returns table (
 language plpgsql
 stable
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $fn$
 begin
-  if not public.is_admin() then
+  if not tasks.is_admin() then
     raise exception 'Only an admin can read delivery failures.'
       using errcode = 'insufficient_privilege';
   end if;
@@ -4914,8 +4907,8 @@ begin
       q.attempts,
       q.last_error,
       coalesce(q.failed_at, q.created_at) as failed_at
-    from public.reminder_queue q
-    join public.profiles p on p.id = q.user_id
+    from tasks.reminder_queue q
+    join tasks.profiles p on p.id = q.user_id
    where q.status = 'failed'
      and coalesce(q.failed_at, q.created_at) > now() - make_interval(hours => greatest(1, since_hours))
    order by coalesce(q.failed_at, q.created_at) desc
@@ -4923,10 +4916,10 @@ begin
 end;
 $fn$;
 
-comment on function public.reminder_failures(integer) is
+comment on function tasks.reminder_failures(integer) is
   'Recent undeliverable reminders, for an admin. Who, which channel and why — never the message.';
 
-grant execute on function public.reminder_failures(integer) to authenticated;
+grant execute on function tasks.reminder_failures(integer) to authenticated;
 
 -- ---------------------------------------------------------------------------
 -- And the same question about yourself, which anybody may ask
@@ -4936,7 +4929,7 @@ grant execute on function public.reminder_failures(integer) to authenticated;
 -- body, and without every caller having to remember the status filter.
 -- ---------------------------------------------------------------------------
 
-create or replace function public.my_reminder_failures(since_hours integer default 168)
+create or replace function tasks.my_reminder_failures(since_hours integer default 168)
 returns table (
   channel    text,
   kind       text,
@@ -4947,7 +4940,7 @@ returns table (
 language sql
 stable
 security invoker
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $fn$
   select
     q.channel,
@@ -4955,7 +4948,7 @@ as $fn$
     q.attempts,
     q.last_error,
     coalesce(q.failed_at, q.created_at)
-  from public.reminder_queue q
+  from tasks.reminder_queue q
    where q.user_id = auth.uid()
      and q.status = 'failed'
      and coalesce(q.failed_at, q.created_at) > now() - make_interval(hours => greatest(1, since_hours))
@@ -4963,10 +4956,10 @@ as $fn$
    limit 20;
 $fn$;
 
-comment on function public.my_reminder_failures(integer) is
+comment on function tasks.my_reminder_failures(integer) is
   'Reminders that could not be delivered to you. Security invoker: RLS decides, as it does for the table.';
 
-grant execute on function public.my_reminder_failures(integer) to authenticated;
+grant execute on function tasks.my_reminder_failures(integer) to authenticated;
 
 -- ---------------------------------------------------------------------------
 -- Telling the person
@@ -4981,17 +4974,17 @@ grant execute on function public.my_reminder_failures(integer) to authenticated;
 -- "a reminder failed".
 -- ---------------------------------------------------------------------------
 
-create or replace function public.notify_reminder_failed(reminder uuid)
+create or replace function tasks.notify_reminder_failed(reminder uuid)
 returns void
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $fn$
 declare
-  q public.reminder_queue%rowtype;
+  q tasks.reminder_queue%rowtype;
   heading text;
 begin
-  select * into q from public.reminder_queue where id = reminder;
+  select * into q from tasks.reminder_queue where id = reminder;
   if not found or q.status <> 'failed' then
     return;
   end if;
@@ -5004,7 +4997,7 @@ begin
     else 'A reminder could not be delivered to you'
   end;
 
-  insert into public.notifications (user_id, actor_id, type, title, body, task_id)
+  insert into tasks.notifications (user_id, actor_id, type, title, body, task_id)
   values (
     q.user_id,
     null,
@@ -5016,11 +5009,11 @@ begin
 end;
 $fn$;
 
-comment on function public.notify_reminder_failed(uuid) is
+comment on function tasks.notify_reminder_failed(uuid) is
   'Tells somebody a reminder could not be delivered, naming the channel. Called by the dispatcher.';
 
 -- =========================================================================
--- 20260927000028_error_log.sql
+-- 20260927000028_error_log.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -5042,12 +5035,12 @@ comment on function public.notify_reminder_failed(uuid) is
 -- swept by the same cron that drains the reminder queue.
 -- ---------------------------------------------------------------------------
 
-create table if not exists public.app_errors (
+create table if not exists tasks.app_errors (
   id           uuid primary key default gen_random_uuid(),
   occurred_at  timestamptz not null default now(),
   -- Null for somebody who was not signed in: a sign-in page that throws is
   -- exactly the kind of fault worth knowing about.
-  user_id      uuid references public.profiles (id) on delete set null,
+  user_id      uuid references tasks.profiles (id) on delete set null,
   source       text not null check (source in ('browser', 'server')),
   -- Next's own reference for a server error. Printed on the error page, so
   -- somebody can quote it and an admin can find this row.
@@ -5058,31 +5051,31 @@ create table if not exists public.app_errors (
 );
 
 create index if not exists app_errors_when_idx
-  on public.app_errors (occurred_at desc);
+  on tasks.app_errors (occurred_at desc);
 
-alter table public.app_errors enable row level security;
-alter table public.app_errors force row level security;
+alter table tasks.app_errors enable row level security;
+alter table tasks.app_errors force row level security;
 
 -- Anybody signed in may report what went wrong in front of them, and only
 -- as themselves. Reading is another matter.
-drop policy if exists "report what went wrong" on public.app_errors;
+drop policy if exists "report what went wrong" on tasks.app_errors;
 create policy "report what went wrong"
-  on public.app_errors for insert
+  on tasks.app_errors for insert
   with check (user_id is null or user_id = auth.uid());
 
 -- No select policy at all: a message can carry a fragment of whatever it
 -- failed on. Admins read through the function below, which the service role
 -- and an admin check stand behind.
-grant insert on public.app_errors to authenticated;
+grant insert on tasks.app_errors to authenticated;
 
-comment on table public.app_errors is
+comment on table tasks.app_errors is
   'Faults from the deployed app, kept for two weeks. Write-only for everybody; read through recent_errors().';
 
 -- ---------------------------------------------------------------------------
 -- What has been going wrong
 -- ---------------------------------------------------------------------------
 
-create or replace function public.recent_errors(since_hours integer default 72)
+create or replace function tasks.recent_errors(since_hours integer default 72)
 returns table (
   occurred_at timestamptz,
   person      text,
@@ -5095,10 +5088,10 @@ returns table (
 language plpgsql
 stable
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $fn$
 begin
-  if not public.is_admin() then
+  if not tasks.is_admin() then
     raise exception 'Only an admin can read the error log.'
       using errcode = 'insufficient_privilege';
   end if;
@@ -5114,8 +5107,8 @@ begin
       e.message,
       e.route,
       count(*) as seen
-    from public.app_errors e
-    left join public.profiles p on p.id = e.user_id
+    from tasks.app_errors e
+    left join tasks.profiles p on p.id = e.user_id
    where e.occurred_at > now() - make_interval(hours => greatest(1, since_hours))
    group by e.source, e.message, e.route
    order by max(e.occurred_at) desc
@@ -5123,10 +5116,10 @@ begin
 end;
 $fn$;
 
-comment on function public.recent_errors(integer) is
+comment on function tasks.recent_errors(integer) is
   'Recent faults, grouped by message and route. Admins only; raises for anybody else.';
 
-grant execute on function public.recent_errors(integer) to authenticated;
+grant execute on function tasks.recent_errors(integer) to authenticated;
 
 -- ---------------------------------------------------------------------------
 -- Two weeks is plenty
@@ -5135,26 +5128,26 @@ grant execute on function public.recent_errors(integer) to authenticated;
 -- there is nothing new to set up and nothing to remember.
 -- ---------------------------------------------------------------------------
 
-create or replace function public.purge_old_errors(older_than interval default interval '14 days')
+create or replace function tasks.purge_old_errors(older_than interval default interval '14 days')
 returns integer
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $fn$
 declare
   removed integer;
 begin
-  delete from public.app_errors where occurred_at < now() - older_than;
+  delete from tasks.app_errors where occurred_at < now() - older_than;
   get diagnostics removed = row_count;
   return removed;
 end;
 $fn$;
 
-comment on function public.purge_old_errors(interval) is
+comment on function tasks.purge_old_errors(interval) is
   'Drops error rows older than the given age. Called by the scheduled dispatcher.';
 
 -- =========================================================================
--- 20260927000029_task_checklists.sql
+-- 20260927000029_task_checklists.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -5182,57 +5175,57 @@ comment on function public.purge_old_errors(interval) is
 -- so the rules are the task's own.
 -- ---------------------------------------------------------------------------
 
-create table if not exists public.task_checklist_items (
+create table if not exists tasks.task_checklist_items (
   id         uuid primary key default gen_random_uuid(),
-  task_id    uuid not null references public.tasks (id) on delete cascade,
+  task_id    uuid not null references tasks.tasks (id) on delete cascade,
   content    text not null check (char_length(btrim(content)) between 1 and 500),
   done       boolean not null default false,
   -- Gaps, so an item can be dropped between two without renumbering.
   position   integer not null default 0,
-  created_by uuid references public.profiles (id) on delete set null,
+  created_by uuid references tasks.profiles (id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
 create index if not exists task_checklist_items_task_idx
-  on public.task_checklist_items (task_id, position);
+  on tasks.task_checklist_items (task_id, position);
 
-alter table public.task_checklist_items enable row level security;
-alter table public.task_checklist_items force row level security;
+alter table tasks.task_checklist_items enable row level security;
+alter table tasks.task_checklist_items force row level security;
 
-drop policy if exists "see the steps of a task you can see" on public.task_checklist_items;
+drop policy if exists "see the steps of a task you can see" on tasks.task_checklist_items;
 create policy "see the steps of a task you can see"
-  on public.task_checklist_items for select
-  using (public.can_view_task(task_id));
+  on tasks.task_checklist_items for select
+  using (tasks.can_view_task(task_id));
 
-drop policy if exists "plan the steps of a task you can edit" on public.task_checklist_items;
+drop policy if exists "plan the steps of a task you can edit" on tasks.task_checklist_items;
 create policy "plan the steps of a task you can edit"
-  on public.task_checklist_items for insert
-  with check (public.is_manager_or_admin() or public.can_edit_task(task_id));
+  on tasks.task_checklist_items for insert
+  with check (tasks.is_manager_or_admin() or tasks.can_edit_task(task_id));
 
-drop policy if exists "change the steps of a task you can edit" on public.task_checklist_items;
+drop policy if exists "change the steps of a task you can edit" on tasks.task_checklist_items;
 create policy "change the steps of a task you can edit"
-  on public.task_checklist_items for update
-  using (public.is_manager_or_admin() or public.can_edit_task(task_id))
-  with check (public.is_manager_or_admin() or public.can_edit_task(task_id));
+  on tasks.task_checklist_items for update
+  using (tasks.is_manager_or_admin() or tasks.can_edit_task(task_id))
+  with check (tasks.is_manager_or_admin() or tasks.can_edit_task(task_id));
 
-drop policy if exists "remove the steps of a task you can edit" on public.task_checklist_items;
+drop policy if exists "remove the steps of a task you can edit" on tasks.task_checklist_items;
 create policy "remove the steps of a task you can edit"
-  on public.task_checklist_items for delete
-  using (public.is_manager_or_admin() or public.can_edit_task(task_id));
+  on tasks.task_checklist_items for delete
+  using (tasks.is_manager_or_admin() or tasks.can_edit_task(task_id));
 
-grant select, insert, update, delete on public.task_checklist_items to authenticated;
+grant select, insert, update, delete on tasks.task_checklist_items to authenticated;
 
-drop trigger if exists task_checklist_items_set_updated_at on public.task_checklist_items;
+drop trigger if exists task_checklist_items_set_updated_at on tasks.task_checklist_items;
 create trigger task_checklist_items_set_updated_at
-  before update on public.task_checklist_items
-  for each row execute function public.set_updated_at();
+  before update on tasks.task_checklist_items
+  for each row execute function tasks.set_updated_at();
 
-comment on table public.task_checklist_items is
+comment on table tasks.task_checklist_items is
   'The steps inside a task. Read and written under exactly the rules the task itself has.';
 
 -- =========================================================================
--- 20260927000030_archive_projects.sql
+-- 20260927000030_archive_projects.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -5252,14 +5245,14 @@ comment on table public.task_checklist_items is
 -- a boolean would not.
 -- ---------------------------------------------------------------------------
 
-alter table public.projects
+alter table tasks.projects
   add column if not exists archived_at timestamptz;
 
 create index if not exists projects_live_idx
-  on public.projects (archived_at)
+  on tasks.projects (archived_at)
   where archived_at is null;
 
-comment on column public.projects.archived_at is
+comment on column tasks.projects.archived_at is
   'When the project was archived, or null while it is live. Archiving hides it from the sidebar and the pickers; nothing is deleted.';
 
 -- ---------------------------------------------------------------------------
@@ -5274,11 +5267,11 @@ comment on column public.projects.archived_at is
 -- ordinary update.
 -- ---------------------------------------------------------------------------
 
-create or replace function public.set_project_archived(project uuid, archived boolean)
+create or replace function tasks.set_project_archived(project uuid, archived boolean)
 returns void
 language plpgsql
 security invoker
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $fn$
 declare
   still_open integer;
@@ -5286,7 +5279,7 @@ declare
 begin
   if archived then
     select count(*) into still_open
-      from public.tasks t
+      from tasks.tasks t
      where t.project_id = project
        and t.deleted_at is null
        and t.status <> 'done';
@@ -5299,7 +5292,7 @@ begin
     end if;
   end if;
 
-  update public.projects
+  update tasks.projects
      set archived_at = case when archived then now() else null end
    where id = project;
 
@@ -5312,13 +5305,13 @@ begin
 end;
 $fn$;
 
-comment on function public.set_project_archived(uuid, boolean) is
+comment on function tasks.set_project_archived(uuid, boolean) is
   'Archives a project, or brings it back. Refuses while any task in it is still open.';
 
-grant execute on function public.set_project_archived(uuid, boolean) to authenticated;
+grant execute on function tasks.set_project_archived(uuid, boolean) to authenticated;
 
 -- =========================================================================
--- 20260930000031_guard_telegram_chat.sql
+-- 20260930000031_guard_telegram_chat.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -5350,11 +5343,11 @@ grant execute on function public.set_project_archived(uuid, boolean) to authenti
 -- the only way to see it is to have gone around the app.
 -- ---------------------------------------------------------------------------
 
-create or replace function public.guard_telegram_chat()
+create or replace function tasks.guard_telegram_chat()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 begin
   -- The webhook, a migration, the dispatcher: anything not acting as a
@@ -5375,16 +5368,16 @@ begin
 end;
 $$;
 
-comment on function public.guard_telegram_chat() is
+comment on function tasks.guard_telegram_chat() is
   'Pins notification_preferences.telegram_chat_id so only the verified webhook can name a chat.';
 
-drop trigger if exists notification_preferences_guard_telegram on public.notification_preferences;
+drop trigger if exists notification_preferences_guard_telegram on tasks.notification_preferences;
 create trigger notification_preferences_guard_telegram
-  before update on public.notification_preferences
-  for each row execute function public.guard_telegram_chat();
+  before update on tasks.notification_preferences
+  for each row execute function tasks.guard_telegram_chat();
 
 -- =========================================================================
--- 20261002000032_project_status_updates.sql
+-- 20261002000032_project_status_updates.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -5409,11 +5402,11 @@ create trigger notification_preferences_guard_telegram
 --   delete  whoever wrote it, or an admin
 -- ---------------------------------------------------------------------------
 
-create table if not exists public.project_status_updates (
+create table if not exists tasks.project_status_updates (
   id         uuid primary key default gen_random_uuid(),
-  project_id uuid not null references public.projects (id) on delete cascade,
+  project_id uuid not null references tasks.projects (id) on delete cascade,
   -- Kept when the author leaves, so the history does not lose its entries.
-  author_id  uuid references public.profiles (id) on delete set null,
+  author_id  uuid references tasks.profiles (id) on delete set null,
   status     text not null,
   body       text not null,
   created_at timestamptz not null default now(),
@@ -5425,39 +5418,39 @@ create table if not exists public.project_status_updates (
 );
 
 create index if not exists project_status_updates_recent_idx
-  on public.project_status_updates (project_id, created_at desc);
+  on tasks.project_status_updates (project_id, created_at desc);
 
-comment on table public.project_status_updates is
+comment on table tasks.project_status_updates is
   'What the person running a project says about how it is going. Append-only.';
 
-alter table public.project_status_updates enable row level security;
-alter table public.project_status_updates force row level security;
+alter table tasks.project_status_updates enable row level security;
+alter table tasks.project_status_updates force row level security;
 
-drop policy if exists "status is readable with the project" on public.project_status_updates;
+drop policy if exists "status is readable with the project" on tasks.project_status_updates;
 create policy "status is readable with the project"
-  on public.project_status_updates for select
+  on tasks.project_status_updates for select
   to authenticated
-  using (public.can_view_project(project_id));
+  using (tasks.can_view_project(project_id));
 
-drop policy if exists "managers report on their projects" on public.project_status_updates;
+drop policy if exists "managers report on their projects" on tasks.project_status_updates;
 create policy "managers report on their projects"
-  on public.project_status_updates for insert
+  on tasks.project_status_updates for insert
   to authenticated
   with check (
     author_id = auth.uid()
-    and public.is_manager_or_admin()
-    and public.can_view_project(project_id)
+    and tasks.is_manager_or_admin()
+    and tasks.can_view_project(project_id)
   );
 
 -- No update policy, on purpose: see the header.
 
-drop policy if exists "authors and admins withdraw an update" on public.project_status_updates;
+drop policy if exists "authors and admins withdraw an update" on tasks.project_status_updates;
 create policy "authors and admins withdraw an update"
-  on public.project_status_updates for delete
+  on tasks.project_status_updates for delete
   to authenticated
-  using (author_id = auth.uid() or public.is_admin());
+  using (author_id = auth.uid() or tasks.is_admin());
 
-grant select, insert, delete on public.project_status_updates to authenticated;
+grant select, insert, delete on tasks.project_status_updates to authenticated;
 
 -- ---------------------------------------------------------------------------
 -- Every live project's health, in one question
@@ -5472,7 +5465,7 @@ grant select, insert, delete on public.project_status_updates to authenticated;
 -- changed without a migration.
 -- ---------------------------------------------------------------------------
 
-create or replace function public.project_health()
+create or replace function tasks.project_health()
 returns table (
   project_id     uuid,
   name           text,
@@ -5486,7 +5479,7 @@ returns table (
 language sql
 stable
 security invoker
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
   select
     p.id,
@@ -5497,20 +5490,20 @@ as $$
     coalesce(author.full_name, author.email),
     coalesce(work.open_tasks, 0),
     coalesce(work.overdue_tasks, 0)
-  from public.projects p
+  from tasks.projects p
   left join lateral (
     select u.status, u.body, u.created_at, u.author_id
-      from public.project_status_updates u
+      from tasks.project_status_updates u
      where u.project_id = p.id
      order by u.created_at desc
      limit 1
   ) latest on true
-  left join public.profiles author on author.id = latest.author_id
+  left join tasks.profiles author on author.id = latest.author_id
   left join lateral (
     select
       count(*) filter (where t.status <> 'done') as open_tasks,
       count(*) filter (where t.status <> 'done' and t.due_at < now()) as overdue_tasks
-      from public.tasks t
+      from tasks.tasks t
      where t.project_id = p.id
        and t.deleted_at is null
   ) work on true
@@ -5519,13 +5512,13 @@ as $$
   order by p.name;
 $$;
 
-comment on function public.project_health() is
+comment on function tasks.project_health() is
   'Per live project: the latest status update, and open and overdue task counts, as the caller can see them.';
 
-grant execute on function public.project_health() to authenticated;
+grant execute on function tasks.project_health() to authenticated;
 
 -- =========================================================================
--- 20261002000033_comment_reactions.sql
+-- 20261002000033_comment_reactions.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -5551,9 +5544,9 @@ grant execute on function public.project_health() to authenticated;
 -- comment is the noise this exists to remove.
 -- ---------------------------------------------------------------------------
 
-create table if not exists public.comment_reactions (
-  comment_id uuid not null references public.comments (id) on delete cascade,
-  user_id    uuid not null references public.profiles (id) on delete cascade,
+create table if not exists tasks.comment_reactions (
+  comment_id uuid not null references tasks.comments (id) on delete cascade,
+  user_id    uuid not null references tasks.profiles (id) on delete cascade,
   emoji      text not null,
   created_at timestamptz not null default now(),
 
@@ -5565,7 +5558,7 @@ create table if not exists public.comment_reactions (
     check (emoji in ('👍', '✅', '🙏', '👀', '🎉'))
 );
 
-comment on table public.comment_reactions is
+comment on table tasks.comment_reactions is
   'Who reacted to which comment, with which of the five allowed emoji.';
 
 -- ---------------------------------------------------------------------------
@@ -5576,47 +5569,47 @@ comment on table public.comment_reactions is
 -- same one the comment, the file and the history already resolve through.
 -- ---------------------------------------------------------------------------
 
-create or replace function public.can_view_comment(comment uuid)
+create or replace function tasks.can_view_comment(comment uuid)
 returns boolean
 language sql
 stable
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
   select exists (
-    select 1 from public.comments c
+    select 1 from tasks.comments c
      where c.id = comment
-       and public.can_view_task(c.task_id)
+       and tasks.can_view_task(c.task_id)
   );
 $$;
 
-grant execute on function public.can_view_comment(uuid) to authenticated;
+grant execute on function tasks.can_view_comment(uuid) to authenticated;
 
-alter table public.comment_reactions enable row level security;
-alter table public.comment_reactions force row level security;
+alter table tasks.comment_reactions enable row level security;
+alter table tasks.comment_reactions force row level security;
 
-drop policy if exists "reactions are visible with their comment" on public.comment_reactions;
+drop policy if exists "reactions are visible with their comment" on tasks.comment_reactions;
 create policy "reactions are visible with their comment"
-  on public.comment_reactions for select
+  on tasks.comment_reactions for select
   to authenticated
-  using (public.can_view_comment(comment_id));
+  using (tasks.can_view_comment(comment_id));
 
-drop policy if exists "people react as themselves" on public.comment_reactions;
+drop policy if exists "people react as themselves" on tasks.comment_reactions;
 create policy "people react as themselves"
-  on public.comment_reactions for insert
+  on tasks.comment_reactions for insert
   to authenticated
-  with check (user_id = auth.uid() and public.can_view_comment(comment_id));
+  with check (user_id = auth.uid() and tasks.can_view_comment(comment_id));
 
-drop policy if exists "people take back their own reactions" on public.comment_reactions;
+drop policy if exists "people take back their own reactions" on tasks.comment_reactions;
 create policy "people take back their own reactions"
-  on public.comment_reactions for delete
+  on tasks.comment_reactions for delete
   to authenticated
   using (user_id = auth.uid());
 
-grant select, insert, delete on public.comment_reactions to authenticated;
+grant select, insert, delete on tasks.comment_reactions to authenticated;
 
 -- =========================================================================
--- 20261013000034_close_self_registration.sql
+-- 20261013000034_close_self_registration.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -5649,18 +5642,18 @@ grant select, insert, delete on public.comment_reactions to authenticated;
 -- Run in the Supabase SQL editor. Safe to run more than once.
 -- ---------------------------------------------------------------------------
 
-create or replace function public.handle_new_user()
+create or replace function tasks.handle_new_user()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 declare
-  assigned_role public.user_role;
+  assigned_role tasks.user_role;
   added_by_text text := new.raw_app_meta_data ->> 'added_by';
   added_by uuid;
 begin
-  if not exists (select 1 from public.profiles) then
+  if not exists (select 1 from tasks.profiles) then
     -- An empty database: this is the person setting it up.
     assigned_role := 'admin';
   else
@@ -5671,7 +5664,7 @@ begin
     end if;
 
     if added_by is null or not exists (
-      select 1 from public.profiles p
+      select 1 from tasks.profiles p
       where p.id = added_by and p.role = 'admin'
     ) then
       raise exception 'Accounts are added by an admin from the Team page.'
@@ -5681,7 +5674,7 @@ begin
     assigned_role := 'member';
   end if;
 
-  insert into public.profiles (id, email, full_name, avatar_url, role)
+  insert into tasks.profiles (id, email, full_name, avatar_url, role)
   values (
     new.id,
     new.email,
@@ -5696,13 +5689,10 @@ end;
 $$;
 
 -- The trigger itself is unchanged; it is restated so this file stands alone.
-drop trigger if exists on_auth_user_created on auth.users;
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute function public.handle_new_user();
+-- (Maham One: no trigger on auth.users; see the end of this file.)
 
 -- =========================================================================
--- 20261013000035_attachment_files_follow_task.sql
+-- 20261013000035_attachment_files_follow_task.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -5728,11 +5718,11 @@ create trigger on_auth_user_created
 -- null when that is not a task id. Checked before casting, so a stray object
 -- with an odd name is simply unreadable rather than an error for everybody
 -- listing the bucket.
-create or replace function public.attachment_task_id(object_name text)
+create or replace function tasks.attachment_task_id(object_name text)
 returns uuid
 language sql
 immutable
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
   select case
     when split_part(object_name, '/', 1)
@@ -5754,13 +5744,13 @@ begin
     on storage.objects for select
     to authenticated
     using (
-      bucket_id = 'task-attachments'
-      and public.can_view_task(public.attachment_task_id(name))
+      bucket_id = 'tasks-attachments'
+      and tasks.can_view_task(tasks.attachment_task_id(name))
     )$p$;
 end $$;
 
 -- =========================================================================
--- 20261017000036_company_holidays.sql
+-- 20261017000036_company_holidays.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -5780,52 +5770,52 @@ end $$;
 -- Run in the Supabase SQL editor. Safe to run more than once.
 -- ---------------------------------------------------------------------------
 
-create table if not exists public.company_holidays (
+create table if not exists tasks.company_holidays (
   day        date primary key,
   name       text not null,
-  created_by uuid references public.profiles (id) on delete set null default auth.uid(),
+  created_by uuid references tasks.profiles (id) on delete set null default auth.uid(),
   created_at timestamptz not null default now(),
 
   constraint company_holidays_name_length
     check (length(btrim(name)) between 1 and 80)
 );
 
-comment on table public.company_holidays is
+comment on table tasks.company_holidays is
   'Days the company is closed besides the Friday–Saturday weekend.';
 
-alter table public.company_holidays enable row level security;
+alter table tasks.company_holidays enable row level security;
 
-grant select on public.company_holidays to authenticated;
-grant insert, update, delete on public.company_holidays to authenticated;
-grant all on public.company_holidays to service_role;
+grant select on tasks.company_holidays to authenticated;
+grant insert, update, delete on tasks.company_holidays to authenticated;
+grant all on tasks.company_holidays to service_role;
 
-drop policy if exists "holidays are readable by the team" on public.company_holidays;
+drop policy if exists "holidays are readable by the team" on tasks.company_holidays;
 create policy "holidays are readable by the team"
-  on public.company_holidays for select
+  on tasks.company_holidays for select
   to authenticated
   using (true);
 
-drop policy if exists "admins add holidays" on public.company_holidays;
+drop policy if exists "admins add holidays" on tasks.company_holidays;
 create policy "admins add holidays"
-  on public.company_holidays for insert
+  on tasks.company_holidays for insert
   to authenticated
-  with check (public.is_admin());
+  with check (tasks.is_admin());
 
-drop policy if exists "admins change holidays" on public.company_holidays;
+drop policy if exists "admins change holidays" on tasks.company_holidays;
 create policy "admins change holidays"
-  on public.company_holidays for update
+  on tasks.company_holidays for update
   to authenticated
-  using (public.is_admin())
-  with check (public.is_admin());
+  using (tasks.is_admin())
+  with check (tasks.is_admin());
 
-drop policy if exists "admins remove holidays" on public.company_holidays;
+drop policy if exists "admins remove holidays" on tasks.company_holidays;
 create policy "admins remove holidays"
-  on public.company_holidays for delete
+  on tasks.company_holidays for delete
   to authenticated
-  using (public.is_admin());
+  using (tasks.is_admin());
 
 -- =========================================================================
--- 20261017000037_office_reminders.sql
+-- 20261017000037_office_reminders.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -5856,13 +5846,13 @@ create policy "admins remove holidays"
 -- Run in the Supabase SQL editor after 36. Safe to run more than once.
 -- ---------------------------------------------------------------------------
 
-create or replace function public.company_time_zone()
+create or replace function tasks.company_time_zone()
 returns text
 language sql
 immutable
 as $$ select 'Asia/Kuwait' $$;
 
-comment on function public.company_time_zone() is
+comment on function tasks.company_time_zone() is
   'The office''s time zone, for anything written in words: reminder times, which day it is.';
 
 -- ---------------------------------------------------------------------------
@@ -5872,11 +5862,11 @@ comment on function public.company_time_zone() is
 -- changed: a plpgsql body cannot be patched in place.
 -- ---------------------------------------------------------------------------
 
-create or replace function public.enqueue_task_reminders()
+create or replace function tasks.enqueue_task_reminders()
 returns integer
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 declare
   inserted integer := 0;
@@ -5889,10 +5879,10 @@ begin
       p.email,
       np.email_enabled, np.telegram_enabled, np.whatsapp_enabled, np.push_enabled,
       np.telegram_chat_id, np.whatsapp_number, np.due_soon_lead_hours
-    from public.tasks t
-    join public.task_assignments a on a.task_id = t.id
-    join public.profiles p on p.id = a.user_id
-    join public.notification_preferences np on np.user_id = a.user_id
+    from tasks.tasks t
+    join tasks.task_assignments a on a.task_id = t.id
+    join tasks.profiles p on p.id = a.user_id
+    join tasks.notification_preferences np on np.user_id = a.user_id
     where t.status <> 'done'
       and t.deleted_at is null
       and t.due_at is not null
@@ -5900,13 +5890,13 @@ begin
       and t.due_at > now()
       and t.due_at <= now() + make_interval(hours => np.due_soon_lead_hours)
   )
-  insert into public.reminder_queue
+  insert into tasks.reminder_queue
     (user_id, task_id, channel, kind, recipient, subject, body, dedupe_key)
   select
     c.user_id, c.task_id, ch.channel, 'due_soon',
     ch.recipient,
     'Due soon: ' || c.title,
-    c.title || ' is due ' || to_char(c.due_at at time zone public.company_time_zone(), 'Dy DD Mon, HH24:MI') || '.',
+    c.title || ' is due ' || to_char(c.due_at at time zone tasks.company_time_zone(), 'Dy DD Mon, HH24:MI') || '.',
     'due_soon:' || c.task_id || ':' || c.user_id || ':' || ch.channel || case when ch.channel = 'push' then ':' || ch.recipient else '' end || ':' || extract(epoch from c.due_at)::bigint
   from candidates c
   cross join lateral (
@@ -5923,7 +5913,7 @@ begin
     -- both. The others have exactly one address each, which is why they were
     -- a plain case expression until now.
     select 'push', s.endpoint
-      from public.push_subscriptions s
+      from tasks.push_subscriptions s
      where c.push_enabled and s.user_id = c.user_id
   ) ch
   on conflict (dedupe_key) do nothing;
@@ -5938,24 +5928,24 @@ begin
       a.user_id, p.email,
       np.email_enabled, np.telegram_enabled, np.whatsapp_enabled, np.push_enabled,
       np.telegram_chat_id, np.whatsapp_number, np.due_soon_lead_hours
-    from public.tasks t
-    join public.task_assignments a on a.task_id = t.id
-    join public.profiles p on p.id = a.user_id
-    join public.notification_preferences np on np.user_id = a.user_id
+    from tasks.tasks t
+    join tasks.task_assignments a on a.task_id = t.id
+    join tasks.profiles p on p.id = a.user_id
+    join tasks.notification_preferences np on np.user_id = a.user_id
     where t.status <> 'done'
       and t.deleted_at is null
       and t.due_at is not null
       and t.due_at < now()
       and np.remind_overdue
   )
-  insert into public.reminder_queue
+  insert into tasks.reminder_queue
     (user_id, task_id, channel, kind, recipient, subject, body, dedupe_key)
   select
     c.user_id, c.task_id, ch.channel, 'overdue',
     ch.recipient,
     'Overdue: ' || c.title,
-    c.title || ' was due ' || to_char(c.due_at at time zone public.company_time_zone(), 'Dy DD Mon, HH24:MI') || ' and is still open.',
-    'overdue:' || c.task_id || ':' || c.user_id || ':' || ch.channel || case when ch.channel = 'push' then ':' || ch.recipient else '' end || ':' || to_char(now() at time zone public.company_time_zone(), 'YYYY-MM-DD')
+    c.title || ' was due ' || to_char(c.due_at at time zone tasks.company_time_zone(), 'Dy DD Mon, HH24:MI') || ' and is still open.',
+    'overdue:' || c.task_id || ':' || c.user_id || ':' || ch.channel || case when ch.channel = 'push' then ':' || ch.recipient else '' end || ':' || to_char(now() at time zone tasks.company_time_zone(), 'YYYY-MM-DD')
   from candidates c
   cross join lateral (
     select 'email'::text as channel, c.email as recipient
@@ -5971,7 +5961,7 @@ begin
     -- both. The others have exactly one address each, which is why they were
     -- a plain case expression until now.
     select 'push', s.endpoint
-      from public.push_subscriptions s
+      from tasks.push_subscriptions s
      where c.push_enabled and s.user_id = c.user_id
   ) ch
   on conflict (dedupe_key) do nothing;
@@ -5983,17 +5973,17 @@ begin
       a.user_id, p.email,
       np.email_enabled, np.telegram_enabled, np.whatsapp_enabled, np.push_enabled,
       np.telegram_chat_id, np.whatsapp_number, np.due_soon_lead_hours
-    from public.tasks t
-    join public.task_assignments a on a.task_id = t.id
-    join public.profiles p on p.id = a.user_id
-    join public.notification_preferences np on np.user_id = a.user_id
+    from tasks.tasks t
+    join tasks.task_assignments a on a.task_id = t.id
+    join tasks.profiles p on p.id = a.user_id
+    join tasks.notification_preferences np on np.user_id = a.user_id
     where t.status <> 'done'
       and t.deleted_at is null
       and t.follow_up_at is not null
       and t.follow_up_at <= now()
       and np.remind_follow_up
   )
-  insert into public.reminder_queue
+  insert into tasks.reminder_queue
     (user_id, task_id, channel, kind, recipient, subject, body, dedupe_key)
   select
     c.user_id, c.task_id, ch.channel, 'follow_up',
@@ -6016,7 +6006,7 @@ begin
     -- both. The others have exactly one address each, which is why they were
     -- a plain case expression until now.
     select 'push', s.endpoint
-      from public.push_subscriptions s
+      from tasks.push_subscriptions s
      where c.push_enabled and s.user_id = c.user_id
   ) ch
   on conflict (dedupe_key) do nothing;
@@ -6026,34 +6016,34 @@ end;
 $$;
 
 -- Being assigned something, likewise.
-create or replace function public.enqueue_assignment_reminder()
+create or replace function tasks.enqueue_assignment_reminder()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $fn$
 declare
-  t public.tasks%rowtype;
-  prefs public.notification_preferences%rowtype;
+  t tasks.tasks%rowtype;
+  prefs tasks.notification_preferences%rowtype;
 begin
-  select * into t from public.tasks where id = new.task_id;
+  select * into t from tasks.tasks where id = new.task_id;
   if not found then return null; end if;
 
-  select * into prefs from public.notification_preferences where user_id = new.user_id;
+  select * into prefs from tasks.notification_preferences where user_id = new.user_id;
   if not found or not prefs.remind_assigned then return null; end if;
 
-  insert into public.reminder_queue
+  insert into tasks.reminder_queue
     (user_id, task_id, channel, kind, recipient, subject, body, dedupe_key)
   select
     new.user_id, t.id, ch.channel, 'assigned',
     ch.recipient,
     'Assigned to you: ' || t.title,
     'You were assigned "' || t.title || '"'
-      || coalesce(' - due ' || to_char(t.due_at at time zone public.company_time_zone(), 'Dy DD Mon, HH24:MI'), '') || '.',
+      || coalesce(' - due ' || to_char(t.due_at at time zone tasks.company_time_zone(), 'Dy DD Mon, HH24:MI'), '') || '.',
     'assigned:' || t.id || ':' || new.user_id || ':' || ch.channel
       || case when ch.channel = 'push' then ':' || ch.recipient else '' end
   from (
-    select 'email'::text as channel, (select email from public.profiles where id = new.user_id) as recipient
+    select 'email'::text as channel, (select email from tasks.profiles where id = new.user_id) as recipient
       where prefs.email_enabled
     union all
     select 'telegram', prefs.telegram_chat_id
@@ -6063,7 +6053,7 @@ begin
       where prefs.whatsapp_enabled and prefs.whatsapp_number is not null
     union all
     select 'push', s.endpoint
-      from public.push_subscriptions s
+      from tasks.push_subscriptions s
      where prefs.push_enabled and s.user_id = new.user_id
   ) ch
   where ch.recipient is not null
@@ -6077,18 +6067,18 @@ $fn$;
 -- 2. The morning summary
 -- ---------------------------------------------------------------------------
 
-alter table public.notification_preferences
+alter table tasks.notification_preferences
   add column if not exists morning_summary boolean not null default false;
 
-comment on column public.notification_preferences.morning_summary is
+comment on column tasks.notification_preferences.morning_summary is
   'Whether this person gets one message each working morning listing their day.';
 
-alter table public.reminder_queue
+alter table tasks.reminder_queue
   drop constraint if exists reminder_queue_kind_check;
 
-alter table public.reminder_queue
+alter table tasks.reminder_queue
   add constraint reminder_queue_kind_check
-  check (kind in ('assigned', 'due_soon', 'overdue', 'follow_up', 'summary'));
+  check (kind in ('assigned', 'due_soon', 'overdue', 'follow_up', 'summary')) not valid;
 
 /**
  * One summary per person and channel for the office day `as_of` falls on.
@@ -6100,14 +6090,14 @@ alter table public.reminder_queue
  *
  * WhatsApp gets one line: its templates refuse a variable with a line break.
  */
-create or replace function public.enqueue_morning_summaries(as_of timestamptz default now())
+create or replace function tasks.enqueue_morning_summaries(as_of timestamptz default now())
 returns integer
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 declare
-  zone      constant text := public.company_time_zone();
+  zone      constant text := tasks.company_time_zone();
   today     constant date := (as_of at time zone zone)::date;
   day_end   constant timestamptz := (today + 1)::timestamp at time zone zone;
   inserted  integer := 0;
@@ -6125,8 +6115,8 @@ begin
         when t.due_at < day_end then t.due_at
         else t.follow_up_at
       end as moment
-    from public.tasks t
-    join public.task_assignments a on a.task_id = t.id
+    from tasks.tasks t
+    join tasks.task_assignments a on a.task_id = t.id
     where t.status <> 'done'
       and t.deleted_at is null
       and (t.due_at < day_end or t.follow_up_at < day_end)
@@ -6165,11 +6155,11 @@ begin
       ) as subject,
       case when pe.total > 8 then 'and ' || (pe.total - 8) || ' more.' end as rest
     from people pe
-    join public.profiles p on p.id = pe.user_id
-    join public.notification_preferences np on np.user_id = pe.user_id
+    join tasks.profiles p on p.id = pe.user_id
+    join tasks.notification_preferences np on np.user_id = pe.user_id
     where np.morning_summary
   )
-  insert into public.reminder_queue
+  insert into tasks.reminder_queue
     (user_id, task_id, channel, kind, recipient, subject, body, dedupe_key)
   select
     s.user_id, null, ch.channel, 'summary',
@@ -6195,7 +6185,7 @@ begin
      where s.whatsapp_enabled and s.whatsapp_number is not null
     union all
     select 'push', d.endpoint
-      from public.push_subscriptions d
+      from tasks.push_subscriptions d
      where s.push_enabled and d.user_id = s.user_id
   ) ch
   where ch.recipient is not null
@@ -6210,13 +6200,13 @@ $$;
 -- 3. For the dispatcher only
 -- ---------------------------------------------------------------------------
 
-revoke all on function public.enqueue_task_reminders() from public, anon, authenticated;
-revoke all on function public.enqueue_morning_summaries(timestamptz) from public, anon, authenticated;
-grant execute on function public.enqueue_task_reminders() to service_role;
-grant execute on function public.enqueue_morning_summaries(timestamptz) to service_role;
+revoke all on function tasks.enqueue_task_reminders() from public, anon, authenticated;
+revoke all on function tasks.enqueue_morning_summaries(timestamptz) from public, anon, authenticated;
+grant execute on function tasks.enqueue_task_reminders() to service_role;
+grant execute on function tasks.enqueue_morning_summaries(timestamptz) to service_role;
 
 -- =========================================================================
--- 20261017000038_two_step_sign_in.sql
+-- 20261017000038_two_step_sign_in.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -6243,12 +6233,12 @@ grant execute on function public.enqueue_morning_summaries(timestamptz) to servi
  * with the password alone. Supabase records which in the token's `aal`
  * claim: aal1 after a password, aal2 after the code.
  */
-create or replace function public.second_step_pending()
+create or replace function tasks.second_step_pending()
 returns boolean
 language sql
 stable
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
   select coalesce(auth.jwt() ->> 'aal', 'aal1') <> 'aal2'
      and exists (
@@ -6258,31 +6248,31 @@ as $$
      );
 $$;
 
-comment on function public.second_step_pending() is
+comment on function tasks.second_step_pending() is
   'Whether the caller has two-step sign-in but has not entered the code this session.';
 
-create or replace function public.current_user_role()
-returns public.user_role
+create or replace function tasks.current_user_role()
+returns tasks.user_role
 language sql
 stable
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
   select case
-           when public.second_step_pending() then 'member'::public.user_role
+           when tasks.second_step_pending() then 'member'::tasks.user_role
            else role
          end
-    from public.profiles
+    from tasks.profiles
    where id = auth.uid();
 $$;
 
-comment on function public.current_user_role() is
+comment on function tasks.current_user_role() is
   'Role of the calling user — member until the second step, for those who have one. SECURITY DEFINER so RLS on profiles does not recurse.';
 
-grant execute on function public.second_step_pending() to authenticated;
+grant execute on function tasks.second_step_pending() to authenticated;
 
 -- =========================================================================
--- 20261017000039_labels.sql
+-- 20261017000039_labels.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -6299,11 +6289,11 @@ grant execute on function public.second_step_pending() to authenticated;
 -- Run in the Supabase SQL editor after 38. Safe to run more than once.
 -- ---------------------------------------------------------------------------
 
-create table if not exists public.labels (
+create table if not exists tasks.labels (
   id         uuid primary key default gen_random_uuid(),
   name       text not null,
   colour     text not null default 'slate',
-  created_by uuid references public.profiles (id) on delete set null default auth.uid(),
+  created_by uuid references tasks.profiles (id) on delete set null default auth.uid(),
   created_at timestamptz not null default now(),
 
   constraint labels_name_length check (length(btrim(name)) between 1 and 30),
@@ -6311,73 +6301,73 @@ create table if not exists public.labels (
 );
 
 -- "Bank" and "bank " are the same label.
-create unique index if not exists labels_name_unique on public.labels (lower(btrim(name)));
+create unique index if not exists labels_name_unique on tasks.labels (lower(btrim(name)));
 
-create table if not exists public.task_labels (
-  task_id    uuid not null references public.tasks (id) on delete cascade,
-  label_id   uuid not null references public.labels (id) on delete cascade,
+create table if not exists tasks.task_labels (
+  task_id    uuid not null references tasks.tasks (id) on delete cascade,
+  label_id   uuid not null references tasks.labels (id) on delete cascade,
   created_at timestamptz not null default now(),
   primary key (task_id, label_id)
 );
 
-create index if not exists task_labels_label_idx on public.task_labels (label_id);
+create index if not exists task_labels_label_idx on tasks.task_labels (label_id);
 
-comment on table public.labels is
+comment on table tasks.labels is
   'Words that cut across projects, put on tasks to narrow a list to them.';
-comment on table public.task_labels is
+comment on table tasks.task_labels is
   'Which labels are on which task. Seen with the task; set by whoever plans it.';
 
-alter table public.labels enable row level security;
-alter table public.labels force row level security;
-alter table public.task_labels enable row level security;
-alter table public.task_labels force row level security;
+alter table tasks.labels enable row level security;
+alter table tasks.labels force row level security;
+alter table tasks.task_labels enable row level security;
+alter table tasks.task_labels force row level security;
 
 -- The labels themselves --------------------------------------------------------
 
-drop policy if exists "labels are readable by the team" on public.labels;
+drop policy if exists "labels are readable by the team" on tasks.labels;
 create policy "labels are readable by the team"
-  on public.labels for select to authenticated
+  on tasks.labels for select to authenticated
   using (true);
 
-drop policy if exists "planners add labels" on public.labels;
+drop policy if exists "planners add labels" on tasks.labels;
 create policy "planners add labels"
-  on public.labels for insert to authenticated
-  with check (public.is_manager_or_admin());
+  on tasks.labels for insert to authenticated
+  with check (tasks.is_manager_or_admin());
 
-drop policy if exists "planners change labels" on public.labels;
+drop policy if exists "planners change labels" on tasks.labels;
 create policy "planners change labels"
-  on public.labels for update to authenticated
-  using (public.is_manager_or_admin())
-  with check (public.is_manager_or_admin());
+  on tasks.labels for update to authenticated
+  using (tasks.is_manager_or_admin())
+  with check (tasks.is_manager_or_admin());
 
-drop policy if exists "planners remove labels" on public.labels;
+drop policy if exists "planners remove labels" on tasks.labels;
 create policy "planners remove labels"
-  on public.labels for delete to authenticated
-  using (public.is_manager_or_admin());
+  on tasks.labels for delete to authenticated
+  using (tasks.is_manager_or_admin());
 
 -- Labels on tasks ---------------------------------------------------------------
 
-drop policy if exists "see the labels on a task you can see" on public.task_labels;
+drop policy if exists "see the labels on a task you can see" on tasks.task_labels;
 create policy "see the labels on a task you can see"
-  on public.task_labels for select to authenticated
-  using (public.can_view_task(task_id));
+  on tasks.task_labels for select to authenticated
+  using (tasks.can_view_task(task_id));
 
-drop policy if exists "planners label tasks" on public.task_labels;
+drop policy if exists "planners label tasks" on tasks.task_labels;
 create policy "planners label tasks"
-  on public.task_labels for insert to authenticated
-  with check (public.is_manager_or_admin() and public.can_view_task(task_id));
+  on tasks.task_labels for insert to authenticated
+  with check (tasks.is_manager_or_admin() and tasks.can_view_task(task_id));
 
-drop policy if exists "planners unlabel tasks" on public.task_labels;
+drop policy if exists "planners unlabel tasks" on tasks.task_labels;
 create policy "planners unlabel tasks"
-  on public.task_labels for delete to authenticated
-  using (public.is_manager_or_admin() and public.can_view_task(task_id));
+  on tasks.task_labels for delete to authenticated
+  using (tasks.is_manager_or_admin() and tasks.can_view_task(task_id));
 
-grant select, insert, update, delete on public.labels to authenticated;
-grant select, insert, delete on public.task_labels to authenticated;
-grant all on public.labels, public.task_labels to service_role;
+grant select, insert, update, delete on tasks.labels to authenticated;
+grant select, insert, delete on tasks.task_labels to authenticated;
+grant all on tasks.labels, tasks.task_labels to service_role;
 
 -- =========================================================================
--- 20261017000040_task_dependencies.sql
+-- 20261017000040_task_dependencies.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -6395,63 +6385,63 @@ grant all on public.labels, public.task_labels to service_role;
 -- Run in the Supabase SQL editor after 39. Safe to run more than once.
 -- ---------------------------------------------------------------------------
 
-create table if not exists public.task_dependencies (
-  task_id    uuid not null references public.tasks (id) on delete cascade,
-  blocked_by uuid not null references public.tasks (id) on delete cascade,
-  created_by uuid references public.profiles (id) on delete set null default auth.uid(),
+create table if not exists tasks.task_dependencies (
+  task_id    uuid not null references tasks.tasks (id) on delete cascade,
+  blocked_by uuid not null references tasks.tasks (id) on delete cascade,
+  created_by uuid references tasks.profiles (id) on delete set null default auth.uid(),
   created_at timestamptz not null default now(),
   primary key (task_id, blocked_by),
   constraint task_dependencies_not_itself check (task_id <> blocked_by)
 );
 
 create index if not exists task_dependencies_blocked_by_idx
-  on public.task_dependencies (blocked_by);
+  on tasks.task_dependencies (blocked_by);
 
-comment on table public.task_dependencies is
+comment on table tasks.task_dependencies is
   'Task task_id cannot start until task blocked_by is done.';
 
-alter table public.task_dependencies enable row level security;
-alter table public.task_dependencies force row level security;
+alter table tasks.task_dependencies enable row level security;
+alter table tasks.task_dependencies force row level security;
 
-drop policy if exists "see what a task you can see waits on" on public.task_dependencies;
+drop policy if exists "see what a task you can see waits on" on tasks.task_dependencies;
 create policy "see what a task you can see waits on"
-  on public.task_dependencies for select to authenticated
-  using (public.can_view_task(task_id));
+  on tasks.task_dependencies for select to authenticated
+  using (tasks.can_view_task(task_id));
 
-drop policy if exists "planners link tasks they can see" on public.task_dependencies;
+drop policy if exists "planners link tasks they can see" on tasks.task_dependencies;
 create policy "planners link tasks they can see"
-  on public.task_dependencies for insert to authenticated
+  on tasks.task_dependencies for insert to authenticated
   with check (
-    public.is_manager_or_admin()
-    and public.can_view_task(task_id)
-    and public.can_view_task(blocked_by)
+    tasks.is_manager_or_admin()
+    and tasks.can_view_task(task_id)
+    and tasks.can_view_task(blocked_by)
   );
 
-drop policy if exists "planners unlink tasks" on public.task_dependencies;
+drop policy if exists "planners unlink tasks" on tasks.task_dependencies;
 create policy "planners unlink tasks"
-  on public.task_dependencies for delete to authenticated
-  using (public.is_manager_or_admin() and public.can_view_task(task_id));
+  on tasks.task_dependencies for delete to authenticated
+  using (tasks.is_manager_or_admin() and tasks.can_view_task(task_id));
 
-grant select, insert, delete on public.task_dependencies to authenticated;
-grant all on public.task_dependencies to service_role;
+grant select, insert, delete on tasks.task_dependencies to authenticated;
+grant all on tasks.task_dependencies to service_role;
 
 -- ---------------------------------------------------------------------------
 -- No circles: A waits on B waits on C waits on A would wait forever.
 -- Definer, so the whole chain is followed, not only the part this caller sees.
 -- ---------------------------------------------------------------------------
 
-create or replace function public.guard_task_dependency_cycle()
+create or replace function tasks.guard_task_dependency_cycle()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 begin
   if exists (
     with recursive chain (id) as (
-      select d.blocked_by from public.task_dependencies d where d.task_id = new.blocked_by
+      select d.blocked_by from tasks.task_dependencies d where d.task_id = new.blocked_by
       union
-      select d.blocked_by from public.task_dependencies d join chain c on d.task_id = c.id
+      select d.blocked_by from tasks.task_dependencies d join chain c on d.task_id = c.id
     )
     select 1 from chain where id = new.task_id
   ) then
@@ -6461,10 +6451,10 @@ begin
 end;
 $$;
 
-drop trigger if exists task_dependencies_no_cycle on public.task_dependencies;
+drop trigger if exists task_dependencies_no_cycle on tasks.task_dependencies;
 create trigger task_dependencies_no_cycle
-  before insert on public.task_dependencies
-  for each row execute function public.guard_task_dependency_cycle();
+  before insert on tasks.task_dependencies
+  for each row execute function tasks.guard_task_dependency_cycle();
 
 -- ---------------------------------------------------------------------------
 -- How many open tasks this one waits on, as a column every task list can ask
@@ -6472,29 +6462,29 @@ create trigger task_dependencies_no_cycle
 -- see; a binned task is not waited on.
 -- ---------------------------------------------------------------------------
 
-create or replace function public.waiting_on(t public.tasks)
+create or replace function tasks.waiting_on(t tasks.tasks)
 returns integer
 language sql
 stable
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
   select count(*)::integer
-    from public.task_dependencies d
-    join public.tasks b on b.id = d.blocked_by
+    from tasks.task_dependencies d
+    join tasks.tasks b on b.id = d.blocked_by
    where d.task_id = t.id
      and b.status <> 'done'
      and b.deleted_at is null;
 $$;
 
-grant execute on function public.waiting_on(public.tasks) to authenticated;
+grant execute on function tasks.waiting_on(tasks.tasks) to authenticated;
 
 -- ---------------------------------------------------------------------------
 -- Ready to go: when a task is finished, the people on each task that was
 -- waiting only on it are told.
 -- ---------------------------------------------------------------------------
 
-alter table public.notifications drop constraint if exists notifications_type_known;
-alter table public.notifications add constraint notifications_type_known check (
+alter table tasks.notifications drop constraint if exists notifications_type_known;
+alter table tasks.notifications add constraint notifications_type_known check (
   type in (
     'task_assigned',
     'task_unassigned',
@@ -6506,13 +6496,13 @@ alter table public.notifications add constraint notifications_type_known check (
     'reminder_failed',
     'task_unblocked'
   )
-);
+) not valid;
 
-create or replace function public.notify_unblocked()
+create or replace function tasks.notify_unblocked()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 declare
   waiting record;
@@ -6524,16 +6514,16 @@ begin
 
   for waiting in
     select w.id, w.title, w.project_id
-      from public.task_dependencies d
-      join public.tasks w on w.id = d.task_id
+      from tasks.task_dependencies d
+      join tasks.tasks w on w.id = d.task_id
      where d.blocked_by = new.id
        and w.status <> 'done'
        and w.deleted_at is null
        -- Nothing else it waits on is still open.
        and not exists (
          select 1
-           from public.task_dependencies other
-           join public.tasks b on b.id = other.blocked_by
+           from tasks.task_dependencies other
+           join tasks.tasks b on b.id = other.blocked_by
           where other.task_id = w.id
             and other.blocked_by <> new.id
             and b.status <> 'done'
@@ -6541,9 +6531,9 @@ begin
        )
   loop
     for person in
-      select a.user_id from public.task_assignments a where a.task_id = waiting.id
+      select a.user_id from tasks.task_assignments a where a.task_id = waiting.id
     loop
-      perform public.push_notification(
+      perform tasks.push_notification(
         person,
         auth.uid(),
         'task_unblocked',
@@ -6559,13 +6549,13 @@ begin
 end;
 $$;
 
-drop trigger if exists tasks_notify_unblocked on public.tasks;
+drop trigger if exists tasks_notify_unblocked on tasks.tasks;
 create trigger tasks_notify_unblocked
-  after update of status on public.tasks
-  for each row execute function public.notify_unblocked();
+  after update of status on tasks.tasks
+  for each row execute function tasks.notify_unblocked();
 
 -- =========================================================================
--- 20261017000041_task_templates.sql
+-- 20261017000041_task_templates.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -6581,16 +6571,16 @@ create trigger tasks_notify_unblocked
 -- Run in the Supabase SQL editor after 40. Safe to run more than once.
 -- ---------------------------------------------------------------------------
 
-create table if not exists public.task_templates (
+create table if not exists tasks.task_templates (
   id                  uuid primary key default gen_random_uuid(),
   name                text not null,
   title               text not null,
   description         text,
-  priority            public.task_priority not null default 'medium',
+  priority            tasks.task_priority not null default 'medium',
   steps               text[] not null default '{}',
   label_ids           uuid[] not null default '{}',
   due_in_working_days integer,
-  created_by          uuid references public.profiles (id) on delete set null default auth.uid(),
+  created_by          uuid references tasks.profiles (id) on delete set null default auth.uid(),
   created_at          timestamptz not null default now(),
   updated_at          timestamptz not null default now(),
 
@@ -6600,43 +6590,43 @@ create table if not exists public.task_templates (
   constraint task_templates_due_range check (due_in_working_days between 0 and 365)
 );
 
-comment on table public.task_templates is
+comment on table tasks.task_templates is
   'Work that comes round again: a task''s title, steps and labels, to start the next one from.';
 
-alter table public.task_templates enable row level security;
-alter table public.task_templates force row level security;
+alter table tasks.task_templates enable row level security;
+alter table tasks.task_templates force row level security;
 
-drop policy if exists "templates are readable by the team" on public.task_templates;
+drop policy if exists "templates are readable by the team" on tasks.task_templates;
 create policy "templates are readable by the team"
-  on public.task_templates for select to authenticated
+  on tasks.task_templates for select to authenticated
   using (true);
 
-drop policy if exists "planners add templates" on public.task_templates;
+drop policy if exists "planners add templates" on tasks.task_templates;
 create policy "planners add templates"
-  on public.task_templates for insert to authenticated
-  with check (public.is_manager_or_admin());
+  on tasks.task_templates for insert to authenticated
+  with check (tasks.is_manager_or_admin());
 
-drop policy if exists "planners change templates" on public.task_templates;
+drop policy if exists "planners change templates" on tasks.task_templates;
 create policy "planners change templates"
-  on public.task_templates for update to authenticated
-  using (public.is_manager_or_admin())
-  with check (public.is_manager_or_admin());
+  on tasks.task_templates for update to authenticated
+  using (tasks.is_manager_or_admin())
+  with check (tasks.is_manager_or_admin());
 
-drop policy if exists "planners remove templates" on public.task_templates;
+drop policy if exists "planners remove templates" on tasks.task_templates;
 create policy "planners remove templates"
-  on public.task_templates for delete to authenticated
-  using (public.is_manager_or_admin());
+  on tasks.task_templates for delete to authenticated
+  using (tasks.is_manager_or_admin());
 
-grant select, insert, update, delete on public.task_templates to authenticated;
-grant all on public.task_templates to service_role;
+grant select, insert, update, delete on tasks.task_templates to authenticated;
+grant all on tasks.task_templates to service_role;
 
-drop trigger if exists task_templates_set_updated_at on public.task_templates;
+drop trigger if exists task_templates_set_updated_at on tasks.task_templates;
 create trigger task_templates_set_updated_at
-  before update on public.task_templates
-  for each row execute function public.set_updated_at();
+  before update on tasks.task_templates
+  for each row execute function tasks.set_updated_at();
 
 -- =========================================================================
--- 20261017000042_telegram_quick_add.sql
+-- 20261017000042_telegram_quick_add.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -6658,21 +6648,21 @@ create trigger task_templates_set_updated_at
 -- Run in the Supabase SQL editor after 41. Safe to run more than once.
 -- ---------------------------------------------------------------------------
 
-create or replace function public.add_from_chat(
+create or replace function tasks.add_from_chat(
   chat          text,
   item_title    text,
   item_detail   text default null,
-  item_priority public.task_priority default 'medium',
+  item_priority tasks.task_priority default 'medium',
   due           timestamptz default null
 )
 returns jsonb
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 declare
   person      uuid;
-  person_role public.user_role;
+  person_role tasks.user_role;
   created     uuid;
   inbox       uuid;
   title_text  text := left(btrim(coalesce(item_title, '')), 200);
@@ -6683,8 +6673,8 @@ begin
   end if;
 
   select np.user_id, p.role into person, person_role
-    from public.notification_preferences np
-    join public.profiles p on p.id = np.user_id
+    from tasks.notification_preferences np
+    join tasks.profiles p on p.id = np.user_id
    where np.telegram_chat_id = chat
    limit 1;
   if person is null then
@@ -6695,44 +6685,44 @@ begin
   perform set_config('request.jwt.claim.sub', person::text, true);
 
   if person_role in ('admin', 'manager') then
-    insert into public.tasks (project_id, title, description, priority, due_at, created_by, position)
+    insert into tasks.tasks (project_id, title, description, priority, due_at, created_by, position)
     values (
       null, title_text, detail_text, item_priority, due, person,
-      coalesce((select max(position) from public.tasks where project_id is null and status = 'todo'), 0) + 1024
+      coalesce((select max(position) from tasks.tasks where project_id is null and status = 'todo'), 0) + 1024
     )
     returning id into created;
 
-    insert into public.task_assignments (task_id, user_id) values (created, person);
+    insert into tasks.task_assignments (task_id, user_id) values (created, person);
     return jsonb_build_object('kind', 'task', 'id', created);
   end if;
 
   select id into inbox
-    from public.personal_notes
+    from tasks.personal_notes
    where user_id = person and title = 'Telegram'
    order by created_at
    limit 1;
   if inbox is null then
-    insert into public.personal_notes (user_id, title) values (person, 'Telegram')
+    insert into tasks.personal_notes (user_id, title) values (person, 'Telegram')
     returning id into inbox;
   end if;
 
-  insert into public.personal_note_items (note_id, user_id, content, position)
+  insert into tasks.personal_note_items (note_id, user_id, content, position)
   values (
     inbox, person,
     left(concat_ws(' — ', title_text, detail_text), 1000),
-    coalesce((select max(position) from public.personal_note_items where note_id = inbox), 0) + 1024
+    coalesce((select max(position) from tasks.personal_note_items where note_id = inbox), 0) + 1024
   )
   returning id into created;
 
   -- To the top of My List, where the newest thing belongs.
-  update public.personal_notes set updated_at = now() where id = inbox;
+  update tasks.personal_notes set updated_at = now() where id = inbox;
   return jsonb_build_object('kind', 'note', 'id', created);
 end;
 $$;
 
-revoke all on function public.add_from_chat(text, text, text, public.task_priority, timestamptz)
+revoke all on function tasks.add_from_chat(text, text, text, tasks.task_priority, timestamptz)
   from public, anon, authenticated;
-grant execute on function public.add_from_chat(text, text, text, public.task_priority, timestamptz)
+grant execute on function tasks.add_from_chat(text, text, text, tasks.task_priority, timestamptz)
   to service_role;
 
 -- ---------------------------------------------------------------------------
@@ -6740,38 +6730,38 @@ grant execute on function public.add_from_chat(text, text, text, public.task_pri
 -- that one check added.
 -- ---------------------------------------------------------------------------
 
-create or replace function public.enqueue_assignment_reminder()
+create or replace function tasks.enqueue_assignment_reminder()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $fn$
 declare
-  t public.tasks%rowtype;
-  prefs public.notification_preferences%rowtype;
+  t tasks.tasks%rowtype;
+  prefs tasks.notification_preferences%rowtype;
 begin
-  select * into t from public.tasks where id = new.task_id;
+  select * into t from tasks.tasks where id = new.task_id;
   if not found then return null; end if;
 
   -- Nobody needs telling that they assigned themselves: from the task form,
   -- or from Telegram, where the bot has just said so.
   if new.user_id = auth.uid() then return null; end if;
 
-  select * into prefs from public.notification_preferences where user_id = new.user_id;
+  select * into prefs from tasks.notification_preferences where user_id = new.user_id;
   if not found or not prefs.remind_assigned then return null; end if;
 
-  insert into public.reminder_queue
+  insert into tasks.reminder_queue
     (user_id, task_id, channel, kind, recipient, subject, body, dedupe_key)
   select
     new.user_id, t.id, ch.channel, 'assigned',
     ch.recipient,
     'Assigned to you: ' || t.title,
     'You were assigned "' || t.title || '"'
-      || coalesce(' - due ' || to_char(t.due_at at time zone public.company_time_zone(), 'Dy DD Mon, HH24:MI'), '') || '.',
+      || coalesce(' - due ' || to_char(t.due_at at time zone tasks.company_time_zone(), 'Dy DD Mon, HH24:MI'), '') || '.',
     'assigned:' || t.id || ':' || new.user_id || ':' || ch.channel
       || case when ch.channel = 'push' then ':' || ch.recipient else '' end
   from (
-    select 'email'::text as channel, (select email from public.profiles where id = new.user_id) as recipient
+    select 'email'::text as channel, (select email from tasks.profiles where id = new.user_id) as recipient
       where prefs.email_enabled
     union all
     select 'telegram', prefs.telegram_chat_id
@@ -6781,7 +6771,7 @@ begin
       where prefs.whatsapp_enabled and prefs.whatsapp_number is not null
     union all
     select 'push', s.endpoint
-      from public.push_subscriptions s
+      from tasks.push_subscriptions s
      where prefs.push_enabled and s.user_id = new.user_id
   ) ch
   where ch.recipient is not null
@@ -6792,7 +6782,7 @@ end;
 $fn$;
 
 -- =========================================================================
--- 20261017000043_work_report.sql
+-- 20261017000043_work_report.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -6814,7 +6804,7 @@ $fn$;
 -- Run in the Supabase SQL editor after 42. Safe to run more than once.
 -- ---------------------------------------------------------------------------
 
-create or replace function public.work_report(
+create or replace function tasks.work_report(
   first_day date,
   last_day  date,
   grain     text default 'week'
@@ -6822,11 +6812,11 @@ create or replace function public.work_report(
 returns jsonb
 language sql
 stable
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
   with
   settings as (
-    select public.company_time_zone() as zone,
+    select tasks.company_time_zone() as zone,
            (last_day - first_day + 1) as length
   ),
   periods as (
@@ -6837,13 +6827,13 @@ as $$
     from settings s
   ),
   live as (
-    select * from public.tasks where deleted_at is null
+    select * from tasks.tasks where deleted_at is null
   ),
   finished as (
     select
       t.id, t.due_at,
       coalesce(
-        (select max(a.created_at) from public.task_activity a
+        (select max(a.created_at) from tasks.task_activity a
           where a.task_id = t.id and a.action = 'status_changed' and a.new_value = 'done'),
         t.updated_at
       ) as at
@@ -6901,9 +6891,9 @@ as $$
           coalesce(nullif(p.full_name, ''), p.email) as name,
           count(*) as open,
           count(*) filter (where t.due_at < now()) as overdue
-        from public.task_assignments a
+        from tasks.task_assignments a
         join live t on t.id = a.task_id
-        join public.profiles p on p.id = a.user_id
+        join tasks.profiles p on p.id = a.user_id
         where t.status <> 'done'
         group by p.id, p.full_name, p.email
       ) x
@@ -6917,7 +6907,7 @@ as $$
           count(t.id) as total,
           count(t.id) filter (where t.status = 'done') as done,
           count(t.id) filter (where t.status <> 'done' and t.due_at < now()) as overdue
-        from public.projects pr
+        from tasks.projects pr
         left join live t on t.project_id = pr.id
         where pr.archived_at is null
         group by pr.id, pr.name
@@ -6926,10 +6916,10 @@ as $$
   );
 $$;
 
-grant execute on function public.work_report(date, date, text) to authenticated;
+grant execute on function tasks.work_report(date, date, text) to authenticated;
 
 -- =========================================================================
--- 20261017000044_project_milestones.sql
+-- 20261017000044_project_milestones.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -6948,13 +6938,13 @@ grant execute on function public.work_report(date, date, text) to authenticated;
 -- Run in the Supabase SQL editor after 43. Safe to run more than once.
 -- ---------------------------------------------------------------------------
 
-create table if not exists public.project_milestones (
+create table if not exists tasks.project_milestones (
   id          uuid primary key default gen_random_uuid(),
-  project_id  uuid not null references public.projects (id) on delete cascade,
+  project_id  uuid not null references tasks.projects (id) on delete cascade,
   title       text not null,
   due_on      date not null,
   done_at     timestamptz,
-  created_by  uuid references public.profiles (id) on delete set null default auth.uid(),
+  created_by  uuid references tasks.profiles (id) on delete set null default auth.uid(),
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now(),
 
@@ -6962,49 +6952,49 @@ create table if not exists public.project_milestones (
 );
 
 create index if not exists project_milestones_project_idx
-  on public.project_milestones (project_id, due_on);
+  on tasks.project_milestones (project_id, due_on);
 
-comment on table public.project_milestones is
+comment on table tasks.project_milestones is
   'A date a project has promised, with the tasks for it gathered under it.';
 
-alter table public.project_milestones enable row level security;
-alter table public.project_milestones force row level security;
+alter table tasks.project_milestones enable row level security;
+alter table tasks.project_milestones force row level security;
 
-drop policy if exists "milestones are readable with the project" on public.project_milestones;
+drop policy if exists "milestones are readable with the project" on tasks.project_milestones;
 create policy "milestones are readable with the project"
-  on public.project_milestones for select to authenticated
-  using (public.can_view_project(project_id));
+  on tasks.project_milestones for select to authenticated
+  using (tasks.can_view_project(project_id));
 
-drop policy if exists "planners add milestones" on public.project_milestones;
+drop policy if exists "planners add milestones" on tasks.project_milestones;
 create policy "planners add milestones"
-  on public.project_milestones for insert to authenticated
-  with check (public.is_manager_or_admin() and public.can_view_project(project_id));
+  on tasks.project_milestones for insert to authenticated
+  with check (tasks.is_manager_or_admin() and tasks.can_view_project(project_id));
 
-drop policy if exists "planners change milestones" on public.project_milestones;
+drop policy if exists "planners change milestones" on tasks.project_milestones;
 create policy "planners change milestones"
-  on public.project_milestones for update to authenticated
-  using (public.is_manager_or_admin() and public.can_view_project(project_id))
-  with check (public.is_manager_or_admin() and public.can_view_project(project_id));
+  on tasks.project_milestones for update to authenticated
+  using (tasks.is_manager_or_admin() and tasks.can_view_project(project_id))
+  with check (tasks.is_manager_or_admin() and tasks.can_view_project(project_id));
 
-drop policy if exists "planners remove milestones" on public.project_milestones;
+drop policy if exists "planners remove milestones" on tasks.project_milestones;
 create policy "planners remove milestones"
-  on public.project_milestones for delete to authenticated
-  using (public.is_manager_or_admin() and public.can_view_project(project_id));
+  on tasks.project_milestones for delete to authenticated
+  using (tasks.is_manager_or_admin() and tasks.can_view_project(project_id));
 
-grant select, insert, update, delete on public.project_milestones to authenticated;
-grant all on public.project_milestones to service_role;
+grant select, insert, update, delete on tasks.project_milestones to authenticated;
+grant all on tasks.project_milestones to service_role;
 
-drop trigger if exists project_milestones_set_updated_at on public.project_milestones;
+drop trigger if exists project_milestones_set_updated_at on tasks.project_milestones;
 create trigger project_milestones_set_updated_at
-  before update on public.project_milestones
-  for each row execute function public.set_updated_at();
+  before update on tasks.project_milestones
+  for each row execute function tasks.set_updated_at();
 
 -- A milestone never moves to another project: its tasks would go with it in
 -- name only.
-create or replace function public.keep_milestone_in_project()
+create or replace function tasks.keep_milestone_in_project()
 returns trigger
 language plpgsql
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 begin
   if new.project_id is distinct from old.project_id then
@@ -7015,10 +7005,10 @@ begin
 end;
 $$;
 
-drop trigger if exists project_milestones_keep_project on public.project_milestones;
+drop trigger if exists project_milestones_keep_project on tasks.project_milestones;
 create trigger project_milestones_keep_project
-  before update on public.project_milestones
-  for each row execute function public.keep_milestone_in_project();
+  before update on tasks.project_milestones
+  for each row execute function tasks.keep_milestone_in_project();
 
 -- ---------------------------------------------------------------------------
 -- A task under a milestone
@@ -7026,25 +7016,25 @@ create trigger project_milestones_keep_project
 -- Deleting the milestone leaves its tasks where they are, under none.
 -- ---------------------------------------------------------------------------
 
-alter table public.tasks
+alter table tasks.tasks
   add column if not exists milestone_id uuid
-    references public.project_milestones (id) on delete set null;
+    references tasks.project_milestones (id) on delete set null;
 
 create index if not exists tasks_milestone_idx
-  on public.tasks (milestone_id)
+  on tasks.tasks (milestone_id)
   where milestone_id is not null;
 
-comment on column public.tasks.milestone_id is
+comment on column tasks.tasks.milestone_id is
   'The milestone of the task''s own project it counts towards, or null.';
 
 -- Only a milestone of the task's own project. A task moved to another
 -- project, or out of every project, leaves its old milestone behind rather
 -- than refusing to move: the move is the thing being asked for.
-create or replace function public.check_task_milestone()
+create or replace function tasks.check_task_milestone()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 begin
   if new.milestone_id is null then
@@ -7052,7 +7042,7 @@ begin
   end if;
 
   if exists (
-    select 1 from public.project_milestones m
+    select 1 from tasks.project_milestones m
     where m.id = new.milestone_id and m.project_id = new.project_id
   ) then
     return new;
@@ -7071,20 +7061,20 @@ begin
 end;
 $$;
 
-drop trigger if exists tasks_check_milestone on public.tasks;
+drop trigger if exists tasks_check_milestone on tasks.tasks;
 create trigger tasks_check_milestone
-  before insert or update of milestone_id, project_id on public.tasks
-  for each row execute function public.check_task_milestone();
+  before insert or update of milestone_id, project_id on tasks.tasks
+  for each row execute function tasks.check_task_milestone();
 
 -- Which milestone a task counts towards is planning, like its due date.
-create or replace function public.enforce_task_field_permissions()
+create or replace function tasks.enforce_task_field_permissions()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
 begin
-  if public.is_manager_or_admin() then
+  if tasks.is_manager_or_admin() then
     return new;
   end if;
 
@@ -7108,7 +7098,7 @@ $$;
 notify pgrst, 'reload schema';
 
 -- =========================================================================
--- 20261017000045_admin_alerts.sql
+-- 20261017000045_admin_alerts.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -7131,7 +7121,7 @@ notify pgrst, 'reload schema';
 -- Run in the Supabase SQL editor after 44. Safe to run more than once.
 -- ---------------------------------------------------------------------------
 
-create table if not exists public.admin_alerts (
+create table if not exists tasks.admin_alerts (
   id        uuid primary key default gen_random_uuid(),
   sent_at   timestamptz not null default now(),
   faults    integer not null default 0 check (faults >= 0),
@@ -7140,16 +7130,16 @@ create table if not exists public.admin_alerts (
   reached   integer not null default 0 check (reached >= 0)
 );
 
-create index if not exists admin_alerts_sent_idx on public.admin_alerts (sent_at desc);
+create index if not exists admin_alerts_sent_idx on tasks.admin_alerts (sent_at desc);
 
-comment on table public.admin_alerts is
+comment on table tasks.admin_alerts is
   'When the admins were last told about faults and failed reminders. Service key only.';
 
-alter table public.admin_alerts enable row level security;
-alter table public.admin_alerts force row level security;
+alter table tasks.admin_alerts enable row level security;
+alter table tasks.admin_alerts force row level security;
 -- No policies: nobody signed in reads or writes it.
-revoke all on public.admin_alerts from anon, authenticated;
-grant all on public.admin_alerts to service_role;
+revoke all on tasks.admin_alerts from anon, authenticated;
+grant all on tasks.admin_alerts to service_role;
 
 -- ---------------------------------------------------------------------------
 -- What is new since the last note
@@ -7159,22 +7149,22 @@ grant all on public.admin_alerts to service_role;
 -- without their query strings, busiest first, five at most.
 -- ---------------------------------------------------------------------------
 
-create or replace function public.admin_alert_digest(as_of timestamptz default now())
+create or replace function tasks.admin_alert_digest(as_of timestamptz default now())
 returns jsonb
 language sql
 stable
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
   with since as (
     select coalesce(
-      (select max(sent_at) from public.admin_alerts where sent_at <= as_of),
+      (select max(sent_at) from tasks.admin_alerts where sent_at <= as_of),
       as_of - interval '24 hours'
     ) as at
   ),
   faults as (
     select e.source, coalesce(nullif(split_part(e.route, '?', 1), ''), '/') as page
-      from public.app_errors e, since
+      from tasks.app_errors e, since
      where e.occurred_at > since.at and e.occurred_at <= as_of
   ),
   pages as (
@@ -7192,13 +7182,13 @@ as $$
                         order by n desc, page) from pages),
       '[]'::jsonb),
     'failedReminders', (
-      select count(*)::int from public.reminder_queue q, since
+      select count(*)::int from tasks.reminder_queue q, since
        where q.status = 'failed' and q.failed_at > since.at and q.failed_at <= as_of
     ),
     'recipients', coalesce(
       (select jsonb_agg(np.telegram_chat_id order by p.created_at)
-         from public.profiles p
-         join public.notification_preferences np on np.user_id = p.id
+         from tasks.profiles p
+         join tasks.notification_preferences np on np.user_id = p.id
         where p.role = 'admin'
           and np.telegram_enabled
           and np.telegram_chat_id is not null),
@@ -7206,14 +7196,14 @@ as $$
   );
 $$;
 
-revoke all on function public.admin_alert_digest(timestamptz) from public, anon, authenticated;
-grant execute on function public.admin_alert_digest(timestamptz) to service_role;
+revoke all on function tasks.admin_alert_digest(timestamptz) from public, anon, authenticated;
+grant execute on function tasks.admin_alert_digest(timestamptz) to service_role;
 
-comment on function public.admin_alert_digest(timestamptz) is
+comment on function tasks.admin_alert_digest(timestamptz) is
   'Faults and failed reminders since the admins were last told, and which Telegram chats to tell. Service key only.';
 
 -- =========================================================================
--- 20261017000046_portal_health.sql
+-- 20261017000046_portal_health.sql (Maham Tasks, moved to the tasks schema)
 -- =========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -7234,26 +7224,26 @@ comment on function public.admin_alert_digest(timestamptz) is
 -- Run in the Supabase SQL editor after 45. Safe to run more than once.
 -- ---------------------------------------------------------------------------
 
-create or replace function public.portal_health()
+create or replace function tasks.portal_health()
 returns jsonb
 language sql
 stable
 security definer
-set search_path = public, pg_temp
+set search_path = tasks, pg_temp
 as $$
   with markers (migration, present) as (
     values
-      (35, to_regprocedure('public.attachment_task_id(text)') is not null),
-      (36, to_regclass('public.company_holidays') is not null),
-      (37, to_regprocedure('public.enqueue_morning_summaries(timestamptz)') is not null),
-      (38, to_regprocedure('public.second_step_pending()') is not null),
-      (39, to_regclass('public.labels') is not null),
-      (40, to_regclass('public.task_dependencies') is not null),
-      (41, to_regclass('public.task_templates') is not null),
-      (42, to_regprocedure('public.add_from_chat(text, text, text, public.task_priority, timestamptz)') is not null),
-      (43, to_regprocedure('public.work_report(date, date, text)') is not null),
-      (44, to_regclass('public.project_milestones') is not null),
-      (45, to_regclass('public.admin_alerts') is not null),
+      (35, to_regprocedure('tasks.attachment_task_id(text)') is not null),
+      (36, to_regclass('tasks.company_holidays') is not null),
+      (37, to_regprocedure('tasks.enqueue_morning_summaries(timestamptz)') is not null),
+      (38, to_regprocedure('tasks.second_step_pending()') is not null),
+      (39, to_regclass('tasks.labels') is not null),
+      (40, to_regclass('tasks.task_dependencies') is not null),
+      (41, to_regclass('tasks.task_templates') is not null),
+      (42, to_regprocedure('tasks.add_from_chat(text, text, text, tasks.task_priority, timestamptz)') is not null),
+      (43, to_regprocedure('tasks.work_report(date, date, text)') is not null),
+      (44, to_regclass('tasks.project_milestones') is not null),
+      (45, to_regclass('tasks.admin_alerts') is not null),
       (46, true)
   )
   select jsonb_build_object(
@@ -7269,7 +7259,728 @@ as $$
   );
 $$;
 
-grant execute on function public.portal_health() to anon, authenticated, service_role;
+grant execute on function tasks.portal_health() to anon, authenticated, service_role;
 
-comment on function public.portal_health() is
+comment on function tasks.portal_health() is
   'For /api/health: the database answers, and which migrations have been run. Names only, nothing about anybody.';
+
+-- =========================================================================
+-- Maham One: one account for Maham One and Maham Tasks
+-- =========================================================================
+
+-- Maham Tasks puts nothing on auth.users: Maham One's sign-ups, sign-ins
+-- and token refreshes never wait on it or go through it. Its old sign-up
+-- trigger (handle_new_user, which made the first account admin and refused
+-- the rest) is not attached, and goes.
+drop function if exists tasks.handle_new_user();
+
+-- People a Maham Tasks admin invited, by email. Being in Maham Tasks is
+-- theirs to accept: the invite becomes their profile when they sign in here
+-- with a confirmed Maham One account that has that email (tasks.join). An
+-- invite says nothing about whether such an account exists, and lapses
+-- after 30 days.
+create table if not exists tasks.invites (
+  email      text primary key,
+  full_name  text,
+  role       tasks.user_role not null default 'member',
+  invited_by uuid references tasks.profiles (id) on delete set null,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null default now() + interval '30 days',
+
+  constraint invites_email_lower check (email = lower(btrim(email)) and length(email) > 3),
+  constraint invites_full_name_length check (full_name is null or length(full_name) <= 120)
+);
+
+alter table tasks.invites enable row level security;
+-- Seen and withdrawn by admins (the rules below); made by add_teammate only.
+grant select, delete on tasks.invites to authenticated;
+
+drop policy if exists "admins see invites" on tasks.invites;
+create policy "admins see invites"
+  on tasks.invites for select
+  to authenticated
+  using (tasks.is_admin());
+
+drop policy if exists "admins withdraw invites" on tasks.invites;
+create policy "admins withdraw invites"
+  on tasks.invites for delete
+  to authenticated
+  using (tasks.is_admin());
+
+-- An admin, signed in with two-step sign-in, invites a teammate by email.
+-- Returns {status: 'invited'}, or 'already' when somebody in Maham Tasks
+-- has that email; never whether a Maham One account has it.
+create or replace function tasks.add_teammate(
+  p_email     text,
+  p_full_name text default null,
+  p_role      tasks.user_role default 'member'
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = tasks, pg_temp
+as $$
+declare
+  v_email text := lower(btrim(coalesce(p_email, '')));
+  v_name  text := nullif(btrim(coalesce(p_full_name, '')), '');
+begin
+  if not tasks.is_admin() then
+    raise exception 'Only an admin adds teammates.' using errcode = '42501';
+  end if;
+  if coalesce(auth.jwt() ->> 'aal', 'aal1') <> 'aal2' then
+    raise exception 'Turn on two-step sign-in to add people.' using errcode = '42501';
+  end if;
+  if v_email !~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$' then
+    raise exception 'Enter a valid email address.' using errcode = '22023';
+  end if;
+  if v_name is not null and length(v_name) > 120 then
+    raise exception 'Keep the name to 120 characters.' using errcode = '22023';
+  end if;
+
+  if exists (select 1 from tasks.profiles p where lower(p.email) = v_email) then
+    return jsonb_build_object('status', 'already');
+  end if;
+
+  insert into tasks.invites (email, full_name, role, invited_by)
+  values (v_email, v_name, p_role, auth.uid())
+  on conflict (email) do update
+    set full_name = excluded.full_name,
+        role = excluded.role,
+        invited_by = excluded.invited_by,
+        created_at = now(),
+        expires_at = now() + interval '30 days';
+  return jsonb_build_object('status', 'invited');
+end;
+$$;
+
+revoke all on function tasks.add_teammate(text, text, tasks.user_role) from public, anon;
+grant execute on function tasks.add_teammate(text, text, tasks.user_role) to authenticated;
+
+-- The signed-in account joins Maham Tasks when it was invited: confirmed,
+-- with the invited email, before the invite lapsed. True once it is in.
+create or replace function tasks.join()
+returns boolean
+language plpgsql
+security definer
+set search_path = tasks, pg_temp
+as $$
+declare
+  v_id     uuid := auth.uid();
+  v_email  text;
+  v_meta   jsonb;
+  v_invite tasks.invites%rowtype;
+begin
+  if v_id is null then
+    return false;
+  end if;
+  if exists (select 1 from tasks.profiles p where p.id = v_id) then
+    return true;
+  end if;
+  select u.email, u.raw_user_meta_data
+    into v_email, v_meta
+    from auth.users u
+   where u.id = v_id
+     and u.email_confirmed_at is not null;
+  if v_email is null then
+    return false;
+  end if;
+  select * into v_invite
+    from tasks.invites i
+   where i.email = lower(btrim(v_email))
+     and i.expires_at > now();
+  if not found then
+    return false;
+  end if;
+  insert into tasks.profiles (id, email, full_name, role)
+  values (
+    v_id,
+    v_email,
+    left(coalesce(v_invite.full_name, nullif(btrim(coalesce(v_meta ->> 'full_name', '')), '')), 120),
+    v_invite.role
+  )
+  on conflict (id) do nothing;
+  delete from tasks.invites i where i.email = v_invite.email;
+  return true;
+end;
+$$;
+
+revoke all on function tasks.join() from public, anon;
+grant execute on function tasks.join() to authenticated;
+
+-- An admin, signed in with two-step sign-in, removes a teammate's
+-- authenticator app (a lost phone). Only that: the account is their Maham
+-- One one too.
+create or replace function tasks.remove_two_step(p_user uuid)
+returns integer
+language plpgsql
+security definer
+set search_path = tasks, pg_temp
+as $$
+declare
+  v_count integer;
+begin
+  if not tasks.is_admin() then
+    raise exception 'Only an admin removes two-step sign-in.' using errcode = '42501';
+  end if;
+  if coalesce(auth.jwt() ->> 'aal', 'aal1') <> 'aal2' then
+    raise exception 'Turn on two-step sign-in to manage the team.' using errcode = '42501';
+  end if;
+  if p_user = auth.uid() then
+    raise exception 'Remove your own two-step sign-in from your profile.' using errcode = '22023';
+  end if;
+  if not exists (select 1 from tasks.profiles p where p.id = p_user) then
+    raise exception 'That person is not in Maham Tasks.' using errcode = '22023';
+  end if;
+  begin
+    delete from auth.mfa_factors f
+     where f.user_id = p_user
+       and f.factor_type::text = 'totp';
+    get diagnostics v_count = row_count;
+  exception when insufficient_privilege then
+    raise exception 'This database does not let Maham Tasks remove it. Remove it in Supabase: Authentication → Users → the person → Remove MFA factors.'
+      using errcode = '42501';
+  end;
+  return v_count;
+end;
+$$;
+
+revoke all on function tasks.remove_two_step(uuid) from public, anon;
+grant execute on function tasks.remove_two_step(uuid) to authenticated;
+
+-- The first admin, named by the owner in the SQL editor: there is no first
+-- sign-up to make one any more. Refused once Maham Tasks has an admin.
+create or replace function tasks.add_first_admin(p_email text)
+returns text
+language plpgsql
+security definer
+set search_path = tasks, pg_temp
+as $$
+declare
+  v_id    uuid;
+  v_email text;
+  v_name  text;
+begin
+  if exists (select 1 from tasks.profiles p where p.role = 'admin') then
+    raise exception 'Maham Tasks has an admin already: they add everyone else from the Team page.';
+  end if;
+  select u.id, u.email, nullif(btrim(coalesce(u.raw_user_meta_data ->> 'full_name', '')), '')
+    into v_id, v_email, v_name
+    from auth.users u
+   where lower(u.email) = lower(btrim(coalesce(p_email, '')))
+   limit 1;
+  if v_id is null then
+    raise exception 'No Maham One account uses %. Sign up at mahamone.com with it first, then run this again.', p_email;
+  end if;
+  if exists (select 1 from tasks.profiles p where p.id = v_id) then
+    -- Only an admin changes a role (profiles_guard_role_change), and there
+    -- is none yet: the owner's own line is the one exception.
+    alter table tasks.profiles disable trigger profiles_guard_role_change;
+    update tasks.profiles set role = 'admin' where id = v_id;
+    alter table tasks.profiles enable trigger profiles_guard_role_change;
+  else
+    insert into tasks.profiles (id, email, full_name, role)
+    values (v_id, v_email, v_name, 'admin');
+  end if;
+  return format('%s is the Maham Tasks admin.', v_email);
+end;
+$$;
+
+revoke all on function tasks.add_first_admin(text) from public, anon, authenticated;
+
+-- =========================================================================
+-- Maham One: Maham Tasks' server without a master key
+-- =========================================================================
+
+-- The digest of the server's secret (TASKS_SERVER_SECRET in Vercel). No
+-- policies: nothing reads it through the API.
+create table if not exists tasks.server_keys (
+  id         boolean primary key default true check (id),
+  digest     bytea not null,
+  created_at timestamptz not null default now()
+);
+
+alter table tasks.server_keys enable row level security;
+revoke all on tasks.server_keys from anon, authenticated;
+
+-- A new secret for the server, shown once; the one before stops working.
+create or replace function tasks.new_server_secret()
+returns text
+language plpgsql
+security definer
+set search_path = tasks, pg_temp
+as $$
+declare
+  v_secret text := replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', '');
+begin
+  insert into tasks.server_keys (id, digest)
+  values (true, sha256(convert_to(v_secret, 'UTF8')))
+  on conflict (id) do update
+    set digest = excluded.digest,
+        created_at = now();
+  return v_secret;
+end;
+$$;
+
+revoke all on function tasks.new_server_secret() from public, anon, authenticated;
+
+-- Refuses anyone but Maham Tasks' server.
+create or replace function tasks.assert_server(p_secret text)
+returns void
+language plpgsql
+stable
+security definer
+set search_path = tasks, pg_temp
+as $$
+begin
+  if p_secret is null or length(p_secret) < 32 or not exists (
+    select 1 from tasks.server_keys k
+     where k.digest = sha256(convert_to(p_secret, 'UTF8'))
+  ) then
+    raise exception 'Only Maham Tasks'' server does this.' using errcode = '42501';
+  end if;
+end;
+$$;
+
+revoke all on function tasks.assert_server(text) from public, anon, authenticated;
+
+-- The server's jobs. Each checks the secret, then does one thing to Maham
+-- Tasks' tables, as the service key did before.
+
+create or replace function tasks.srv_claim_reminders(p_secret text, batch_size integer default 40)
+returns setof tasks.reminder_queue
+language plpgsql
+security definer
+set search_path = tasks, pg_temp
+as $$
+begin
+  perform tasks.assert_server(p_secret);
+  return query select * from tasks.claim_reminders(batch_size);
+end;
+$$;
+
+create or replace function tasks.srv_claim_task_reminders(p_secret text, task uuid)
+returns setof tasks.reminder_queue
+language plpgsql
+security definer
+set search_path = tasks, pg_temp
+as $$
+begin
+  perform tasks.assert_server(p_secret);
+  return query select * from tasks.claim_task_reminders(task);
+end;
+$$;
+
+create or replace function tasks.srv_purge_trashed_tasks(p_secret text)
+returns integer
+language plpgsql
+security definer
+set search_path = tasks, pg_temp
+as $$
+begin
+  perform tasks.assert_server(p_secret);
+  return tasks.purge_trashed_tasks();
+end;
+$$;
+
+create or replace function tasks.srv_purge_old_errors(p_secret text)
+returns integer
+language plpgsql
+security definer
+set search_path = tasks, pg_temp
+as $$
+begin
+  perform tasks.assert_server(p_secret);
+  return tasks.purge_old_errors();
+end;
+$$;
+
+create or replace function tasks.srv_enqueue_task_reminders(p_secret text)
+returns integer
+language plpgsql
+security definer
+set search_path = tasks, pg_temp
+as $$
+begin
+  perform tasks.assert_server(p_secret);
+  return tasks.enqueue_task_reminders();
+end;
+$$;
+
+create or replace function tasks.srv_enqueue_morning_summaries(p_secret text, as_of timestamptz default now())
+returns integer
+language plpgsql
+security definer
+set search_path = tasks, pg_temp
+as $$
+begin
+  perform tasks.assert_server(p_secret);
+  return tasks.enqueue_morning_summaries(as_of);
+end;
+$$;
+
+create or replace function tasks.srv_notify_reminder_failed(p_secret text, reminder uuid)
+returns void
+language plpgsql
+security definer
+set search_path = tasks, pg_temp
+as $$
+begin
+  perform tasks.assert_server(p_secret);
+  perform tasks.notify_reminder_failed(reminder);
+end;
+$$;
+
+create or replace function tasks.srv_admin_alert_digest(p_secret text, as_of timestamptz default now())
+returns jsonb
+language plpgsql
+security definer
+set search_path = tasks, pg_temp
+as $$
+begin
+  perform tasks.assert_server(p_secret);
+  return tasks.admin_alert_digest(as_of);
+end;
+$$;
+
+create or replace function tasks.srv_add_from_chat(
+  p_secret      text,
+  chat          text,
+  item_title    text,
+  item_detail   text default null,
+  item_priority tasks.task_priority default 'medium',
+  due           timestamptz default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = tasks, pg_temp
+as $$
+begin
+  perform tasks.assert_server(p_secret);
+  return tasks.add_from_chat(chat, item_title, item_detail, item_priority, due);
+end;
+$$;
+
+-- A reminder delivered.
+create or replace function tasks.srv_reminder_sent(p_secret text, p_id uuid, p_attempts integer)
+returns void
+language plpgsql
+security definer
+set search_path = tasks, pg_temp
+as $$
+begin
+  perform tasks.assert_server(p_secret);
+  update tasks.reminder_queue
+     set status = 'sent',
+         attempts = p_attempts,
+         sent_at = now(),
+         last_error = null,
+         claimed_at = null
+   where id = p_id;
+end;
+$$;
+
+-- A reminder not delivered: tried again at p_retry_at, or given up.
+create or replace function tasks.srv_reminder_failed(
+  p_secret    text,
+  p_id        uuid,
+  p_attempts  integer,
+  p_error     text,
+  p_exhausted boolean,
+  p_retry_at  timestamptz default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = tasks, pg_temp
+as $$
+begin
+  perform tasks.assert_server(p_secret);
+  update tasks.reminder_queue
+     set status = case when p_exhausted then 'failed' else 'pending' end,
+         attempts = p_attempts,
+         last_error = p_error,
+         failed_at = case when p_exhausted then now() else null end,
+         claimed_at = null,
+         scheduled_for = case
+           when p_exhausted or p_retry_at is null then scheduled_for
+           else p_retry_at
+         end
+   where id = p_id;
+end;
+$$;
+
+-- A device the push service says is gone.
+create or replace function tasks.srv_forget_push_device(p_secret text, p_endpoint text)
+returns void
+language plpgsql
+security definer
+set search_path = tasks, pg_temp
+as $$
+begin
+  perform tasks.assert_server(p_secret);
+  delete from tasks.push_subscriptions where endpoint = p_endpoint;
+end;
+$$;
+
+-- A device's keys, to send it a push.
+create or replace function tasks.srv_push_device(p_secret text, p_endpoint text)
+returns table (p256dh text, auth text)
+language plpgsql
+security definer
+set search_path = tasks, pg_temp
+as $$
+begin
+  perform tasks.assert_server(p_secret);
+  return query
+    select s.p256dh, s.auth from tasks.push_subscriptions s where s.endpoint = p_endpoint;
+end;
+$$;
+
+-- The push keys: the stored pair, or this one when there is none yet.
+create or replace function tasks.srv_web_push_keys(p_secret text, p_public text, p_private text)
+returns table (public_key text, private_key text)
+language plpgsql
+security definer
+set search_path = tasks, pg_temp
+as $$
+begin
+  perform tasks.assert_server(p_secret);
+  if p_public is not null and p_private is not null then
+    insert into tasks.web_push_keys (id, public_key, private_key)
+    values (true, p_public, p_private)
+    on conflict (id) do nothing;
+  end if;
+  return query select k.public_key, k.private_key from tasks.web_push_keys k where k.id;
+end;
+$$;
+
+-- The digest of an alert sent to the admins.
+create or replace function tasks.srv_record_admin_alert(
+  p_secret   text,
+  p_sent_at  timestamptz,
+  p_faults   integer,
+  p_failures integer,
+  p_reached  integer
+)
+returns void
+language plpgsql
+security definer
+set search_path = tasks, pg_temp
+as $$
+begin
+  perform tasks.assert_server(p_secret);
+  insert into tasks.admin_alerts (sent_at, faults, failures, reached)
+  values (coalesce(p_sent_at, now()), p_faults, p_failures, p_reached);
+end;
+$$;
+
+-- An error on the server, for the portal's health page.
+create or replace function tasks.srv_log_error(
+  p_secret     text,
+  p_digest     text,
+  p_message    text,
+  p_route      text,
+  p_user_agent text
+)
+returns void
+language plpgsql
+security definer
+set search_path = tasks, pg_temp
+as $$
+begin
+  perform tasks.assert_server(p_secret);
+  insert into tasks.app_errors (source, digest, message, route, user_agent)
+  values (
+    'server',
+    p_digest,
+    left(coalesce(nullif(p_message, ''), 'Unknown error'), 2000),
+    left(p_route, 500),
+    left(p_user_agent, 400)
+  );
+end;
+$$;
+
+-- Company holidays between two days, for reminders and quick adds.
+create or replace function tasks.srv_holidays(p_secret text, p_from date, p_to date)
+returns table (day date)
+language plpgsql
+security definer
+set search_path = tasks, pg_temp
+as $$
+begin
+  perform tasks.assert_server(p_secret);
+  return query
+    select h.day from tasks.company_holidays h where h.day between p_from and p_to order by h.day;
+end;
+$$;
+
+-- Whether a Telegram chat is linked to someone.
+create or replace function tasks.srv_telegram_linked(p_secret text, p_chat text)
+returns boolean
+language plpgsql
+security definer
+set search_path = tasks, pg_temp
+as $$
+begin
+  perform tasks.assert_server(p_secret);
+  return exists (
+    select 1 from tasks.notification_preferences n where n.telegram_chat_id = p_chat
+  );
+end;
+$$;
+
+-- Links a Telegram chat by the code its person was given; false when the
+-- code is not valid or used already.
+create or replace function tasks.srv_link_telegram(p_secret text, p_code text, p_chat text)
+returns boolean
+language plpgsql
+security definer
+set search_path = tasks, pg_temp
+as $$
+declare
+  v_user uuid;
+begin
+  perform tasks.assert_server(p_secret);
+  if coalesce(p_code, '') = '' then
+    return false;
+  end if;
+  update tasks.notification_preferences
+     set telegram_chat_id = p_chat,
+         telegram_enabled = true,
+         telegram_link_code = null
+   where telegram_link_code = p_code
+  returning user_id into v_user;
+  return v_user is not null;
+end;
+$$;
+
+-- Called without a session (the publishable key) by the server only, which
+-- the secret proves.
+do $$
+declare
+  f record;
+begin
+  for f in
+    select p.oid::regprocedure as sig
+      from pg_proc p
+     where p.pronamespace = 'tasks'::regnamespace
+       and p.proname like 'srv\_%'
+  loop
+    execute format('revoke all on function %s from public', f.sig);
+    execute format('grant execute on function %s to anon, authenticated, service_role', f.sig);
+  end loop;
+end
+$$;
+
+-- =========================================================================
+-- Maham One: only Maham Tasks' people reach Maham Tasks
+-- =========================================================================
+
+-- In its own project everyone signed in was on the team, so some of Maham
+-- Tasks' rules ask no more than that (the team chat, labels, templates,
+-- holidays). Here every Maham One account is signed in too. Whatever a
+-- table's own rules allow, a signed-in account without a Maham Tasks profile
+-- reaches none of it: a restrictive rule on every table, added to the rules
+-- each table has. Maham Tasks' own functions and the server's run as their
+-- owner and are not held back by it.
+create or replace function tasks.is_member()
+returns boolean
+language sql
+stable
+security definer
+set search_path = tasks, pg_temp
+as $$
+  select exists (select 1 from tasks.profiles p where p.id = auth.uid());
+$$;
+
+comment on function tasks.is_member() is
+  'Whether the caller has a Maham Tasks profile: added by a Maham Tasks admin. Every Maham One account signs in; only these reach Maham Tasks.';
+
+revoke all on function tasks.is_member() from public, anon;
+grant execute on function tasks.is_member() to authenticated, service_role;
+
+do $$
+declare
+  t record;
+begin
+  for t in
+    select c.relname
+      from pg_class c
+     where c.relnamespace = 'tasks'::regnamespace
+       and c.relkind in ('r', 'p')
+  loop
+    execute format('alter table tasks.%I enable row level security', t.relname);
+    execute format('drop policy if exists "Maham Tasks members only" on tasks.%I', t.relname);
+    execute format(
+      'create policy "Maham Tasks members only" on tasks.%I as restrictive for all '
+      || 'to authenticated using ((select tasks.is_member())) with check ((select tasks.is_member()))',
+      t.relname
+    );
+  end loop;
+end
+$$;
+
+-- Its files the same way: the task attachments and the avatars of its people
+-- (buckets tasks-attachments and tasks-avatars).
+-- Maham One's bucket (company-files) is left to its own rules.
+drop policy if exists "Maham Tasks files: members only" on storage.objects;
+create policy "Maham Tasks files: members only"
+  on storage.objects
+  as restrictive
+  for all
+  to authenticated
+  using (bucket_id not in ('tasks-attachments', 'tasks-avatars') or (select tasks.is_member()))
+  with check (bucket_id not in ('tasks-attachments', 'tasks-avatars') or (select tasks.is_member()));
+
+-- Functions: nobody signed out calls any but the health check and the
+-- server's (which ask for its secret). Those that delete for good or write
+-- notifications in anyone's name are the server's and the triggers' only,
+-- which run as their owner.
+do $$
+declare
+  f record;
+begin
+  for f in
+    select p.oid::regprocedure as sig, p.proname
+      from pg_proc p
+     where p.pronamespace = 'tasks'::regnamespace
+       and p.prokind = 'f'
+  loop
+    execute format('revoke execute on function %s from public, anon', f.sig);
+    if f.proname in (
+      'purge_trashed_tasks', 'purge_old_errors', 'notify_reminder_failed',
+      'push_notification', 'push_direct_notification', 'claim_reminders',
+      'claim_task_reminders', 'enqueue_task_reminders', 'enqueue_morning_summaries',
+      'admin_alert_digest', 'add_from_chat', 'handle_new_user', 'add_first_admin',
+      'new_server_secret', 'assert_server'
+    ) then
+      execute format('revoke execute on function %s from authenticated', f.sig);
+    end if;
+    if f.proname = 'portal_health' or f.proname like 'srv\_%' then
+      execute format('grant execute on function %s to anon', f.sig);
+    end if;
+  end loop;
+end
+$$;
+
+-- The check constraints the migrations above add NOT VALID (so a second run
+-- doesn't trip over rows a later migration allows), validated as they stand.
+do $$
+declare
+  c record;
+begin
+  for c in
+    select conrelid::regclass as rel, conname
+      from pg_constraint
+     where connamespace = 'tasks'::regnamespace
+       and contype = 'c'
+       and not convalidated
+  loop
+    execute format('alter table %s validate constraint %I', c.rel, c.conname);
+  end loop;
+end
+$$;
+
+-- The Data API learns about the schema at once (once it is exposed).
+notify pgrst, 'reload schema';

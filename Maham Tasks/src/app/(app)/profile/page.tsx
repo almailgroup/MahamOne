@@ -37,7 +37,7 @@ export default async function ProfilePage() {
     getNotificationPreferences(),
     getPushDevices(),
     getMyReminderFailures(),
-    // Null when there is no service-role key to reach the table with. The UI
+    // Null when the server has no TASKS_SERVER_SECRET to reach the table with. The UI
     // then says push is unavailable rather than offering a switch that
     // cannot work.
     publicPushKey().catch(() => null),

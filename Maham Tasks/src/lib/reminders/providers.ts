@@ -2,7 +2,7 @@ import "server-only";
 
 import webpush from "web-push";
 
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createServerAccess } from "@/lib/supabase/server-access";
 import { pushSubject, vapidKeys } from "@/lib/push/keys";
 import type { DeliveryResult, QueuedReminder } from "./types";
 
@@ -220,12 +220,11 @@ async function sendPush(reminder: QueuedReminder): Promise<DeliveryResult> {
   // The keys belong to the device, not to the message, so they are looked up
   // rather than copied into every queued row. A row whose device has since
   // been removed is gone, not broken.
-  const supabase = createAdminClient();
-  const device = await supabase
-    .from("push_subscriptions")
-    .select("p256dh, auth")
-    .eq("endpoint", reminder.recipient)
-    .maybeSingle();
+  const supabase = createServerAccess();
+  const found = await supabase.rpc<{ p256dh: string; auth: string }[]>("push_device", {
+    p_endpoint: reminder.recipient,
+  });
+  const device = { data: found.data?.[0] ?? null };
 
   if (!device.data) {
     return { ok: false, error: "gone", retryable: false, gone: true };

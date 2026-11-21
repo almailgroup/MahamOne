@@ -23,10 +23,10 @@ insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-0000000036b1', 'lead@example.test'),
   ('00000000-0000-4000-8000-0000000036c1', 'hand@example.test');
 
-alter table public.profiles disable trigger profiles_guard_role_change;
-update public.profiles set role = 'manager'
+alter table tasks.profiles disable trigger profiles_guard_role_change;
+update tasks.profiles set role = 'manager'
  where id = '00000000-0000-4000-8000-0000000036b1';
-alter table public.profiles enable trigger profiles_guard_role_change;
+alter table tasks.profiles enable trigger profiles_guard_role_change;
 
 set local role authenticated;
 
@@ -36,7 +36,7 @@ select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-0000000036a1
 
 do $$
 begin
-  insert into public.company_holidays (day, name) values
+  insert into tasks.company_holidays (day, name) values
     ('2027-02-25', 'National Day'),
     ('2027-02-26', 'Liberation Day');
   perform check_that('an admin adds holidays', true);
@@ -46,12 +46,12 @@ end $$;
 
 select check_that(
   '…recorded as theirs',
-  (select count(*) from public.company_holidays
+  (select count(*) from tasks.company_holidays
     where created_by = '00000000-0000-4000-8000-0000000036a1') = 2);
 
 do $$
 begin
-  update public.company_holidays set name = 'Liberation Day (observed)'
+  update tasks.company_holidays set name = 'Liberation Day (observed)'
    where day = '2027-02-26';
   perform check_that('an admin renames one', true);
 exception when others then
@@ -60,7 +60,7 @@ end $$;
 
 do $$
 begin
-  insert into public.company_holidays (day, name) values ('2027-03-01', '   ');
+  insert into tasks.company_holidays (day, name) values ('2027-03-01', '   ');
   perform check_that('a holiday needs a name', false, 'it was accepted');
 exception when check_violation then
   perform check_that('a holiday needs a name', true, sqlerrm);
@@ -72,11 +72,11 @@ select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-0000000036b1
 
 select check_that(
   'a manager sees the holidays',
-  (select count(*) from public.company_holidays) = 2);
+  (select count(*) from tasks.company_holidays) = 2);
 
 do $$
 begin
-  insert into public.company_holidays (day, name) values ('2027-03-02', 'Long weekend');
+  insert into tasks.company_holidays (day, name) values ('2027-03-02', 'Long weekend');
   perform check_that('a manager cannot add one', false, 'it was accepted');
 exception when insufficient_privilege then
   perform check_that('a manager cannot add one', true, sqlerrm);
@@ -88,26 +88,26 @@ select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-0000000036c1
 
 select check_that(
   'a member sees the holidays too — the calendar needs them',
-  (select count(*) from public.company_holidays) = 2);
+  (select count(*) from tasks.company_holidays) = 2);
 
-update public.company_holidays set name = 'Day off' where day = '2027-02-25';
+update tasks.company_holidays set name = 'Day off' where day = '2027-02-25';
 select check_that(
   'a member cannot rename one',
-  (select name from public.company_holidays where day = '2027-02-25') = 'National Day');
+  (select name from tasks.company_holidays where day = '2027-02-25') = 'National Day');
 
-delete from public.company_holidays where day = '2027-02-25';
+delete from tasks.company_holidays where day = '2027-02-25';
 select check_that(
   'or remove one',
-  (select count(*) from public.company_holidays) = 2);
+  (select count(*) from tasks.company_holidays) = 2);
 
 -- --- the admin again -------------------------------------------------------------
 
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-0000000036a1', true);
 
-delete from public.company_holidays where day between '2027-02-25' and '2027-02-26';
+delete from tasks.company_holidays where day between '2027-02-25' and '2027-02-26';
 select check_that(
   'an admin removes a run of days at once',
-  (select count(*) from public.company_holidays) = 0);
+  (select count(*) from tasks.company_holidays) = 0);
 
 reset role;
 

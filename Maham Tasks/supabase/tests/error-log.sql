@@ -24,21 +24,21 @@ insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-0000000000e1', 'boss@example.test'),
   ('00000000-0000-4000-8000-0000000000e2', 'hand@example.test');
 
-alter table public.profiles disable trigger profiles_guard_role_change;
-update public.profiles set role = 'admin'
+alter table tasks.profiles disable trigger profiles_guard_role_change;
+update tasks.profiles set role = 'admin'
  where id = '00000000-0000-4000-8000-0000000000e1';
-alter table public.profiles enable trigger profiles_guard_role_change;
+alter table tasks.profiles enable trigger profiles_guard_role_change;
 
 select check_that(
   'the fixture admin really is an admin',
-  (select role = 'admin' from public.profiles
+  (select role = 'admin' from tasks.profiles
     where id = '00000000-0000-4000-8000-0000000000e1'));
 
 -- --- reporting, as somebody signed in --------------------------------------
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000e2', true);
 
-insert into public.app_errors (user_id, source, message, route)
+insert into tasks.app_errors (user_id, source, message, route)
 values ('00000000-0000-4000-8000-0000000000e2', 'browser', 'TypeError: x is not a function', '/today');
 
 -- The insert above either worked or aborted this transaction, so reaching
@@ -50,7 +50,7 @@ select check_that('somebody signed in can report a fault', true, 'insert accepte
 do $$
 begin
   begin
-    insert into public.app_errors (user_id, source, message, route)
+    insert into tasks.app_errors (user_id, source, message, route)
     values ('00000000-0000-4000-8000-0000000000e1', 'browser', 'Not mine', '/today');
     perform check_that('a fault cannot be reported as somebody else', false, 'it was allowed');
   exception when insufficient_privilege then
@@ -64,7 +64,7 @@ declare
   seen integer;
 begin
   begin
-    select count(*) into seen from public.app_errors;
+    select count(*) into seen from tasks.app_errors;
     perform check_that('the table itself is unreadable with a session', seen = 0, seen::text);
   exception when insufficient_privilege then
     perform check_that('the table itself is unreadable with a session', true, 'refused outright');
@@ -74,7 +74,7 @@ end $$;
 do $$
 begin
   begin
-    perform * from public.recent_errors();
+    perform * from tasks.recent_errors();
     perform check_that('a member cannot read the error log', false, 'it was allowed');
   exception when insufficient_privilege then
     perform check_that('a member cannot read the error log', true, 'refused');
@@ -85,7 +85,7 @@ end $$;
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000e1', true);
 
 -- The same fault twice more: it should read as one line seen three times.
-insert into public.app_errors (user_id, source, message, route)
+insert into tasks.app_errors (user_id, source, message, route)
 values
   ('00000000-0000-4000-8000-0000000000e1', 'browser', 'TypeError: x is not a function', '/today'),
   ('00000000-0000-4000-8000-0000000000e1', 'browser', 'TypeError: x is not a function', '/today');
@@ -95,7 +95,7 @@ declare
   lines integer;
   hits bigint;
 begin
-  select count(*), max(seen) into lines, hits from public.recent_errors();
+  select count(*), max(seen) into lines, hits from tasks.recent_errors();
   perform check_that('an admin reads the log', lines = 1, lines::text);
   perform check_that('and one fault hit three times is one line', hits = 3, hits::text);
 end $$;
@@ -103,7 +103,7 @@ end $$;
 reset role;
 
 -- --- and old ones are swept ------------------------------------------------
-insert into public.app_errors (user_id, source, message, route, occurred_at)
+insert into tasks.app_errors (user_id, source, message, route, occurred_at)
 values (null, 'server', 'Ancient failure', '/old', now() - interval '30 days');
 
 do $$
@@ -111,8 +111,8 @@ declare
   removed integer;
   left_behind integer;
 begin
-  select public.purge_old_errors() into removed;
-  select count(*) into left_behind from public.app_errors;
+  select tasks.purge_old_errors() into removed;
+  select count(*) into left_behind from tasks.app_errors;
 
   perform check_that('an old fault is swept', removed = 1, removed::text);
   perform check_that('and a recent one is not', left_behind = 3, left_behind::text);

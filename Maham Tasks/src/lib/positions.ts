@@ -10,7 +10,7 @@ export const POSITION_PRESETS = [
   "Engineer",
 ] as const;
 
-export const AVATAR_BUCKET = "avatars";
+export const AVATAR_BUCKET = "tasks-avatars";
 
 /** Matches the bucket limit set in the migration. */
 export const MAX_AVATAR_BYTES = 2 * 1024 * 1024;

@@ -173,19 +173,26 @@ export const requireProfile = cache(async (): Promise<Profile> => {
     .eq("id", userId)
     .maybeSingle();
 
-  // The handle_new_user trigger creates this row at signup. Its absence means
-  // the account exists in auth but not in the app — typically the migrations
-  // were never applied, or the user was created out of band.
+  // Accounts are Maham One's: every Maham One account can sign in, and only
+  // those a Maham Tasks admin invited have a profile here. Without one, say so
+  // and who can fix it.
   //
   // Redirecting straight to /login would loop, because the middleware sends
   // anyone holding a valid session back to /dashboard. Go via the sign-out
-  // route, which can actually clear the session, and say what is wrong.
+  // route, which can actually clear the session (on this device only: the
+  // same account stays signed in to Maham One).
   if (!profile) {
-    redirect(
-      `/auth/signout?error=${encodeURIComponent(
-        "Your account has no profile yet. If this is a new deployment, the database migrations may not have been applied.",
-      )}`,
-    );
+    // Invited? Signing in here is what accepts it (tasks.join).
+    const { data: joined } = await supabase.rpc("join");
+    if (joined) {
+      const { data: added } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .maybeSingle();
+      if (added) return added;
+    }
+    redirect(`/auth/signout?error=${encodeURIComponent("auth.notInTasks")}`);
   }
 
   return profile;

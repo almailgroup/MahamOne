@@ -21,25 +21,25 @@ set local role anon;
 
 select check_that('it answers without signing in, every migration run',
   (select h->>'database' = 'ok' and (h->>'schema')::int = 46 and h->'missing' = '[]'::jsonb
-     from (select public.portal_health() as h) x),
-  (select public.portal_health()::text));
+     from (select tasks.portal_health() as h) x),
+  (select tasks.portal_health()::text));
 
 select check_that('it says nothing about anybody',
-  (select array(select jsonb_object_keys(public.portal_health()) order by 1))
+  (select array(select jsonb_object_keys(tasks.portal_health()) order by 1))
     = array['database', 'missing', 'schema', 'time']);
 
 reset role;
 
 -- A migration skipped: the labels table never made.
-drop table public.task_labels;
-drop table public.labels cascade;
+drop table tasks.task_labels;
+drop table tasks.labels cascade;
 
 set local role anon;
 
 select check_that('a skipped migration is named',
   (select h->'missing' = '[39]'::jsonb and (h->>'schema')::int = 46
-     from (select public.portal_health() as h) x),
-  (select public.portal_health()::text));
+     from (select tasks.portal_health() as h) x),
+  (select tasks.portal_health()::text));
 
 reset role;
 

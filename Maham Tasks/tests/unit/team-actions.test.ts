@@ -1,11 +1,13 @@
 /**
- * Adding a teammate — the only way an account is made.
+ * Adding a teammate, taking back an invite, and the one thing an admin may
+ * still undo on somebody else's sign-in.
  *
- * The database refuses an account that does not name the admin who added it
- * in app_metadata (close_self_registration, proven against Postgres in
- * supabase/tests/self-registration.sql). These cover this side of that
- * agreement: the account created here names the admin who asked, and nobody
- * but an admin gets as far as creating one.
+ * Maham Tasks shares its accounts with Maham One, so nothing here holds a
+ * service key, signs anybody up or sets a password. An admin's own session
+ * invites by email (tasks.add_teammate); the person joins by signing in here
+ * themselves (tasks.join). These cover this side of that: what each answer
+ * from the database becomes, and that nobody but an admin who signed in with
+ * two steps gets as far as asking.
  */
 
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -15,10 +17,14 @@ const ADMIN = "00000000-0000-4000-8000-000000000001";
 let callerRole: string;
 /** How the caller signed in: "aal2" after the authenticator app's code. */
 let callerAal: string;
-let createUser: ReturnType<typeof vi.fn>;
-let deleteFactor: ReturnType<typeof vi.fn>;
-/** The authenticator apps the teammate has. */
-let factors: { id: string }[];
+/** What tasks.add_teammate says it did. */
+let teammateStatus: "already" | "invited";
+/** How many authenticator apps tasks.remove_two_step took away. */
+let removedCount: number;
+/** The database functions the admin's session called, in order. */
+let rpcCalls: { name: string; args: Record<string, unknown> }[];
+/** The invites deleted, by email. */
+let deletedInvites: string[];
 
 vi.mock("next/cache", () => ({ revalidatePath: () => {} }));
 vi.mock("@/lib/supabase/server", () => ({
@@ -33,29 +39,29 @@ vi.mock("@/lib/supabase/server", () => ({
         },
       }),
     },
-    from: () => ({
+    from: (table: string) => ({
       select: () => ({
         eq: () => ({ maybeSingle: async () => ({ data: { role: callerRole } }) }),
       }),
-      update: () => ({ eq: async () => ({ error: null }) }),
-    }),
-  }),
-}));
-vi.mock("@/lib/supabase/admin", () => ({
-  createAdminClient: () => ({
-    auth: {
-      admin: {
-        createUser,
-        mfa: {
-          listFactors: async () => ({ data: { factors }, error: null }),
-          deleteFactor: (params: unknown) => deleteFactor(params),
+      delete: () => ({
+        eq: async (_column: string, value: string) => {
+          if (table === "invites") deletedInvites.push(value);
+          return { error: null };
         },
-      },
+      }),
+    }),
+    rpc: async (name: string, args: Record<string, unknown>) => {
+      rpcCalls.push({ name, args });
+      if (name === "add_teammate") return { data: { status: teammateStatus }, error: null };
+      if (name === "remove_two_step") return { data: removedCount, error: null };
+      return { data: null, error: { message: `unexpected ${name}` } };
     },
   }),
 }));
 
-const { addTeamMember, removeMemberTwoStep } = await import("@/lib/data/team-actions");
+const { addTeamMember, removeMemberTwoStep, withdrawInvite } = await import(
+  "@/lib/data/team-actions"
+);
 
 function form(fields: Record<string, string>) {
   const data = new FormData();
@@ -63,75 +69,116 @@ function form(fields: Record<string, string>) {
   return data;
 }
 
-const newHire = { fullName: "Lina Aboud", email: "lina@almailgroup.com", role: "member" };
+const newHire = { fullName: "Noor Example", email: "new.hire@example.com", role: "member" };
 
 beforeEach(() => {
   callerRole = "admin";
   callerAal = "aal2";
-  createUser = vi.fn(async () => ({ data: { user: { id: "new-1" } }, error: null }));
-  deleteFactor = vi.fn(async () => ({ data: null, error: null }));
-  factors = [];
+  teammateStatus = "invited";
+  removedCount = 0;
+  rpcCalls = [];
+  deletedInvites = [];
 });
 
 describe("addTeamMember", () => {
-  test("the account names the admin who added it, where only the server can write", async () => {
+  test("invites the email, as the admin asked", async () => {
     const outcome = await addTeamMember(null, form(newHire));
-    expect(outcome.ok).toBe(true);
-    expect(createUser).toHaveBeenCalledTimes(1);
-    expect(createUser.mock.calls[0][0]).toMatchObject({
-      email: "lina@almailgroup.com",
-      email_confirm: true,
-      app_metadata: { added_by: ADMIN },
+
+    expect(outcome).toEqual({
+      ok: true,
+      data: { status: "invited", email: "new.hire@example.com" },
     });
-    // Not in user_metadata, which the person themselves can edit — the
-    // database would not accept it from there.
-    expect(createUser.mock.calls[0][0].user_metadata).not.toHaveProperty("added_by");
+    expect(rpcCalls).toEqual([
+      {
+        name: "add_teammate",
+        args: { p_email: "new.hire@example.com", p_full_name: "Noor Example", p_role: "member" },
+      },
+    ]);
   });
 
-  test("somebody who is not an admin never gets as far as creating an account", async () => {
+  test("somebody already on the team is said to be", async () => {
+    teammateStatus = "already";
+    const outcome = await addTeamMember(null, form(newHire));
+
+    expect(outcome).toEqual({
+      ok: true,
+      data: { status: "already", email: "new.hire@example.com" },
+    });
+  });
+
+  test("a form that doesn't add up never reaches the database", async () => {
+    const outcome = await addTeamMember(null, form({ ...newHire, email: "not-an-email" }));
+
+    expect(outcome.ok).toBe(false);
+    expect(rpcCalls).toEqual([]);
+  });
+
+  test("somebody who is not an admin never gets as far as asking", async () => {
     callerRole = "manager";
     const outcome = await addTeamMember(null, form(newHire));
+
     expect(outcome).toEqual({ ok: false, error: "action.adminOnly" });
-    expect(createUser).not.toHaveBeenCalled();
+    expect(rpcCalls).toEqual([]);
   });
 
   test("an admin who signed in with the password alone is sent to set up two-step first", async () => {
     callerAal = "aal1";
     const outcome = await addTeamMember(null, form(newHire));
+
     expect(outcome).toEqual({ ok: false, error: "action.needsTwoStep" });
-    expect(createUser).not.toHaveBeenCalled();
+    expect(rpcCalls).toEqual([]);
+  });
+});
+
+describe("withdrawInvite", () => {
+  test("takes back the invite for that email", async () => {
+    expect(await withdrawInvite("new.hire@example.com")).toEqual({ ok: true, data: undefined });
+    expect(deletedInvites).toEqual(["new.hire@example.com"]);
+  });
+
+  test("only for an admin signed in with two steps, and only for an email", async () => {
+    callerAal = "aal1";
+    expect(await withdrawInvite("new.hire@example.com")).toEqual({
+      ok: false,
+      error: "action.needsTwoStep",
+    });
+    callerRole = "manager";
+    callerAal = "aal2";
+    expect(await withdrawInvite("new.hire@example.com")).toEqual({
+      ok: false,
+      error: "action.adminOnly",
+    });
+    callerRole = "admin";
+    expect((await withdrawInvite("nobody")).ok).toBe(false);
+    expect(deletedInvites).toEqual([]);
   });
 });
 
 describe("removeMemberTwoStep", () => {
-  const LINA = "00000000-0000-4000-8000-000000000006";
+  const MEMBER = "00000000-0000-4000-8000-000000000006";
 
-  test("takes away every app the teammate had, for a lost phone", async () => {
-    factors = [{ id: "f1" }, { id: "f2" }];
-    const outcome = await removeMemberTwoStep(LINA);
-    expect(outcome).toEqual({ ok: true, data: { removed: 2 } });
-    expect(deleteFactor.mock.calls.map(([params]) => params)).toEqual([
-      { id: "f1", userId: LINA },
-      { id: "f2", userId: LINA },
-    ]);
+  test("takes away the teammate's authenticator app, for a lost phone", async () => {
+    removedCount = 1;
+    const outcome = await removeMemberTwoStep(MEMBER);
+
+    expect(outcome).toEqual({ ok: true, data: { removed: 1 } });
+    expect(rpcCalls).toEqual([{ name: "remove_two_step", args: { p_user: MEMBER } }]);
   });
 
   test("only an admin who has signed in with their own app", async () => {
-    factors = [{ id: "f1" }];
     callerAal = "aal1";
-    expect(await removeMemberTwoStep(LINA)).toEqual({ ok: false, error: "action.needsTwoStep" });
+    expect(await removeMemberTwoStep(MEMBER)).toEqual({ ok: false, error: "action.needsTwoStep" });
     callerRole = "manager";
     callerAal = "aal2";
-    expect(await removeMemberTwoStep(LINA)).toEqual({ ok: false, error: "action.adminOnly" });
-    expect(deleteFactor).not.toHaveBeenCalled();
+    expect(await removeMemberTwoStep(MEMBER)).toEqual({ ok: false, error: "action.adminOnly" });
+    expect(rpcCalls).toEqual([]);
   });
 
   test("not on their own account, which is turned off from Profile with a code", async () => {
-    factors = [{ id: "f1" }];
     expect(await removeMemberTwoStep(ADMIN)).toEqual({
       ok: false,
       error: "action.ownTwoStepFromProfile",
     });
-    expect(deleteFactor).not.toHaveBeenCalled();
+    expect(rpcCalls).toEqual([]);
   });
 });

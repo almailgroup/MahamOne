@@ -100,7 +100,7 @@ export function NotificationBell({
         "postgres_changes",
         {
           event: "INSERT",
-          schema: "public",
+          schema: "tasks",
           table: "notifications",
           filter: `user_id=eq.${profile.id}`,
         },

@@ -10,6 +10,7 @@ on:
     branches: [main]
     paths:
       - 'Maham Tasks/**'
+      - 'supabase/migrations/20261212000000_maham_tasks.sql'
       - '.github/workflows/maham-tasks.yml'
   workflow_dispatch:
 
@@ -54,15 +55,6 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
 
-      # Keeping the generated bundle in the repo is only safe if it is checked.
-      # A migration added without re-running db:bundle would otherwise ship a
-      # setup.sql that silently lacks it.
-      - name: setup.sql is in sync with the migrations
-        run: |
-          npm run db:bundle
-          git diff --exit-code supabase/setup.sql \
-            || (echo "::error::supabase/setup.sql is stale — run 'npm run db:bundle' and commit the result." && exit 1)
-
   rls:
     name: Row Level Security
     runs-on: ubuntu-latest
@@ -84,8 +76,9 @@ jobs:
 
       # The privacy rules live entirely in the policies, where no amount of
       # testing the UI can reach them. They are checked here against a real
-      # PostgreSQL, built from setup.sql exactly as a fresh deployment would
-      # build it, as several different people.
+      # PostgreSQL, built from Maham One's script for them
+      # (supabase/migrations/20261212000000_maham_tasks.sql) as the owner runs
+      # it, as several different people.
       #
       # Every file in supabase/tests/, found by glob rather than named. Listed
       # by name, this job ran two of them: eight suites arrived with their
@@ -106,7 +99,7 @@ jobs:
             psql "$PGURL" -v ON_ERROR_STOP=1 -q -c "create database $db"
             suite_url="${PGURL%/*}/$db"
             psql "$suite_url" -v ON_ERROR_STOP=1 -q -f supabase/tests/shim.sql
-            psql "$suite_url" -v ON_ERROR_STOP=1 -q -f supabase/setup.sql
+            psql "$suite_url" -v ON_ERROR_STOP=1 -q --single-transaction -f ../supabase/migrations/20261212000000_maham_tasks.sql
             if psql "$suite_url" -v ON_ERROR_STOP=1 -q -f "$suite"; then
               echo "ok"
             else

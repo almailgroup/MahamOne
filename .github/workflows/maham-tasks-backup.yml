@@ -1,13 +1,16 @@
 name: Maham Tasks weekly backup
 
-# A copy of the Maham Tasks database each week, encrypted, kept as a workflow
-# artifact for thirty days: Maham Tasks/.github/workflows/backup.yml, which
-# GitHub only runs at the root of a repository, with its secrets named for
-# Maham Tasks. Does nothing until two repository secrets exist:
+# A copy of Maham Tasks' data each week, encrypted, kept as a workflow
+# artifact for thirty days. Maham Tasks lives in the tasks schema of Maham
+# One's database, and only that schema is copied: nothing of Maham One's
+# (payroll, employees, the books) ever goes into this repository's
+# artifacts. Does nothing until two repository secrets exist:
 #
-#   TASKS_SUPABASE_DB_URL     the Session pooler connection string of the
-#                             Maham Tasks Supabase project, from its dashboard
-#                             (Connect), with the database password in it
+#   TASKS_SUPABASE_DB_URL     the Session pooler connection string of Maham
+#                             One's Supabase project, from its dashboard
+#                             (Connect), with the database password in it.
+#                             It can read everything: add it only if you
+#                             accept a GitHub secret holding that
 #   TASKS_BACKUP_PASSPHRASE   a long passphrase you choose and keep in a
 #                             password manager; without it a backup cannot be
 #                             opened
@@ -54,16 +57,16 @@ jobs:
         with:
           version: latest
 
-      - name: Dump the roles, the schema and the data
+      - name: Dump the tasks schema and its data
         if: steps.check.outputs.ready == 'true'
         env:
           SUPABASE_DB_URL: ${{ secrets.TASKS_SUPABASE_DB_URL }}
         run: |
           set -euo pipefail
           mkdir backup
-          supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/roles.sql --role-only
-          supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/schema.sql
-          supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/data.sql --use-copy --data-only
+          # The tasks schema only: never Maham One's.
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/schema.sql --schema tasks
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/data.sql --use-copy --data-only --schema tasks
           ls -l backup
 
       - name: Encrypt

@@ -27,6 +27,8 @@ export async function GET() {
 
   const supabase = createClient(supabaseUrl(), supabaseAnonKey(), {
     auth: { persistSession: false, autoRefreshToken: false },
+    // Maham Tasks lives in the tasks schema of Maham One's database.
+    db: { schema: "tasks" },
   });
 
   const started = Date.now();

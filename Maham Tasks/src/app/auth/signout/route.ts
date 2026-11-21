@@ -19,7 +19,8 @@ export async function GET(request: NextRequest) {
   const reason = searchParams.get("error");
 
   const supabase = await createClient();
-  await supabase.auth.signOut();
+  // This device only: the account is Maham One's too, signed in there.
+  await supabase.auth.signOut({ scope: "local" });
 
   const target = new URL("/login", origin);
   if (reason) target.searchParams.set("error", reason);

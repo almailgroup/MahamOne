@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/card";
 import { PageHeader, PageShell } from "@/components/layout/page-shell";
 import { AddMemberDialog } from "@/components/team/add-member-dialog";
 import { MemberActions } from "@/components/team/member-actions";
+import { PendingInvites, type PendingInvite } from "@/components/team/pending-invites";
 import { PersonMenu } from "@/components/people/person-menu";
 import { RoleSelect } from "@/components/team/role-select";
 import { PositionSelect } from "@/components/team/position-select";
@@ -19,7 +20,6 @@ import { Users } from "lucide-react";
 import { roleMeta } from "@/lib/constants";
 import { getI18n } from "@/lib/i18n/server";
 import { getTeam, requireProfile } from "@/lib/data/queries";
-import { hasServiceRole } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { signedInWithSecondStep } from "@/lib/auth/second-step";
 import { TwoStepNeeded } from "@/components/team/two-step-needed";
@@ -33,11 +33,19 @@ export default async function TeamPage() {
   const { t, tn } = await getI18n();
   const [profile, team] = await Promise.all([requireProfile(), getTeam()]);
   const isAdmin = profile.role === "admin";
-  // Both admin actions here need the service-role key; say so rather than
-  // letting them fail on use.
-  const serviceRole = hasServiceRole();
   // Adding people and changing roles wait for two-step sign-in.
-  const twoStep = isAdmin ? await signedInWithSecondStep(await createClient()) : true;
+  const supabase = await createClient();
+  const twoStep = isAdmin ? await signedInWithSecondStep(supabase) : true;
+  // Invites nobody has accepted yet: admins see them (the database's rule).
+  const invites: PendingInvite[] = isAdmin
+    ? ((
+        await supabase
+          .from("invites")
+          .select("email, full_name, role, expires_at")
+          .gt("expires_at", new Date().toISOString())
+          .order("created_at", { ascending: true })
+      ).data ?? [])
+    : [];
 
   return (
     <PageShell width="wide">
@@ -50,7 +58,7 @@ export default async function TeamPage() {
             {isAdmin ? t("team.adminHint") : t("team.memberHint")}
           </>
         }
-        actions={isAdmin ? <AddMemberDialog configured={serviceRole} /> : undefined}
+        actions={isAdmin ? <AddMemberDialog /> : undefined}
       />
 
       {!twoStep && <TwoStepNeeded />}
@@ -115,7 +123,6 @@ export default async function TeamPage() {
                   <MemberActions
                     userId={member.id}
                     name={member.full_name ?? member.email}
-                    configured={serviceRole}
                   />
                 )}
               </div>
@@ -125,6 +132,8 @@ export default async function TeamPage() {
           </div>
         ))}
       </Card>
+
+      {isAdmin && <PendingInvites invites={invites} />}
     </PageShell>
   );
 }

@@ -28,34 +28,35 @@ vi.mock("@/lib/push/keys", () => ({
   pushSubject: () => "https://portal.example",
 }));
 
-/** The device rows the provider looks the keys up in. */
+/** The devices the server knows, which the provider looks the keys up in. */
 let devices: { endpoint: string; p256dh: string; auth: string }[];
-/** Endpoints the dispatcher deleted. */
+/** Endpoints the dispatcher asked the server to forget. */
 let deleted: string[];
 
-vi.mock("@/lib/supabase/admin", () => ({
-  createAdminClient: () =>
-    ({
-      from: (table: string) => ({
-        select: () => ({
-          eq: (_column: string, endpoint: string) => ({
-            maybeSingle: async () => ({
-              data: devices.find((device) => device.endpoint === endpoint) ?? null,
-              error: null,
-            }),
-          }),
-        }),
-        update: () => ({ eq: async () => ({ error: null }) }),
-        delete: () => ({
-          eq: async (_column: string, endpoint: string) => {
-            if (table === "push_subscriptions") deleted.push(endpoint);
-            return { error: null };
-          },
-        }),
-      }),
-      rpc: async () => ({ data: [], error: null }),
-    }) as never,
-}));
+/**
+ * The server's jobs, as the provider and the dispatcher both run them. Only
+ * the two about devices answer anything; marking a reminder sent or failed,
+ * and telling the person, just succeed.
+ */
+function fakeServer() {
+  return {
+    rpc: async (job: string, args: Record<string, unknown> = {}) => {
+      if (job === "push_device") {
+        // A list, empty when the device is gone.
+        return {
+          data: devices
+            .filter((device) => device.endpoint === args.p_endpoint)
+            .map(({ p256dh, auth }) => ({ p256dh, auth })),
+          error: null,
+        };
+      }
+      if (job === "forget_push_device") deleted.push(String(args.p_endpoint));
+      return { data: null, error: null };
+    },
+  } as never;
+}
+
+vi.mock("@/lib/supabase/server-access", () => ({ createServerAccess: () => fakeServer() }));
 
 const { deliver } = await import("@/lib/reminders/providers");
 const { sendClaimed } = await import("@/lib/reminders/dispatch");
@@ -135,27 +136,10 @@ describe("sending a push", () => {
   });
 });
 
-/** The client the dispatcher writes the queue back through. */
-const queueClient = () =>
-  ({
-    from: (table: string) => ({
-      update: () => ({ eq: async () => ({ error: null }) }),
-      delete: () => ({
-        eq: async (_column: string, endpoint: string) => {
-          if (table === "push_subscriptions") deleted.push(endpoint);
-          return { error: null };
-        },
-      }),
-    }),
-    // Giving up on a reminder now also tells the person, through the
-    // database function that writes the notification.
-    rpc: async () => ({ data: null, error: null }),
-  }) as never;
-
 describe("what the dispatcher does about it", () => {
   test("a gone device is removed rather than retried forever", async () => {
     failWith(410);
-    const tally = await sendClaimed(queueClient(), [push()]);
+    const tally = await sendClaimed(fakeServer(), [push()]);
 
     expect(deleted).toEqual(["https://push.example/device-one"]);
     expect(tally.givenUp).toBe(1);
@@ -164,7 +148,7 @@ describe("what the dispatcher does about it", () => {
 
   test("a device having a bad day is kept", async () => {
     failWith(503);
-    await sendClaimed(queueClient(), [push()]);
+    await sendClaimed(fakeServer(), [push()]);
 
     expect(deleted).toEqual([]);
   });

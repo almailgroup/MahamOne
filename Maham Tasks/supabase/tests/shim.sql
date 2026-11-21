@@ -36,6 +36,8 @@ create table if not exists auth.users (
   -- What only the service key can write. Supabase fills it in for every
   -- account; here it is null unless a test says otherwise.
   raw_app_meta_data jsonb,
+  -- Confirmed unless a test says otherwise, as accounts mostly are.
+  email_confirmed_at timestamptz default now(),
   created_at timestamptz not null default now()
 );
 
@@ -58,7 +60,7 @@ declare
 begin
   if new.raw_app_meta_data is null then
     select p.id into admin_id
-      from public.profiles p
+      from tasks.profiles p
      where p.role = 'admin'
      order by p.created_at
      limit 1;
@@ -78,6 +80,60 @@ drop trigger if exists shim_added_by_admin on auth.users;
 create trigger shim_added_by_admin
   before insert on auth.users
   for each row execute function auth.shim_added_by_admin();
+
+-- On Maham One's database Maham Tasks puts nothing on auth.users: the owner
+-- names the first admin (tasks.add_first_admin), and everyone else joins by
+-- accepting an admin's invite (tasks.join). The suites' accounts stand for
+-- people already in: the first one the admin, the rest added by them, as
+-- their app_metadata says. This makes their profiles, as Maham Tasks' own
+-- sign-up trigger did in its own project.
+create or replace function auth.shim_profile()
+returns trigger
+language plpgsql
+as $$
+declare
+  added_by uuid;
+begin
+  if to_regclass('tasks.profiles') is null then
+    return new;
+  end if;
+  if not exists (select 1 from tasks.profiles p where p.role = 'admin') then
+    insert into tasks.profiles (id, email, full_name, avatar_url, role)
+    values (
+      new.id,
+      new.email,
+      nullif(btrim(coalesce(new.raw_user_meta_data ->> 'full_name', '')), ''),
+      nullif(btrim(coalesce(new.raw_user_meta_data ->> 'avatar_url', '')), ''),
+      'admin'
+    )
+    on conflict (id) do nothing;
+    return new;
+  end if;
+  if coalesce(new.raw_app_meta_data ->> 'added_by', '')
+       ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' then
+    added_by := (new.raw_app_meta_data ->> 'added_by')::uuid;
+  end if;
+  if added_by is not null and exists (
+    select 1 from tasks.profiles p where p.id = added_by and p.role = 'admin'
+  ) then
+    insert into tasks.profiles (id, email, full_name, avatar_url, role)
+    values (
+      new.id,
+      new.email,
+      nullif(btrim(coalesce(new.raw_user_meta_data ->> 'full_name', '')), ''),
+      nullif(btrim(coalesce(new.raw_user_meta_data ->> 'avatar_url', '')), ''),
+      'member'
+    )
+    on conflict (id) do nothing;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists shim_profile on auth.users;
+create trigger shim_profile
+  after insert on auth.users
+  for each row execute function auth.shim_profile();
 
 -- auth.uid() reads whoever the test has declared itself to be.
 create or replace function auth.uid() returns uuid

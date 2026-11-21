@@ -11,5 +11,8 @@ import { supabaseAnonKey, supabaseUrl } from "./env";
  * per-component is safe and keeps a single websocket.
  */
 export function createClient() {
-  return createBrowserClient<Database>(supabaseUrl(), supabaseAnonKey());
+  return createBrowserClient<Database, "tasks">(supabaseUrl(), supabaseAnonKey(), {
+    // Maham Tasks lives in the tasks schema of Maham One's database.
+    db: { schema: "tasks" },
+  });
 }

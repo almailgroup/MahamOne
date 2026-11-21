@@ -1134,6 +1134,20 @@ begin
           null::integer[]
         from pg_policy as x
         where x.polrelid = to_regclass('storage.objects')
+          -- Maham Tasks' own (20261212000000_maham_tasks.sql): its two
+          -- buckets only, never company-files.
+          and not (
+            to_regnamespace('tasks') is not null
+            and x.polname in (
+              'attachment objects readable with their task',
+              'attachment objects removable by owner or manager',
+              'attachment objects writable by task editors',
+              'avatars are publicly readable',
+              'users remove their own avatar',
+              'users replace their own avatar',
+              'users upload their own avatar'
+            )
+          )
         union all
         -- Kinds of record, server_features() and record_is_private, as asked above.
         select x.step, x.grp, x.label, x.problem, x.versions::integer[]

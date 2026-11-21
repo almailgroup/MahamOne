@@ -99,7 +99,7 @@ export function DirectThread({
         "postgres_changes",
         {
           event: "INSERT",
-          schema: "public",
+          schema: "tasks",
           table: "direct_messages",
           filter: `conversation_id=eq.${conversationId}`,
         },
@@ -123,7 +123,7 @@ export function DirectThread({
         "postgres_changes",
         {
           event: "DELETE",
-          schema: "public",
+          schema: "tasks",
           table: "direct_messages",
           filter: `conversation_id=eq.${conversationId}`,
         },

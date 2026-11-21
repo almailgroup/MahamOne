@@ -33,7 +33,7 @@ select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-00000000cc01
 
 do $$
 begin
-  update public.notification_preferences
+  update tasks.notification_preferences
      set telegram_chat_id = '-1001999888777', telegram_enabled = true
    where user_id = '00000000-0000-4000-8000-00000000cc01';
   perform check_that(
@@ -47,14 +47,14 @@ end $$;
 select check_that(
   'so no chat is linked and the channel stays off',
   (select telegram_chat_id is null and not telegram_enabled
-     from public.notification_preferences
+     from tasks.notification_preferences
     where user_id = '00000000-0000-4000-8000-00000000cc01'));
 
 -- Everything else on the row is still theirs to change.
 do $$
 declare n integer;
 begin
-  update public.notification_preferences
+  update tasks.notification_preferences
      set remind_overdue = false, due_soon_lead_hours = 4
    where user_id = '00000000-0000-4000-8000-00000000cc01';
   get diagnostics n = row_count;
@@ -70,7 +70,7 @@ end $$;
 -- A person still cannot see anybody else's row, link code included.
 select check_that(
   'and nobody else''s preferences are readable',
-  (select count(*) from public.notification_preferences
+  (select count(*) from tasks.notification_preferences
     where user_id = '00000000-0000-4000-8000-00000000cc02') = 0);
 
 -- --- as the webhook -------------------------------------------------------
@@ -82,7 +82,7 @@ select set_config('request.jwt.claim.sub', '', true);
 do $$
 declare n integer;
 begin
-  update public.notification_preferences
+  update tasks.notification_preferences
      set telegram_chat_id = '-1001999888777',
          telegram_enabled = true,
          telegram_link_code = null
@@ -96,7 +96,7 @@ end $$;
 select check_that(
   'and the link is recorded',
   (select telegram_chat_id = '-1001999888777' and telegram_enabled
-     from public.notification_preferences
+     from tasks.notification_preferences
     where user_id = '00000000-0000-4000-8000-00000000cc01'));
 
 -- --- unlinking stays the owner's ------------------------------------------
@@ -106,7 +106,7 @@ select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-00000000cc01
 do $$
 declare n integer;
 begin
-  update public.notification_preferences
+  update tasks.notification_preferences
      set telegram_enabled = false, telegram_chat_id = null, telegram_link_code = null
    where user_id = '00000000-0000-4000-8000-00000000cc01';
   get diagnostics n = row_count;
@@ -118,7 +118,7 @@ end $$;
 select check_that(
   'which leaves no chat linked',
   (select telegram_chat_id is null
-     from public.notification_preferences
+     from tasks.notification_preferences
     where user_id = '00000000-0000-4000-8000-00000000cc01'));
 
 reset role;

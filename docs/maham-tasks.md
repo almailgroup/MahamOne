@@ -6,103 +6,123 @@ design and features (a Next.js app; its
 [README](../Maham%20Tasks/README.md) describes it in full), and it lives at
 its own address, **tasks.mahamone.com**.
 
-For now it keeps everything it had before it moved here:
+It is part of the Maham One platform:
 
-- **its own Supabase project** (database, accounts and files). Merging it into
-  Maham One's Supabase project is a later step;
-- **its own Vercel site**, which now builds from this repository's
-  `Maham Tasks` folder;
-- **its own AI Worker** in Cloudflare, which keeps running as it is.
+- **Maham One's database.** Its tables live in Maham One's Supabase project,
+  in their own schema, `tasks`, beside Maham One's data and changing none of
+  it ([`supabase/migrations/20261212000000_maham_tasks.sql`](../supabase/migrations/20261212000000_maham_tasks.sql)).
+- **One account.** Everyone signs in to both apps with the same Maham One
+  email and password. Being in Maham Tasks is up to its admins: a Maham One
+  account they haven't invited reaches nothing of it.
+- **No master key.** Maham Tasks' server (reminders, Telegram, push) holds
+  only its own secret, `TASKS_SERVER_SECRET`, which opens its own functions
+  and none of Maham One's data. Maham One's secret key is never used.
+- **Its own Vercel project**, built from this repository's `Maham Tasks`
+  folder. A Vercel project runs one app, so Maham One and Maham Tasks are two
+  projects in the same team, from the same code.
+- **Its own AI Worker** in Cloudflare, which keeps running as it is.
 
 ## What runs automatically
 
 - **Checks** (`.github/workflows/maham-tasks.yml`): types, lint, unit tests,
-  the build, the database rules against a real PostgreSQL, and the
-  end-to-end tests. They run when a push to `main` changes the `Maham Tasks`
-  folder. These are the same checks it had in its old repository: the copies
-  inside the folder (`Maham Tasks/.github/workflows/`) don't run here,
-  because GitHub only runs the workflows at the root of a repository.
-- **Weekly backup** (`.github/workflows/maham-tasks-backup.yml`): a copy of the
-  Maham Tasks database every Sunday, encrypted, kept for 30 days. It does
-  nothing until its two secrets are added (step 4 below).
+  the build, the database rules against a real PostgreSQL (built from the
+  script above), and the end-to-end tests. They run when a push to `main`
+  changes the `Maham Tasks` folder or the script. Maham One's own tests
+  (`src/cloud/maham-tasks-sql.test.ts`) run the script after all of Maham
+  One's and check that nothing of Maham One changes.
+- **Weekly backup** (`.github/workflows/maham-tasks-backup.yml`): optional, a
+  copy of the `tasks` schema only, every Sunday, encrypted, kept for 30 days.
+  It does nothing until its two secrets are added (see "Backups" in the Maham
+  Tasks README).
 - A push that changes only Maham Tasks doesn't rebuild or redeploy Maham One,
   and Maham One's build skips the folder.
 
-## Moving it here: the owner's steps
+## Bringing it back: the owner's steps
 
-Do them in this order. Nothing changes for the people using Maham Tasks: the
-same accounts, the same data, and the old address keeps working too.
+Its old Supabase project and old Vercel project are gone, so Maham Tasks
+starts again empty, on Maham One's database. Do these in order.
 
-### 1. Vercel: build the existing site from this repository
+### 1. Supabase: the database script
 
-1. Sign in at [vercel.com](https://vercel.com) and open the project of the
-   task portal (not Maham One's).
-2. **Settings → Git**: disconnect `almailgroup-task-management-portal`, then
-   connect **`almailgroup/MahamOne`**. If it isn't in the list, choose the
-   option to adjust the GitHub app's permissions and give Vercel access to
-   that repository.
-3. **Settings → Build and Deployment → Root Directory**: type
-   `Maham Tasks` (exactly, with the space) and save.
-4. Leave the environment variables as they are.
-5. **Deployments**: redeploy the latest one, or wait for the next push. Check
-   the new deployment shows commits from `MahamOne` and finishes as Ready.
+In Maham One's project (the one at `gagdyhintrxdkiqhahzh.supabase.co`):
+**SQL Editor → New query**, paste the whole of
+[`supabase/migrations/20261212000000_maham_tasks.sql`](../supabase/migrations/20261212000000_maham_tasks.sql)
+(on GitHub: **Copy raw file**), and **Run**. It should finish with "Success.
+No rows returned". It is safe to run again, and it needs none of Maham One's
+other scripts. Run `supabase/health-check.sql` after it if you like: it reads
+the same as before.
 
-Optional: under **Settings → Git → Ignored Build Step**, you can make Vercel
-build Maham Tasks only when its folder changes. Without it, every push to the
-repository also rebuilds Maham Tasks, which is harmless.
+### 2. Supabase: let the API serve it
 
-### 2. The address tasks.mahamone.com
+**Project Settings → Data API → Exposed schemas**: add `tasks`, then
+**Save**. Leave `public` and the others as they are.
 
-1. In the same Vercel project: **Settings → Domains → Add**, type
-   `tasks.mahamone.com`.
-2. Vercel shows the DNS record to add (usually a `CNAME` named `tasks`). Add
-   it wherever mahamone.com's DNS is managed. If that is Vercel itself, it is
-   added for you.
-3. Wait until Vercel shows the domain as valid, then open
-   https://tasks.mahamone.com and sign in.
-4. **Settings → Environment Variables**: change `NEXT_PUBLIC_SITE_URL` to
-   `https://tasks.mahamone.com` (Production and Preview), then redeploy.
-   Password reset emails link to this address.
+### 3. Supabase: you as the first admin, and the server's secret
 
-### 3. Supabase: let sign-in emails return to the new address
+**SQL Editor → New query**, with the email of your Maham One account:
 
-In the **Maham Tasks** Supabase project (not Maham One's):
-**Authentication → URL Configuration**.
+```sql
+select tasks.add_first_admin('you@example.com');
+```
 
-- **Site URL**: `https://tasks.mahamone.com`
-- **Redirect URLs**: add `https://tasks.mahamone.com/auth/callback`. Keep the
-  old address there until nobody uses it.
+Then a new query:
 
-The old `vercel.app` address keeps working, so the daily reminders and the
-Telegram bot keep working without changes. Moving them to the new address is
-optional; the [Reminders](../Maham%20Tasks/README.md#reminders) section of the
-Maham Tasks README shows where each one is set.
+```sql
+select tasks.new_server_secret();
+```
 
-### 4. GitHub: the weekly backup
+It shows a long code, once. Copy it for step 5 (`TASKS_SERVER_SECRET`). Don't
+paste it into a chat or an email. If it is ever lost or seen, run the line
+again and replace it in Vercel: the old one stops working at once.
 
-In this repository: **Settings → Secrets and variables → Actions → New
-repository secret**, two secrets:
+### 4. Supabase: let sign-in emails come back to Maham Tasks
 
-- `TASKS_SUPABASE_DB_URL`: the Maham Tasks project's **Session pooler**
-  connection string (Supabase → **Connect**), with its database password in
-  it. If the old repository had backups, it is the value it had as
-  `SUPABASE_DB_URL`.
-- `TASKS_BACKUP_PASSPHRASE`: a long passphrase kept in your password manager.
-  If the old repository had backups, use the same one, so old and new backups
-  open the same way.
+**Authentication → URL Configuration → Redirect URLs → Add URL**:
+`https://tasks.mahamone.com/**`. **Don't change the Site URL**: it is Maham
+One's, and every Maham One email uses it.
 
-Then **Actions → Maham Tasks weekly backup → Run workflow**, and check it
-finishes green with a file attached. How to open a backup and try a restore:
-[Backups](../Maham%20Tasks/README.md#backups) in the Maham Tasks README.
+### 5. Vercel: a project for Maham Tasks
 
-### 5. Archive the old repository
+In the **Almail Group** team: **Add New → Project**, import
+`almailgroup/MahamOne`, and set **Root Directory** to `Maham Tasks`. Before
+**Deploy**, open **Environment Variables** and add:
 
-Once step 1 is done (Vercel no longer builds from it): on GitHub, open
+| Name                            | Value                                                                                          |
+| ------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`      | `https://gagdyhintrxdkiqhahzh.supabase.co`                                                     |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Maham One's **publishable** key (Supabase → Project Settings → API Keys), never the secret one |
+| `NEXT_PUBLIC_SITE_URL`          | `https://tasks.mahamone.com`                                                                   |
+| `TASKS_SERVER_SECRET`           | the code from step 3                                                                           |
+| `CRON_SECRET`                   | a long random code you make up (it lets Vercel's daily reminder run in)                        |
+
+Reminders by email, Telegram or WhatsApp need their providers' keys as well
+(see "Reminders" in the Maham Tasks README); the app works without them.
+
+Then **Deploy**, and under the project's **Settings → Domains** add
+`tasks.mahamone.com`. Your DNS record for `tasks` can stay as it is; if Vercel
+asks for a different one, change it at your domain provider as it says.
+
+### 6. Try it, then invite the team
+
+1. Open tasks.mahamone.com and sign in with your Maham One email and
+   password: you are the admin.
+2. **Profile → Two-step sign-in**: add an authenticator app (the iPhone's
+   Passwords app, Google or Microsoft Authenticator). Maham Tasks asks for it
+   before an admin can invite anybody. From then on, signing in to Maham Tasks
+   asks for its six-digit code too.
+3. **Team → Add teammate**, with each person's Maham One email. They join the
+   first time they sign in to tasks.mahamone.com with that account (someone
+   without one makes it at Maham One with that email first). An invite lasts
+   30 days; the Team page lists the ones not used yet, with **Withdraw**.
+
+Someone signed in to Maham One who wasn't invited sees "Your Maham One account
+is not in Maham Tasks yet".
+
+Reminders on Telegram need one more step once it is deployed: see "Setting up
+each channel" in the Maham Tasks README.
+
+### 7. Archive the old repository
+
+If not done yet: on GitHub, open
 `almailgroup/almailgroup-task-management-portal` → **Settings → Archive this
-repository**. It stays readable, but nobody can change it by mistake. Its own
-weekly backup stops then, which is why step 4 comes first.
-
-### 6. Tell Claude
-
-Once tasks.mahamone.com works, the next step is a **Maham Tasks** tile on the
-Maham One home that opens it.
+repository**. It stays readable, but nobody can change it by mistake.

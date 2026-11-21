@@ -26,30 +26,30 @@ insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-0000000000f2', 'hand@example.test'),
   ('00000000-0000-4000-8000-0000000000f3', 'other@example.test');
 
-alter table public.profiles disable trigger profiles_guard_role_change;
-update public.profiles set role = 'admin'
+alter table tasks.profiles disable trigger profiles_guard_role_change;
+update tasks.profiles set role = 'admin'
  where id = '00000000-0000-4000-8000-0000000000f1';
-alter table public.profiles enable trigger profiles_guard_role_change;
+alter table tasks.profiles enable trigger profiles_guard_role_change;
 
 select check_that(
   'the fixture admin really is an admin',
-  (select role = 'admin' from public.profiles
+  (select role = 'admin' from tasks.profiles
     where id = '00000000-0000-4000-8000-0000000000f1'));
 
-insert into public.projects (id, name, created_by)
+insert into tasks.projects (id, name, created_by)
 values ('11111111-1111-4111-8111-0000000000f1', 'Banking',
         '00000000-0000-4000-8000-0000000000f1');
 
-insert into public.tasks (id, project_id, title, status, created_by)
+insert into tasks.tasks (id, project_id, title, status, created_by)
 values ('22222222-2222-4222-8222-0000000000f1',
         '11111111-1111-4111-8111-0000000000f1',
         'Meet with Kuwait banks', 'todo',
         '00000000-0000-4000-8000-0000000000f1');
 
-insert into public.task_assignments (task_id, user_id)
+insert into tasks.task_assignments (task_id, user_id)
 values ('22222222-2222-4222-8222-0000000000f1', '00000000-0000-4000-8000-0000000000f2');
 
-insert into public.task_checklist_items (id, task_id, content, position, created_by)
+insert into tasks.task_checklist_items (id, task_id, content, position, created_by)
 values
   ('33333333-3333-4333-8333-0000000000f1', '22222222-2222-4222-8222-0000000000f1',
    'Bring the signatory list', 0, '00000000-0000-4000-8000-0000000000f1'),
@@ -65,17 +65,17 @@ declare
   seen integer;
   changed integer;
 begin
-  select count(*) into seen from public.task_checklist_items;
+  select count(*) into seen from tasks.task_checklist_items;
   perform check_that('somebody on the task sees its steps', seen = 2, seen::text);
 
-  update public.task_checklist_items set done = true
+  update tasks.task_checklist_items set done = true
    where id = '33333333-3333-4333-8333-0000000000f1';
   get diagnostics changed = row_count;
   perform check_that('and can tick one off', changed = 1, changed::text);
 
   -- Assigned means can_edit_task here as everywhere else in this schema:
   -- somebody doing the work may also change what the work is made of.
-  update public.task_checklist_items set content = 'Bring the signatory list and the stamp'
+  update tasks.task_checklist_items set content = 'Bring the signatory list and the stamp'
    where id = '33333333-3333-4333-8333-0000000000f1';
   get diagnostics changed = row_count;
   perform check_that('and may plan them, as they may edit the task', changed = 1, changed::text);
@@ -89,16 +89,16 @@ declare
   seen integer;
   changed integer;
 begin
-  select count(*) into seen from public.task_checklist_items;
+  select count(*) into seen from tasks.task_checklist_items;
   perform check_that('somebody not on the task sees no steps', seen = 0, seen::text);
 
-  update public.task_checklist_items set done = true
+  update tasks.task_checklist_items set done = true
    where id = '33333333-3333-4333-8333-0000000000f2';
   get diagnostics changed = row_count;
   perform check_that('and can tick nothing', changed = 0, changed::text);
 
   begin
-    insert into public.task_checklist_items (task_id, content, created_by)
+    insert into tasks.task_checklist_items (task_id, content, created_by)
     values ('22222222-2222-4222-8222-0000000000f1', 'Sneak this in',
             '00000000-0000-4000-8000-0000000000f3');
     perform check_that('and cannot add one', false, 'it was allowed');
@@ -113,12 +113,12 @@ end $$;
 -- one is put in the project as well, which is the real shape of somebody
 -- who can see a task they are not on.
 reset role;
-alter table public.profiles disable trigger profiles_guard_role_change;
-update public.profiles set role = 'manager'
+alter table tasks.profiles disable trigger profiles_guard_role_change;
+update tasks.profiles set role = 'manager'
  where id = '00000000-0000-4000-8000-0000000000f3';
-alter table public.profiles enable trigger profiles_guard_role_change;
+alter table tasks.profiles enable trigger profiles_guard_role_change;
 
-insert into public.project_members (project_id, user_id)
+insert into tasks.project_members (project_id, user_id)
 values ('11111111-1111-4111-8111-0000000000f1', '00000000-0000-4000-8000-0000000000f3');
 set local role authenticated;
 
@@ -127,10 +127,10 @@ declare
   seen integer;
   changed integer;
 begin
-  select count(*) into seen from public.task_checklist_items;
+  select count(*) into seen from tasks.task_checklist_items;
   perform check_that('a manager sees the steps of any task', seen = 2, seen::text);
 
-  update public.task_checklist_items set content = 'Bring the board resolution'
+  update tasks.task_checklist_items set content = 'Bring the board resolution'
    where id = '33333333-3333-4333-8333-0000000000f2';
   get diagnostics changed = row_count;
 
@@ -143,12 +143,12 @@ end $$;
 reset role;
 
 -- --- and the steps go with the task ------------------------------------------
-delete from public.tasks where id = '22222222-2222-4222-8222-0000000000f1';
+delete from tasks.tasks where id = '22222222-2222-4222-8222-0000000000f1';
 
 select check_that(
   'deleting a task takes its steps with it',
-  (select count(*) from public.task_checklist_items) = 0,
-  (select count(*)::text from public.task_checklist_items));
+  (select count(*) from tasks.task_checklist_items) = 0,
+  (select count(*)::text from tasks.task_checklist_items));
 
 -- --- results ---------------------------------------------------------------
 select

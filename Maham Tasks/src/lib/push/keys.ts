@@ -2,7 +2,7 @@ import "server-only";
 
 import webpush from "web-push";
 
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createServerAccess } from "@/lib/supabase/server-access";
 
 /**
  * The VAPID key pair.
@@ -15,7 +15,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
  *
  * Instead it is generated here on first use and kept in `web_push_keys`, a
  * table with row-level security on and no policies: nothing holding a user's
- * session can read it, only the service role this runs as. It is written
+ * session can read it, only the server, through tasks.srv_web_push_keys. It is written
  * once; the primary key is a boolean fixed at true, so two servers racing to
  * create it produce one row and one of them reads the winner's.
  */
@@ -27,54 +27,26 @@ let cached: VapidKeys | null = null;
 export async function vapidKeys(): Promise<VapidKeys | null> {
   if (cached) return cached;
 
-  const supabase = createAdminClient();
+  const supabase = createServerAccess();
+  type Row = { public_key: string; private_key: string };
 
-  const existing = await supabase
-    .from("web_push_keys")
-    .select("public_key, private_key")
-    .maybeSingle();
+  // The stored pair, when there is one.
+  const existing = await supabase.rpc<Row[]>("web_push_keys", { p_public: null, p_private: null });
+  let row = existing.data?.[0];
 
-  if (existing.data) {
-    cached = {
-      publicKey: existing.data.public_key,
-      privateKey: existing.data.private_key,
-    };
-    return cached;
+  if (!row) {
+    // Not there yet. Generate, and let the database settle a race: it keeps
+    // the first pair and hands back whichever it kept.
+    const generated = webpush.generateVAPIDKeys();
+    const kept = await supabase.rpc<Row[]>("web_push_keys", {
+      p_public: generated.publicKey,
+      p_private: generated.privateKey,
+    });
+    row = kept.data?.[0];
   }
 
-  // Not there yet. Generate, and let the database settle a race.
-  const generated = webpush.generateVAPIDKeys();
-  const inserted = await supabase
-    .from("web_push_keys")
-    .insert({
-      id: true,
-      public_key: generated.publicKey,
-      private_key: generated.privateKey,
-    })
-    .select("public_key, private_key")
-    .maybeSingle();
-
-  if (inserted.data) {
-    cached = {
-      publicKey: inserted.data.public_key,
-      privateKey: inserted.data.private_key,
-    };
-    return cached;
-  }
-
-  // Somebody else won: read theirs rather than insisting on ours, which is
-  // the whole point of the single-row constraint.
-  const winner = await supabase
-    .from("web_push_keys")
-    .select("public_key, private_key")
-    .maybeSingle();
-
-  if (!winner.data) return null;
-
-  cached = {
-    publicKey: winner.data.public_key,
-    privateKey: winner.data.private_key,
-  };
+  if (!row) return null;
+  cached = { publicKey: row.public_key, privateKey: row.private_key };
   return cached;
 }
 

@@ -1,10 +1,11 @@
 /**
- * Typed shape of the `public` schema, matching supabase/migrations.
+ * Typed shape of the `tasks` schema of Maham One's database, matching
+ * supabase/migrations/20261212000000_maham_tasks.sql at the repository root.
  *
  * Structured exactly like the output of `supabase gen types typescript`, so it
- * can be regenerated in place once the migrations are applied:
+ * can be regenerated in place once the script has run:
  *
- *   npx supabase gen types typescript --project-id <ref> --schema public \
+ *   npx supabase gen types typescript --project-id <ref> --schema tasks \
  *     > src/lib/supabase/database.types.ts
  */
 
@@ -62,7 +63,7 @@ export type TaskActivityAction =
   | "restored";
 
 export type Database = {
-  public: {
+  tasks: {
     Tables: {
       profiles: {
         Row: {
@@ -894,10 +895,35 @@ export type Database = {
         ];
       };
       /**
+       * Invites to Maham Tasks, by email (Maham One's database): seen and
+       * withdrawn by admins, made by add_teammate, used up by join.
+       */
+      invites: {
+        Row: {
+          email: string;
+          full_name: string | null;
+          role: UserRole;
+          invited_by: string | null;
+          created_at: string;
+          expires_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: "invites_invited_by_fkey";
+            columns: ["invited_by"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      /**
        * The VAPID pair, one row forever.
        *
-       * Reachable only with the service role: row-level security is on and
-       * there are no policies, so a user session sees nothing here.
+       * Reachable only by the server (tasks.srv_web_push_keys): row-level
+       * security is on and there are no policies, so a user session sees
+       * nothing here.
        */
       web_push_keys: {
         Row: {
@@ -1162,6 +1188,15 @@ export type Database = {
     Views: Record<never, never>;
     Functions: {
       current_user_role: { Args: Record<never, never>; Returns: UserRole };
+      // Maham One's database: a Maham Tasks admin adds a teammate by email, and
+      // removes a lost phone's two-step sign-in.
+      add_teammate: {
+        Args: { p_email: string; p_full_name?: string | null; p_role?: UserRole };
+        Returns: Json;
+      };
+      remove_two_step: { Args: { p_user: string }; Returns: number };
+      is_member: { Args: Record<never, never>; Returns: boolean };
+      join: { Args: Record<never, never>; Returns: boolean };
       is_admin: { Args: Record<never, never>; Returns: boolean };
       is_manager_or_admin: { Args: Record<never, never>; Returns: boolean };
       can_edit_task: { Args: { task: string }; Returns: boolean };
@@ -1222,12 +1257,12 @@ export type Database = {
       /** Moves a batch of due reminders to 'sending' and returns them. */
       claim_reminders: {
         Args: { batch_size?: number };
-        Returns: Database["public"]["Tables"]["reminder_queue"]["Row"][];
+        Returns: Database["tasks"]["Tables"]["reminder_queue"]["Row"][];
       };
       /** The same claim, narrowed to one task, for the assignment path. */
       claim_task_reminders: {
         Args: { task: string };
-        Returns: Database["public"]["Tables"]["reminder_queue"]["Row"][];
+        Returns: Database["tasks"]["Tables"]["reminder_queue"]["Row"][];
       };
       /** Per-assignee open/done/overdue, counted in the database. */
       /** Soft delete: hides the task everywhere, keeps it for 30 days. */
@@ -1330,31 +1365,31 @@ export type Database = {
 };
 
 /** Convenience row aliases used throughout the app. */
-export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
-export type Project = Database["public"]["Tables"]["projects"]["Row"];
-export type CompanyHoliday = Database["public"]["Tables"]["company_holidays"]["Row"];
+export type Profile = Database["tasks"]["Tables"]["profiles"]["Row"];
+export type Project = Database["tasks"]["Tables"]["projects"]["Row"];
+export type CompanyHoliday = Database["tasks"]["Tables"]["company_holidays"]["Row"];
 /** The dot beside a label's name. No amber: that means late, and only that. */
 export type LabelColour = "slate" | "blue" | "green" | "violet" | "pink" | "teal";
-export type Label = Database["public"]["Tables"]["labels"]["Row"];
-export type TaskTemplate = Database["public"]["Tables"]["task_templates"]["Row"];
-export type ProjectMilestone = Database["public"]["Tables"]["project_milestones"]["Row"];
-export type Task = Database["public"]["Tables"]["tasks"]["Row"];
+export type Label = Database["tasks"]["Tables"]["labels"]["Row"];
+export type TaskTemplate = Database["tasks"]["Tables"]["task_templates"]["Row"];
+export type ProjectMilestone = Database["tasks"]["Tables"]["project_milestones"]["Row"];
+export type Task = Database["tasks"]["Tables"]["tasks"]["Row"];
 export type TaskAssignment =
-  Database["public"]["Tables"]["task_assignments"]["Row"];
-export type Comment = Database["public"]["Tables"]["comments"]["Row"];
-export type TaskActivity = Database["public"]["Tables"]["task_activity"]["Row"];
+  Database["tasks"]["Tables"]["task_assignments"]["Row"];
+export type Comment = Database["tasks"]["Tables"]["comments"]["Row"];
+export type TaskActivity = Database["tasks"]["Tables"]["task_activity"]["Row"];
 export type TaskAttachment =
-  Database["public"]["Tables"]["task_attachments"]["Row"];
-export type Notification = Database["public"]["Tables"]["notifications"]["Row"];
+  Database["tasks"]["Tables"]["task_attachments"]["Row"];
+export type Notification = Database["tasks"]["Tables"]["notifications"]["Row"];
 export type ProjectMember =
-  Database["public"]["Tables"]["project_members"]["Row"];
+  Database["tasks"]["Tables"]["project_members"]["Row"];
 export type NotificationPreferences =
-  Database["public"]["Tables"]["notification_preferences"]["Row"];
+  Database["tasks"]["Tables"]["notification_preferences"]["Row"];
 export type ReminderQueueRow =
-  Database["public"]["Tables"]["reminder_queue"]["Row"];
+  Database["tasks"]["Tables"]["reminder_queue"]["Row"];
 
 export type PushSubscriptionRow =
-  Database["public"]["Tables"]["push_subscriptions"]["Row"];
+  Database["tasks"]["Tables"]["push_subscriptions"]["Row"];
 
 /** What the profile page shows about a device. Never the keys. */
 export type PushDevice = Pick<
@@ -1364,20 +1399,20 @@ export type PushDevice = Pick<
 
 /** A reminder that could not be delivered — never the message itself. */
 export type ReminderFailure =
-  Database["public"]["Functions"]["my_reminder_failures"]["Returns"][number];
+  Database["tasks"]["Functions"]["my_reminder_failures"]["Returns"][number];
 
 export type TeamReminderFailure =
-  Database["public"]["Functions"]["reminder_failures"]["Returns"][number];
+  Database["tasks"]["Functions"]["reminder_failures"]["Returns"][number];
 
 /** A fault, as an admin sees it: grouped, counted, never a payload. */
 export type AppError =
-  Database["public"]["Functions"]["recent_errors"]["Returns"][number];
+  Database["tasks"]["Functions"]["recent_errors"]["Returns"][number];
 
 /** How the person running a project says it is going. */
 export type ProjectStatus = "on_track" | "at_risk" | "off_track";
 
 export type ProjectStatusUpdate =
-  Database["public"]["Tables"]["project_status_updates"]["Row"];
+  Database["tasks"]["Tables"]["project_status_updates"]["Row"];
 
 /** An update with whoever wrote it, which is how the project page lists them. */
 export type ProjectStatusUpdateWithAuthor = ProjectStatusUpdate & {
@@ -1386,19 +1421,19 @@ export type ProjectStatusUpdateWithAuthor = ProjectStatusUpdate & {
 
 /** One live project's health, as project_health() reports it. */
 export type ProjectHealthRow =
-  Database["public"]["Functions"]["project_health"]["Returns"][number];
+  Database["tasks"]["Functions"]["project_health"]["Returns"][number];
 
 export type ChecklistItem =
-  Database["public"]["Tables"]["task_checklist_items"]["Row"];
+  Database["tasks"]["Tables"]["task_checklist_items"]["Row"];
 
 /** How far along a task's steps are, for a list that has no room for them. */
 export type ChecklistProgress = { done: number; total: number };
 
-export type Conversation = Database["public"]["Tables"]["conversations"]["Row"];
+export type Conversation = Database["tasks"]["Tables"]["conversations"]["Row"];
 export type ConversationParticipant =
-  Database["public"]["Tables"]["conversation_participants"]["Row"];
+  Database["tasks"]["Tables"]["conversation_participants"]["Row"];
 export type DirectMessage =
-  Database["public"]["Tables"]["direct_messages"]["Row"];
+  Database["tasks"]["Tables"]["direct_messages"]["Row"];
 
 /** A message with whoever wrote it, which is what the thread renders. */
 export type DirectMessageWithAuthor = DirectMessage & { author: Profile | null };
@@ -1433,13 +1468,13 @@ export type ConversationSummary = {
 };
 
 export type PersonalNote =
-  Database["public"]["Tables"]["personal_notes"]["Row"];
+  Database["tasks"]["Tables"]["personal_notes"]["Row"];
 export type PersonalNoteItem =
-  Database["public"]["Tables"]["personal_note_items"]["Row"];
+  Database["tasks"]["Tables"]["personal_note_items"]["Row"];
 
 /** A note with its checklist, in display order. */
 export type PersonalNoteShare =
-  Database["public"]["Tables"]["personal_note_shares"]["Row"];
+  Database["tasks"]["Tables"]["personal_note_shares"]["Row"];
 
 /**
  * A list with everything the page shows: its lines, who owns it, and who else
@@ -1474,7 +1509,7 @@ export type TaskWithAssignees = Task & {
 };
 
 /** A comment joined with its author (null when the account was removed). */
-export type TeamMessage = Database["public"]["Tables"]["team_messages"]["Row"];
+export type TeamMessage = Database["tasks"]["Tables"]["team_messages"]["Row"];
 
 /** A message with whoever wrote it, which is how the room reads. */
 export type TeamMessageWithAuthor = TeamMessage & { author: Profile | null };

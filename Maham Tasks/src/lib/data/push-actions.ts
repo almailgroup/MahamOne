@@ -26,9 +26,9 @@ export type DeviceSubscription = {
 /**
  * The public half of the signing key, for `pushManager.subscribe`.
  *
- * Generated on first use and kept in a table only the service role can read;
+ * Generated on first use and kept in a table only the server can read;
  * this returns the half that is meant to be public. Null means push is not
- * available — no service-role key configured — and the UI says so rather than
+ * available — no TASKS_SERVER_SECRET configured — and the UI says so rather than
  * offering a switch that cannot work.
  */
 export async function getPushPublicKey(): Promise<string | null> {

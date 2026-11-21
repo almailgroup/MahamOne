@@ -7,7 +7,6 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:bundle": "node scripts/bundle-migrations.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test"

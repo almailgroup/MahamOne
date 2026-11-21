@@ -5,6 +5,10 @@
  * path claims one task's. What happens to a claimed row after that — sent,
  * retried with a backoff, or given up on — is the same code, and this is what
  * makes it the same code rather than two copies that drift.
+ *
+ * The queue is written back through the server's own jobs (reminder_sent,
+ * reminder_failed), which release the claim and stamp the times themselves;
+ * these check what the dispatcher tells them.
  */
 
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -13,36 +17,34 @@ import type { DeliveryResult, QueuedReminder } from "@/lib/reminders/types";
 
 const deliver = vi.fn<(r: QueuedReminder) => Promise<DeliveryResult>>();
 vi.mock("@/lib/reminders/providers", () => ({ deliver: (r: QueuedReminder) => deliver(r) }));
-vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => fakeAdmin() }));
+vi.mock("@/lib/supabase/server-access", () => ({ createServerAccess: () => fakeServer() }));
 
-/** Every update the dispatcher wrote back, by reminder id. */
-let writes: Record<string, Record<string, unknown>>;
+/** The last thing the dispatcher wrote back about each reminder, by its id. */
+let writes: Record<string, { job: string; args: Record<string, unknown> }>;
 /** What `claim_task_reminders` should hand back. */
 let claimable: QueuedReminder[];
 /** Reminder ids the dispatcher told somebody about. */
 let told: string[];
 let claimError: string | null;
 
-function fakeAdmin() {
+function fakeServer() {
   return {
-    from: (table: string) => ({
-      update: (values: Record<string, unknown>) => ({
-        eq: (_column: string, id: string) => {
-          if (table === "reminder_queue") writes[id] = values;
-          return Promise.resolve({ error: null });
-        },
-      }),
-    }),
-    rpc: async (name: string, args: Record<string, unknown>) => {
+    rpc: async (job: string, args: Record<string, unknown> = {}) => {
+      if (job === "claim_task_reminders") {
+        return claimError
+          ? { data: null, error: { message: claimError } }
+          : { data: claimable, error: null };
+      }
       // Telling somebody their reminder could not be delivered goes through
       // the database, like every other notification here.
-      if (name === "notify_reminder_failed") {
+      if (job === "notify_reminder_failed") {
         told.push(String(args.reminder));
         return { data: null, error: null };
       }
-      return claimError
-        ? { data: null, error: { message: claimError } }
-        : { data: claimable, error: null };
+      if (job === "reminder_sent" || job === "reminder_failed") {
+        writes[String(args.p_id)] = { job, args };
+      }
+      return { data: null, error: null };
     },
   } as never;
 }
@@ -64,6 +66,8 @@ const reminder = (over: Partial<QueuedReminder> = {}): QueuedReminder => ({
   ...over,
 });
 
+const FIFTEEN_MINUTES = 15 * 60_000;
+
 beforeEach(() => {
   writes = {};
   told = [];
@@ -73,47 +77,79 @@ beforeEach(() => {
 });
 
 describe("sendClaimed", () => {
-  test("a delivered reminder is marked sent and its claim released", async () => {
+  test("a delivered reminder is marked sent, which also releases its claim", async () => {
     deliver.mockResolvedValue({ ok: true });
-    const tally = await sendClaimed(fakeAdmin(), [reminder()]);
+    const tally = await sendClaimed(fakeServer(), [reminder()]);
 
     expect(tally).toMatchObject({ considered: 1, sent: 1, retrying: 0, givenUp: 0 });
-    expect(writes.r1).toMatchObject({ status: "sent", attempts: 1, last_error: null, claimed_at: null });
+    expect(writes.r1).toEqual({ job: "reminder_sent", args: { p_id: "r1", p_attempts: 1 } });
   });
 
   /**
    * The claim has to come off whatever happens. A row left in 'sending' is
    * invisible to the next run until the ten-minute rescue, which turns a
    * moment's provider trouble into a reminder that arrives very late.
+   * reminder_failed releases it; what matters here is that it is asked to
+   * retry, and not straight away.
    */
-  test("a transient failure goes back to pending, backed off, unclaimed", async () => {
+  test("a transient failure goes back to be retried, backed off", async () => {
     deliver.mockResolvedValue({ ok: false, error: "Telegram 429", retryable: true });
     const before = Date.now();
-    const tally = await sendClaimed(fakeAdmin(), [reminder()]);
+    const tally = await sendClaimed(fakeServer(), [reminder()]);
+    const after = Date.now();
 
     expect(tally).toMatchObject({ sent: 0, retrying: 1, givenUp: 0 });
-    expect(writes.r1).toMatchObject({ status: "pending", attempts: 1, claimed_at: null });
-    expect(writes.r1.last_error).toBe("Telegram 429");
-    // Backed off rather than retried immediately.
-    expect(new Date(writes.r1.scheduled_for as string).getTime()).toBeGreaterThan(before);
+    expect(writes.r1.job).toBe("reminder_failed");
+    expect(writes.r1.args).toMatchObject({
+      p_id: "r1",
+      p_attempts: 1,
+      p_error: "Telegram 429",
+      p_exhausted: false,
+    });
+    // Backed off by a quarter of an hour rather than retried immediately.
+    const retryAt = new Date(writes.r1.args.p_retry_at as string).getTime();
+    expect(retryAt).toBeGreaterThanOrEqual(before + FIFTEEN_MINUTES);
+    expect(retryAt).toBeLessThanOrEqual(after + FIFTEEN_MINUTES);
+  });
+
+  test("each attempt waits longer than the one before", async () => {
+    deliver.mockResolvedValue({ ok: false, error: "Resend 503", retryable: true });
+    const before = Date.now();
+    await sendClaimed(fakeServer(), [reminder({ attempts: 1 })]);
+
+    // The second attempt failed: half an hour before the third.
+    const retryAt = new Date(writes.r1.args.p_retry_at as string).getTime();
+    expect(retryAt).toBeGreaterThanOrEqual(before + 2 * FIFTEEN_MINUTES);
   });
 
   test("a permanent failure is not retried at all", async () => {
     deliver.mockResolvedValue({ ok: false, error: "Resend 403", retryable: false });
-    const tally = await sendClaimed(fakeAdmin(), [reminder()]);
+    const tally = await sendClaimed(fakeServer(), [reminder()]);
 
     expect(tally).toMatchObject({ sent: 0, retrying: 0, givenUp: 1 });
-    expect(writes.r1).toMatchObject({ status: "failed", attempts: 1 });
-    // No new schedule: there is nothing to come back for.
-    expect(writes.r1.scheduled_for).toBeUndefined();
+    // No new time: there is nothing to come back for.
+    expect(writes.r1).toEqual({
+      job: "reminder_failed",
+      args: {
+        p_id: "r1",
+        p_attempts: 1,
+        p_error: "Resend 403",
+        p_exhausted: true,
+        p_retry_at: null,
+      },
+    });
   });
 
   test("a transient failure is given up on once the attempts run out", async () => {
     deliver.mockResolvedValue({ ok: false, error: "Telegram 502", retryable: true });
-    const tally = await sendClaimed(fakeAdmin(), [reminder({ attempts: MAX_ATTEMPTS - 1 })]);
+    const tally = await sendClaimed(fakeServer(), [reminder({ attempts: MAX_ATTEMPTS - 1 })]);
 
     expect(tally).toMatchObject({ givenUp: 1, retrying: 0 });
-    expect(writes.r1).toMatchObject({ status: "failed", attempts: MAX_ATTEMPTS });
+    expect(writes.r1.args).toMatchObject({
+      p_attempts: MAX_ATTEMPTS,
+      p_exhausted: true,
+      p_retry_at: null,
+    });
   });
 
   test("one bad reminder does not stop the rest of the batch", async () => {
@@ -121,15 +157,16 @@ describe("sendClaimed", () => {
       .mockResolvedValueOnce({ ok: false, error: "no", retryable: false })
       .mockResolvedValue({ ok: true });
 
-    const tally = await sendClaimed(fakeAdmin(), [
+    const tally = await sendClaimed(fakeServer(), [
       reminder({ id: "r1" }),
       reminder({ id: "r2" }),
       reminder({ id: "r3" }),
     ]);
 
     expect(tally).toMatchObject({ considered: 3, sent: 2, givenUp: 1 });
-    expect(writes.r2).toMatchObject({ status: "sent" });
-    expect(writes.r3).toMatchObject({ status: "sent" });
+    expect(writes.r1.job).toBe("reminder_failed");
+    expect(writes.r2.job).toBe("reminder_sent");
+    expect(writes.r3.job).toBe("reminder_sent");
   });
 });
 
@@ -169,7 +206,7 @@ describe("when a reminder cannot be delivered at all", () => {
   test("the person is told, once, after the last attempt", async () => {
     deliver.mockResolvedValue({ ok: false, error: "Twilio 400", retryable: false });
 
-    const tally = await sendClaimed(fakeAdmin(), [reminder({ id: "r9" })]);
+    const tally = await sendClaimed(fakeServer(), [reminder({ id: "r9" })]);
 
     expect(tally.givenUp).toBe(1);
     expect(told).toEqual(["r9"]);
@@ -178,26 +215,32 @@ describe("when a reminder cannot be delivered at all", () => {
   test("a reminder that will be tried again tells nobody yet", async () => {
     deliver.mockResolvedValue({ ok: false, error: "Resend 503", retryable: true });
 
-    await sendClaimed(fakeAdmin(), [reminder({ id: "r9", attempts: 0 })]);
+    await sendClaimed(fakeServer(), [reminder({ id: "r9", attempts: 0 })]);
 
     expect(told).toEqual([]);
   });
 
-  test("the row records when it gave up, not when it was queued", async () => {
+  /**
+   * The database stamps failed_at when it is told the reminder was given up
+   * on, so the row says when it gave up, not when it was queued: an hour of
+   * retries can sit between the two.
+   */
+  test("the row is marked as given up, so it records when", async () => {
     deliver.mockResolvedValue({ ok: false, error: "Twilio 400", retryable: false });
 
-    await sendClaimed(fakeAdmin(), [reminder({ id: "r9" })]);
+    await sendClaimed(fakeServer(), [reminder({ id: "r9" })]);
 
-    expect(writes.r9.status).toBe("failed");
-    expect(typeof writes.r9.failed_at).toBe("string");
+    expect(writes.r9.job).toBe("reminder_failed");
+    expect(writes.r9.args.p_exhausted).toBe(true);
   });
 
-  test("and clears that mark while it is still being tried", async () => {
+  test("and not while it is still being tried", async () => {
     deliver.mockResolvedValue({ ok: false, error: "Resend 503", retryable: true });
 
-    await sendClaimed(fakeAdmin(), [reminder({ id: "r9" })]);
+    await sendClaimed(fakeServer(), [reminder({ id: "r9" })]);
 
-    expect(writes.r9.status).toBe("pending");
-    expect(writes.r9.failed_at).toBeNull();
+    expect(writes.r9.job).toBe("reminder_failed");
+    expect(writes.r9.args.p_exhausted).toBe(false);
+    expect(typeof writes.r9.args.p_retry_at).toBe("string");
   });
 });

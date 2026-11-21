@@ -50,7 +50,7 @@ export function useNoteStream({
         "postgres_changes",
         {
           event: "*",
-          schema: "public",
+          schema: "tasks",
           table: "personal_note_items",
           filter: `note_id=eq.${noteId}`,
         },
@@ -72,7 +72,7 @@ export function useNoteStream({
         "postgres_changes",
         {
           event: "UPDATE",
-          schema: "public",
+          schema: "tasks",
           table: "personal_notes",
           filter: `id=eq.${noteId}`,
         },

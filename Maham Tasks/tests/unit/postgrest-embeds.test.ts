@@ -19,14 +19,15 @@ import { describe, expect, it } from "vitest";
  */
 
 const ROOT = path.resolve(__dirname, "../..");
-const MIGRATIONS = path.join(ROOT, "supabase/migrations");
+// Maham Tasks' database, in the tasks schema of Maham One's.
+const SCRIPT = path.join(ROOT, "../supabase/migrations/20261212000000_maham_tasks.sql");
 const DATA = path.join(ROOT, "src");
 const TYPES = path.join(ROOT, "src/lib/supabase/database.types.ts");
 
 type ForeignKey = { table: string; column: string; target: string };
 
 /**
- * Every inline `references public.<table>` in the migrations, and every
+ * Every inline `references tasks.<table>` in the database script, and every
  * table's primary key.
  *
  * The primary key matters because it is what separates a junction table from
@@ -37,12 +38,11 @@ function schema(): { keys: ForeignKey[]; primaryKeys: Map<string, string[]> } {
   const keys: ForeignKey[] = [];
   const primaryKeys = new Map<string, string[]>();
 
-  for (const file of readdirSync(MIGRATIONS).sort()) {
-    if (!file.endsWith(".sql")) continue;
+  for (const file of [SCRIPT]) {
     let table: string | null = null;
 
-    for (const line of readFileSync(path.join(MIGRATIONS, file), "utf8").split("\n")) {
-      const opens = line.match(/^create table (?:if not exists )?public\.(\w+)\s*\(/i);
+    for (const line of readFileSync(file, "utf8").split("\n")) {
+      const opens = line.match(/^create table (?:if not exists )?tasks\.(\w+)\s*\(/i);
       if (opens) {
         table = opens[1];
         continue;
@@ -54,7 +54,7 @@ function schema(): { keys: ForeignKey[]; primaryKeys: Map<string, string[]> } {
       if (!table) continue;
 
       const column = line.match(
-        /^\s*(\w+)\s+\w+[^,]*?references\s+public\.(\w+)\s*\(/i,
+        /^\s*(\w+)\s+\w+[^,]*?references\s+tasks\.(\w+)\s*\(/i,
       );
       if (column) keys.push({ table, column: column[1], target: column[2] });
 

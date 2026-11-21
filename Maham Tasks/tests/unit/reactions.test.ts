@@ -16,7 +16,7 @@ describe("the reactions on offer", () => {
     // The picker and the check constraint are two copies of one list. If they
     // drift, the picker offers a reaction the insert refuses.
     const sql = readFileSync(
-      path.resolve(__dirname, "../../supabase/migrations/20261002000033_comment_reactions.sql"),
+      path.resolve(__dirname, "../../../supabase/migrations/20261212000000_maham_tasks.sql"),
       "utf8",
     );
     const check = sql.match(/emoji in \(([^)]*)\)/);

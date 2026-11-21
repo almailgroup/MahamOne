@@ -26,19 +26,19 @@ insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-0000000000d1', 'boss@example.test'),
   ('00000000-0000-4000-8000-0000000000d2', 'hand@example.test');
 
-alter table public.profiles disable trigger profiles_guard_role_change;
-update public.profiles set role = 'admin'
+alter table tasks.profiles disable trigger profiles_guard_role_change;
+update tasks.profiles set role = 'admin'
  where id = '00000000-0000-4000-8000-0000000000d1';
-alter table public.profiles enable trigger profiles_guard_role_change;
+alter table tasks.profiles enable trigger profiles_guard_role_change;
 
 select check_that(
   'the fixture admin really is an admin',
-  (select role = 'admin' from public.profiles
+  (select role = 'admin' from tasks.profiles
     where id = '00000000-0000-4000-8000-0000000000d1'),
-  (select role::text from public.profiles
+  (select role::text from tasks.profiles
     where id = '00000000-0000-4000-8000-0000000000d1'));
 
-insert into public.reminder_queue
+insert into tasks.reminder_queue
   (user_id, task_id, channel, kind, recipient, subject, body, dedupe_key,
    status, attempts, last_error, failed_at)
 values
@@ -65,7 +65,7 @@ declare
 begin
   select count(*), string_agg(channel, ',' order by channel)
     into seen, channels
-    from public.my_reminder_failures();
+    from tasks.my_reminder_failures();
 
   perform check_that('somebody sees their own failure', seen = 1, coalesce(channels, '-'));
   perform check_that('and not the one still being retried', channels = 'push', coalesce(channels, '-'));
@@ -75,7 +75,7 @@ end $$;
 do $$
 begin
   begin
-    perform * from public.reminder_failures();
+    perform * from tasks.reminder_failures();
     perform check_that('a member cannot read the team''s failures', false, 'it was allowed');
   exception when insufficient_privilege then
     perform check_that('a member cannot read the team''s failures', true, 'refused');
@@ -92,7 +92,7 @@ declare
 begin
   select count(*), string_agg(person, ', ' order by person)
     into seen, people
-    from public.reminder_failures();
+    from tasks.reminder_failures();
 
   perform check_that('an admin sees the team''s failures', seen = 2, coalesce(people, '-'));
 end $$;
@@ -117,12 +117,12 @@ declare
   queued uuid;
   told integer;
 begin
-  select id into queued from public.reminder_queue
+  select id into queued from tasks.reminder_queue
    where user_id = '00000000-0000-4000-8000-0000000000d2' and status = 'failed';
 
-  perform public.notify_reminder_failed(queued);
+  perform tasks.notify_reminder_failed(queued);
 
-  select count(*) into told from public.notifications
+  select count(*) into told from tasks.notifications
    where user_id = '00000000-0000-4000-8000-0000000000d2'
      and type = 'reminder_failed';
 
@@ -131,10 +131,10 @@ end $$;
 
 select check_that(
   'and the message names the channel, because that is the fix',
-  (select title like '%devices%' from public.notifications
+  (select title like '%devices%' from tasks.notifications
     where user_id = '00000000-0000-4000-8000-0000000000d2'
       and type = 'reminder_failed'),
-  (select title from public.notifications
+  (select title from tasks.notifications
     where user_id = '00000000-0000-4000-8000-0000000000d2'
       and type = 'reminder_failed'));
 
@@ -144,10 +144,10 @@ declare
   pending_row uuid;
   told integer;
 begin
-  select id into pending_row from public.reminder_queue where status = 'pending';
-  perform public.notify_reminder_failed(pending_row);
+  select id into pending_row from tasks.reminder_queue where status = 'pending';
+  perform tasks.notify_reminder_failed(pending_row);
 
-  select count(*) into told from public.notifications where type = 'reminder_failed';
+  select count(*) into told from tasks.notifications where type = 'reminder_failed';
   perform check_that('a reminder still being retried tells nobody', told = 1, told::text);
 end $$;
 

@@ -1,5 +1,6 @@
 /**
- * The bot's webhook: who may add work, what is sent on, and what is said back.
+ * The bot's webhook: linking a chat, who may add work, what is sent on, and
+ * what is said back.
  *
  * add_from_chat itself — task or My List, as whom — is checked against a real
  * Postgres in supabase/tests/telegram-quick-add.sql.
@@ -8,34 +9,39 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { NextRequest } from "next/server";
 
+/** Every one of the server's jobs the webhook ran, in order. */
 let rpcCalls: { name: string; args: Record<string, unknown> }[];
+/** What add_from_chat answers. */
 let rpcAnswer: { data: unknown; error: { code?: string; message: string } | null };
+/** The chat somebody has linked, if any. */
 let linkedChat: string | null;
+/** The linking code that is still waiting to be used. */
+let freshCode: string;
 let replies: string[];
 
-vi.mock("@/lib/supabase/admin", () => ({
-  createAdminClient: () => ({
-    rpc: async (name: string, args: Record<string, unknown>) => {
+vi.mock("@/lib/supabase/server-access", () => ({
+  createServerAccess: () => ({
+    rpc: async (name: string, args: Record<string, unknown> = {}) => {
       rpcCalls.push({ name, args });
-      return rpcAnswer;
-    },
-    from: (table: string) => {
-      const chain = {
-        select: () => chain,
-        gte: () => chain,
-        lte: async () => ({ data: [], error: null }),
-        eq: (_column: string, value: string) => ({
-          maybeSingle: async () => ({
-            data: table === "notification_preferences" && value === linkedChat ? { user_id: "u1" } : null,
-          }),
-        }),
-      };
-      return chain;
+      switch (name) {
+        case "holidays":
+          return { data: [], error: null };
+        case "telegram_linked":
+          return { data: args.p_chat === linkedChat, error: null };
+        case "link_telegram":
+          // False for a code that was made up or has been used already.
+          return { data: args.p_code === freshCode, error: null };
+        default:
+          return rpcAnswer;
+      }
     },
   }),
 }));
 
 const { POST } = await import("@/app/api/telegram/webhook/route");
+
+/** Only the calls to one job. */
+const callsTo = (name: string) => rpcCalls.filter((call) => call.name === name);
 
 const SECRET = "hook-secret";
 
@@ -56,6 +62,7 @@ beforeEach(() => {
   rpcCalls = [];
   rpcAnswer = { data: { kind: "task", id: "t-1" }, error: null };
   linkedChat = "4242";
+  freshCode = "K7Q2M9XP";
   replies = [];
   vi.stubGlobal("fetch", async (_url: string, init: { body: string }) => {
     replies.push(JSON.parse(init.body).text);
@@ -68,7 +75,7 @@ afterEach(() => vi.unstubAllGlobals());
 describe("adding work from the chat", () => {
   test("hands the parsed message to the database, for this chat only", async () => {
     await send("!Call the bank\nAbout the mandate");
-    expect(rpcCalls).toEqual([
+    expect(callsTo("add_from_chat")).toEqual([
       {
         name: "add_from_chat",
         args: {
@@ -103,8 +110,17 @@ describe("adding work from the chat", () => {
 
   test("a command is answered with help, not added", async () => {
     await send("/help");
-    expect(rpcCalls).toEqual([]);
+    expect(callsTo("add_from_chat")).toEqual([]);
     expect(replies[0]).toMatch(/Send me anything to add it/);
+  });
+
+  test("a command from a chat nobody linked is told how to link it first", async () => {
+    linkedChat = null;
+    await send("/help");
+    expect(callsTo("telegram_linked")).toEqual([
+      { name: "telegram_linked", args: { p_chat: "4242" } },
+    ]);
+    expect(replies[0]).toMatch(/send me the code it shows/);
   });
 
   test("nothing at all without the webhook's secret", async () => {
@@ -112,5 +128,23 @@ describe("adding work from the chat", () => {
     expect(response.status).toBe(404);
     expect(rpcCalls).toEqual([]);
     expect(replies).toEqual([]);
+  });
+});
+
+describe("linking a chat", () => {
+  test("a fresh code from the profile links this chat", async () => {
+    linkedChat = null;
+    await send(`/start ${freshCode}`);
+    expect(callsTo("link_telegram")).toEqual([
+      { name: "link_telegram", args: { p_code: "K7Q2M9XP", p_chat: "4242" } },
+    ]);
+    expect(replies[0]).toMatch(/^Linked\. You will get your task reminders here\./);
+    // Linking adds nothing.
+    expect(callsTo("add_from_chat")).toEqual([]);
+  });
+
+  test("a code that was made up, or used already, is refused", async () => {
+    await send("/start ZZ99ZZ99");
+    expect(replies).toEqual(["That code is not valid or has already been used."]);
   });
 });

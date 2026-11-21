@@ -28,6 +28,16 @@ export const MIGRATIONS = [
   join(__dirname, '../../supabase/migrations/20261210000000_warehouse_issues.sql'),
 ];
 
+/**
+ * Maham Tasks, in its own schema (tasks): run after Maham One's files, and
+ * needing none of them. Kept out of MIGRATIONS, which the health check
+ * numbers; startDatabase runs it when asked.
+ */
+export const TASKS_MIGRATION = join(
+  __dirname,
+  '../../supabase/migrations/20261212000000_maham_tasks.sql',
+);
+
 const SUPABASE_STUB = `
 create role anon nologin;
 create role authenticated nologin;
@@ -40,6 +50,8 @@ create table auth.users (
   email text,
   email_confirmed_at timestamptz,
   raw_user_meta_data jsonb not null default '{}'::jsonb,
+  -- What only the service key writes (Maham Tasks reads it).
+  raw_app_meta_data jsonb,
   created_at timestamptz not null default now()
 );
 create function auth.uid() returns uuid language sql stable as $$
@@ -101,6 +113,15 @@ $$;
 
 create publication supabase_realtime;
 
+-- Two-step sign-in factors (Maham Tasks).
+create table auth.mfa_factors (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  factor_type text not null default 'totp',
+  status text not null default 'verified',
+  created_at timestamptz default now()
+);
+
 -- Supabase lets the API roles use whatever is created in the public schema
 -- unless a script takes it back; the migrations must.
 alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
@@ -139,10 +160,12 @@ function queryOn(tx: Pick<Transaction, 'query'>): Query {
 export async function startDatabase(
   runs = 1,
   migrations: number = MIGRATIONS.length,
+  options: { tasks?: boolean } = {},
 ): Promise<Harness> {
   const db = new PGlite();
   await db.exec(SUPABASE_STUB);
-  for (const file of MIGRATIONS.slice(0, migrations)) {
+  const files = [...MIGRATIONS.slice(0, migrations), ...(options.tasks ? [TASKS_MIGRATION] : [])];
+  for (const file of files) {
     const migration = readFileSync(file, 'utf8');
     for (let i = 0; i < runs; i++) await db.exec(migration);
   }
@@ -179,7 +202,7 @@ export async function startDatabase(
       const names = Object.keys(args);
       const list = names.map((n, i) => `${n} => $${i + 1}`).join(', ');
       return q(
-        `select * from public.${name}(${list})`,
+        `select * from ${name.includes('.') ? name : `public.${name}`}(${list})`,
         names.map((n) => args[n]),
       );
     });

@@ -22,29 +22,25 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FieldError, FormError } from "@/components/auth/field-error";
-import { OneTimePassword } from "@/components/team/one-time-password";
 import { USER_ROLES } from "@/lib/constants";
-import { MARK, useI18n } from "@/lib/i18n/client";
-import { addTeamMember } from "@/lib/data/team-actions";
+import { useI18n } from "@/lib/i18n/client";
+import { addTeamMember, type AddedTeammate } from "@/lib/data/team-actions";
 import type { ActionResult } from "@/lib/action-result";
 
-type Created = { email: string; password: string };
-
 /**
- * Admin-only: add somebody to the workspace without sending them anything.
+ * Admin-only: invite somebody to Maham Tasks by their Maham One email.
  *
- * Sign-up depends on a confirmation email, and a Supabase project's built-in
- * mail service allows only a few an hour — which is why onboarding a team
- * through the sign-up form runs into "email rate limit exceeded". An account
- * made here is confirmed from the start and comes with a one-time password to
- * hand over.
+ * One account opens both apps. They are in once they sign in here with that
+ * email (or create their Maham One account with it first), within 30 days;
+ * nothing is created for them, and no password changes hands
+ * (see team-actions.ts).
  */
-export function AddMemberDialog({ configured }: { configured: boolean }) {
+export function AddMemberDialog() {
   const router = useRouter();
   const { t } = useI18n();
   const [open, setOpen] = React.useState(false);
   const [pending, setPending] = React.useState(false);
-  const [result, setResult] = React.useState<ActionResult<Created> | null>(null);
+  const [result, setResult] = React.useState<ActionResult<AddedTeammate> | null>(null);
 
   function reset() {
     setResult(null);
@@ -63,13 +59,11 @@ export function AddMemberDialog({ configured }: { configured: boolean }) {
     if (outcome.ok) router.refresh();
   }
 
-  const created = result?.ok ? result.data : null;
+  const done = result?.ok ? result.data : null;
   const errors = result?.ok === false ? result.fieldErrors : undefined;
 
   return (
     <>
-      {/* A disabled button with nothing to explain it is a dead end, and a
-          tooltip is no use on a phone, so the reason is on the page. */}
       {/* Right-aligned beside a page title on a desktop; on a phone it
           wraps to its own full-width line, where centring the button and
           its caption read as a mistake. */}
@@ -80,27 +74,10 @@ export function AddMemberDialog({ configured }: { configured: boolean }) {
             reset();
             setOpen(true);
           }}
-          disabled={!configured}
         >
           <UserPlus />
           {t("team.add")}
         </Button>
-        {!configured && (
-          <p className="text-start text-xs leading-relaxed text-muted-foreground sm:max-w-[15rem] sm:text-end">
-            {t("team.needsKey", { key: MARK })
-              .split(MARK)
-              .map((part, index) =>
-                index === 0 ? (
-                  <React.Fragment key={index}>
-                    {part}
-                    <code className="font-mono">SUPABASE_SERVICE_ROLE_KEY</code>
-                  </React.Fragment>
-                ) : (
-                  part
-                ),
-              )}
-          </p>
-        )}
       </div>
 
       <Dialog
@@ -111,17 +88,18 @@ export function AddMemberDialog({ configured }: { configured: boolean }) {
         }}
       >
         <DialogContent className="max-w-md">
-          {created ? (
+          {done ? (
             <>
               <DialogHeader>
-                <DialogTitle>{t("team.ready")}</DialogTitle>
-                <DialogDescription>{t("team.readyDesc")}</DialogDescription>
+                <DialogTitle>
+                  {done.status === "already" ? t("team.already") : t("team.invited")}
+                </DialogTitle>
+                <DialogDescription>
+                  {done.status === "already"
+                    ? t("team.alreadyDesc", { email: done.email })
+                    : t("team.invitedDesc", { email: done.email })}
+                </DialogDescription>
               </DialogHeader>
-
-              <OneTimePassword
-                email={created.email}
-                password={created.password}
-              />
 
               <div className="flex justify-end gap-2">
                 <Button variant="outline" size="sm" onClick={reset}>
@@ -196,7 +174,7 @@ export function AddMemberDialog({ configured }: { configured: boolean }) {
                 </Button>
                 <Button type="submit" size="sm" disabled={pending}>
                   {pending && <Loader2 className="animate-spin" />}
-                  {pending ? t("team.creating") : t("auth.createAccount")}
+                  {pending ? t("team.inviting") : t("team.invite")}
                 </Button>
               </div>
             </form>

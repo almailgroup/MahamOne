@@ -967,3 +967,38 @@ any items issued back until the server takes them.
   `src/db/stock-issues.test.ts` (the app's side, the device's own check
   included) and `e2e/warehouses.spec.ts` (a keeper's issue confirmed by the
   owner, through the e2e fake).
+
+## Maham Tasks
+
+`20261212000000_maham_tasks.sql` puts Maham Tasks (the Next.js app in the
+`Maham Tasks` folder, at tasks.mahamone.com) in this database, in its own
+schema, `tasks`. It is not one of the numbered scripts above: it needs none of
+them, replaces none of their functions, and the health check neither asks for
+it nor changes because of it (it only knows Maham Tasks' own Storage rules as
+its own). The owner's steps are in [`docs/maham-tasks.md`](../docs/maham-tasks.md).
+
+- Maham Tasks' 46 migrations as they stood in its own project, moved from
+  `public` to `tasks` (tables, types, functions, triggers, rules, grants,
+  Realtime), with its two Storage buckets (`tasks-attachments`,
+  `tasks-avatars`). Their check constraints are added `NOT VALID` and
+  validated at the end, so the script runs again with data in it.
+- One account for both apps, and nothing on `auth.users`: Maham Tasks adds no
+  trigger there, so Maham One's sign-ups and sign-ins never run its code. A
+  Maham Tasks admin (signed in with two steps) invites an email
+  (`tasks.add_teammate`, kept in `tasks.invites` for 30 days); the profile is
+  made when that person signs in to Maham Tasks with a confirmed account that
+  has the email (`tasks.join`). Nobody becomes admin by signing in first: the
+  owner runs `tasks.add_first_admin(email)` in the SQL editor.
+- Only Maham Tasks' people reach it: a restrictive rule on every `tasks` table
+  and on its two buckets (`tasks.is_member()`), whatever a table's own rules
+  allow; nobody signed out calls its functions but `portal_health` and the
+  server's.
+- No master key: the app's server holds `TASKS_SERVER_SECRET` (made by
+  `tasks.new_server_secret()`, kept here only as a SHA-256 digest), which opens
+  the `tasks.srv_*` functions; each checks it and touches Maham Tasks' tables
+  only.
+- Tests: `src/cloud/maham-tasks-sql.test.ts` (after every Maham One file,
+  each twice: Maham One's functions, rules and triggers unchanged, the health
+  check the same, no profile from signing up, invites and joining, two-step
+  for admins, the first admin, members only, the server's secret) and Maham Tasks' own policy suites
+  (`Maham Tasks/supabase/tests/`, run by `.github/workflows/maham-tasks.yml`).

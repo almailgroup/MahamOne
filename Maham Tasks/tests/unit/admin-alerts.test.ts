@@ -34,27 +34,26 @@ describe("the note to the admins", () => {
 });
 
 describe("sending it", () => {
-  let inserted: unknown[];
+  /** What the server was asked to record as sent. */
+  let recorded: unknown[];
   let fetches: { url: string; body: { chat_id: string } }[];
   let answer: AlertDigest | null;
 
-  const fakeAdmin = () =>
+  /** The server's jobs: one reads what is new, the other records a note as sent. */
+  const fakeServer = () =>
     ({
-      rpc: async (name: string) => {
-        expect(name).toBe("admin_alert_digest");
+      rpc: async (job: string, args: Record<string, unknown> = {}) => {
+        if (job === "record_admin_alert") {
+          recorded.push(args);
+          return { data: null, error: null };
+        }
+        expect(job).toBe("admin_alert_digest");
         return { data: answer, error: null };
       },
-      from: (table: string) => ({
-        insert: async (row: unknown) => {
-          expect(table).toBe("admin_alerts");
-          inserted.push(row);
-          return { error: null };
-        },
-      }),
     }) as never;
 
   beforeEach(() => {
-    inserted = [];
+    recorded = [];
     fetches = [];
     answer = digest();
     vi.stubEnv("TELEGRAM_BOT_TOKEN", "token");
@@ -73,23 +72,26 @@ describe("sending it", () => {
 
   test("goes to each admin on Telegram, and is recorded once it reached one", async () => {
     const now = new Date("2026-10-18T06:00:00Z");
-    expect(await alertAdmins(fakeAdmin(), now)).toBe(1);
+    expect(await alertAdmins(fakeServer(), now)).toBe(1);
     expect(fetches.map((f) => f.body.chat_id)).toEqual(["4501", "4502"]);
-    expect(inserted).toEqual([{ sent_at: now.toISOString(), faults: 3, failures: 1, reached: 1 }]);
+    expect(recorded).toEqual([
+      { p_sent_at: now.toISOString(), p_faults: 3, p_failures: 1, p_reached: 1 },
+    ]);
   });
 
   test("is not recorded when it reached nobody, so the next run tries again", async () => {
     vi.stubGlobal("fetch", async () => ({ ok: false }) as Response);
-    expect(await alertAdmins(fakeAdmin())).toBe(0);
-    expect(inserted).toEqual([]);
+    expect(await alertAdmins(fakeServer())).toBe(0);
+    expect(recorded).toEqual([]);
   });
 
   test("does nothing without a bot, or with nothing to say", async () => {
     answer = digest({ faults: 0, pages: [], failedReminders: 0 });
-    expect(await alertAdmins(fakeAdmin())).toBe(0);
+    expect(await alertAdmins(fakeServer())).toBe(0);
     vi.stubEnv("TELEGRAM_BOT_TOKEN", "");
     answer = digest();
-    expect(await alertAdmins(fakeAdmin())).toBe(0);
+    expect(await alertAdmins(fakeServer())).toBe(0);
     expect(fetches).toEqual([]);
+    expect(recorded).toEqual([]);
   });
 });

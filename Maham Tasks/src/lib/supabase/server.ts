@@ -13,7 +13,9 @@ import { supabaseAnonKey, supabaseUrl } from "./env";
 export async function createClient() {
   const cookieStore = await cookies();
 
-  return createServerClient<Database>(supabaseUrl(), supabaseAnonKey(), {
+  return createServerClient<Database, "tasks">(supabaseUrl(), supabaseAnonKey(), {
+    // Maham Tasks lives in the tasks schema of Maham One's database.
+    db: { schema: "tasks" },
     cookies: {
       getAll() {
         return cookieStore.getAll();

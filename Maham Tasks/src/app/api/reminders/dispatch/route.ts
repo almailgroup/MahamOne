@@ -1,14 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createServerAccess } from "@/lib/supabase/server-access";
 import { sweep } from "@/lib/reminders/sweep";
 
 /**
  * Drains the reminder queue.
  *
  * Called on a schedule (Vercel Cron, or Supabase pg_cron) and authenticated by
- * a shared secret, because it runs with the service-role key and must not be
- * reachable by anyone else. Vercel Cron sends the secret as a Bearer token;
+ * a shared secret, because it runs as the server (TASKS_SERVER_SECRET, see
+ * lib/supabase/server-access.ts) and must not be reachable by anyone else. Vercel Cron sends the secret as a Bearer token;
  * anything else can pass the same value as x-cron-secret.
  *
  * What a run does, and on which days it stays quiet, is lib/reminders/sweep.
@@ -41,11 +41,11 @@ async function run(request: NextRequest) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  // A missing service-role key is the commonest first-deploy mistake, so say
+  // A missing server secret is the commonest first-deploy mistake, so say
   // so plainly instead of returning an opaque 500.
   let supabase;
   try {
-    supabase = createAdminClient();
+    supabase = createServerAccess();
   } catch (error) {
     return NextResponse.json(
       {
@@ -53,7 +53,7 @@ async function run(request: NextRequest) {
           error instanceof Error
             ? error.message
             : "Reminder delivery is not configured.",
-        hint: "Set SUPABASE_SERVICE_ROLE_KEY in the server environment. It must NOT be prefixed NEXT_PUBLIC_.",
+        hint: "Set TASKS_SERVER_SECRET in the server environment (what tasks.new_server_secret() returned). It must NOT be prefixed NEXT_PUBLIC_.",
       },
       { status: 503 },
     );

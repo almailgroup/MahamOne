@@ -94,7 +94,8 @@ export async function signIn(
 
 export async function signOut(): Promise<void> {
   const supabase = await createClient();
-  await supabase.auth.signOut();
+  // This device only: the account is Maham One's too, signed in there.
+  await supabase.auth.signOut({ scope: "local" });
   revalidatePath("/", "layout");
   redirect("/login");
 }

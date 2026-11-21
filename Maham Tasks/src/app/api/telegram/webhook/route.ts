@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createServerAccess, type ServerAccess } from "@/lib/supabase/server-access";
 import { isMissingFunction, isMissingTable } from "@/lib/supabase/missing";
 import { parseQuickAdd } from "@/lib/telegram/quick-add";
 
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
 
   if (!chatId || !text) return NextResponse.json({ ok: true });
 
-  const supabase = createAdminClient();
+  const supabase = createServerAccess();
 
   const link = text.match(/^\/start\s+([A-Za-z0-9]{6,32})$/);
   if (link) {
@@ -69,11 +69,9 @@ export async function POST(request: NextRequest) {
 
   // Any other command — /start, /help — is a question about what to do.
   if (text.startsWith("/")) {
-    const { data: linked } = await supabase
-      .from("notification_preferences")
-      .select("user_id")
-      .eq("telegram_chat_id", String(chatId))
-      .maybeSingle();
+    const { data: linked } = await supabase.rpc<boolean>("telegram_linked", {
+      p_chat: String(chatId),
+    });
     await reply(chatId, linked ? HELP : LINK_FIRST);
     return NextResponse.json({ ok: true });
   }
@@ -129,28 +127,18 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ ok: true });
 }
 
-type Admin = ReturnType<typeof createAdminClient>;
+type Admin = ServerAccess;
 
 async function linkChat(supabase: Admin, chatId: number, code: string) {
-  const { data: profileRow } = await supabase
-    .from("notification_preferences")
-    .select("user_id")
-    .eq("telegram_link_code", code)
-    .maybeSingle();
+  const { data: linked, error } = await supabase.rpc<boolean>("link_telegram", {
+    p_code: code,
+    p_chat: String(chatId),
+  });
 
-  if (!profileRow) {
+  if (!error && !linked) {
     await reply(chatId, "That code is not valid or has already been used.");
     return;
   }
-
-  const { error } = await supabase
-    .from("notification_preferences")
-    .update({
-      telegram_chat_id: String(chatId),
-      telegram_enabled: true,
-      telegram_link_code: null,
-    })
-    .eq("user_id", profileRow.user_id);
 
   await reply(
     chatId,
@@ -164,11 +152,7 @@ async function linkChat(supabase: Admin, chatId: number, code: string) {
 async function upcomingHolidays(supabase: Admin): Promise<Set<string>> {
   const from = new Date().toISOString().slice(0, 10);
   const to = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10);
-  const { data, error } = await supabase
-    .from("company_holidays")
-    .select("day")
-    .gte("day", from)
-    .lte("day", to);
+  const { data, error } = await supabase.rpc<{ day: string }[]>("holidays", { p_from: from, p_to: to });
   if (error && !isMissingTable(error)) console.error(`[telegram] holidays: ${error.message}`);
   return new Set((data ?? []).map((row) => row.day));
 }

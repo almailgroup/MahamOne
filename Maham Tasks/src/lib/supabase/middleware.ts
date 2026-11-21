@@ -84,10 +84,12 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(setupUrl);
   }
 
-  const supabase = createServerClient<Database>(
+  const supabase = createServerClient<Database, "tasks">(
     supabaseUrl(),
     supabaseAnonKey(),
     {
+      // Maham Tasks lives in the tasks schema of Maham One's database.
+      db: { schema: "tasks" },
       cookies: {
         getAll() {
           return request.cookies.getAll();

@@ -108,7 +108,7 @@ export function TeamChat({
     channel
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "team_messages" },
+        { event: "INSERT", schema: "tasks", table: "team_messages" },
         (payload) => {
           const row = payload.new as TeamMessage;
           setMessages((current) =>
@@ -123,7 +123,7 @@ export function TeamChat({
       )
       .on(
         "postgres_changes",
-        { event: "DELETE", schema: "public", table: "team_messages" },
+        { event: "DELETE", schema: "tasks", table: "team_messages" },
         (payload) => {
           const gone = payload.old as TeamMessage;
           setMessages((current) => current.filter((m) => m.id !== gone.id));

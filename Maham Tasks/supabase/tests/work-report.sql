@@ -23,21 +23,21 @@ insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-0000000043b1', 'lead@example.test'),
   ('00000000-0000-4000-8000-0000000043c1', 'doer@example.test');
 
-update public.profiles set full_name = 'Doer' where id = '00000000-0000-4000-8000-0000000043c1';
+update tasks.profiles set full_name = 'Doer' where id = '00000000-0000-4000-8000-0000000043c1';
 
-alter table public.profiles disable trigger profiles_guard_role_change;
-update public.profiles set role = 'manager' where id = '00000000-0000-4000-8000-0000000043b1';
-alter table public.profiles enable trigger profiles_guard_role_change;
+alter table tasks.profiles disable trigger profiles_guard_role_change;
+update tasks.profiles set role = 'manager' where id = '00000000-0000-4000-8000-0000000043b1';
+alter table tasks.profiles enable trigger profiles_guard_role_change;
 
 -- A project only the admin is on, and one the manager is on too.
-insert into public.projects (id, name, created_by) values
+insert into tasks.projects (id, name, created_by) values
   ('11111111-1111-4111-8111-0000000043a1', 'Seen', '00000000-0000-4000-8000-0000000043b1'),
   ('11111111-1111-4111-8111-0000000043a2', 'Unseen', '00000000-0000-4000-8000-0000000043a1');
 
 -- Period: Sunday 4 to Saturday 17 October 2026 (two office weeks).
 -- In it: three added in "Seen", two finished (one on time, one late), one
 -- overdue and open, assigned to the doer. Plus one in "Unseen", and one binned.
-insert into public.tasks (id, project_id, title, status, due_at, created_by, created_at, updated_at, deleted_at) values
+insert into tasks.tasks (id, project_id, title, status, due_at, created_by, created_at, updated_at, deleted_at) values
   ('22222222-2222-4222-8222-0000000043a1', '11111111-1111-4111-8111-0000000043a1', 'On time', 'done',
    '2026-10-08 17:00+03', '00000000-0000-4000-8000-0000000043b1', '2026-10-05 09:00+03', '2026-10-07 12:00+03', null),
   ('22222222-2222-4222-8222-0000000043a2', '11111111-1111-4111-8111-0000000043a1', 'Late', 'done',
@@ -52,21 +52,21 @@ insert into public.tasks (id, project_id, title, status, due_at, created_by, cre
   ('22222222-2222-4222-8222-0000000043a6', '11111111-1111-4111-8111-0000000043a1', 'Earlier', 'done',
    null, '00000000-0000-4000-8000-0000000043b1', '2026-09-22 09:00+03', '2026-09-23 09:00+03', null);
 
-insert into public.task_assignments (task_id, user_id) values
+insert into tasks.task_assignments (task_id, user_id) values
   ('22222222-2222-4222-8222-0000000043a3', '00000000-0000-4000-8000-0000000043c1');
 
 -- The log says when the late one was finished — after its due date.
-insert into public.task_activity (task_id, actor_id, action, field, old_value, new_value, created_at) values
+insert into tasks.task_activity (task_id, actor_id, action, field, old_value, new_value, created_at) values
   ('22222222-2222-4222-8222-0000000043a2', '00000000-0000-4000-8000-0000000043b1', 'status_changed', 'status', 'in_review', 'done', '2026-10-13 11:00+03');
 
 -- The rows above set their own timestamps; triggers may have written others.
-delete from public.task_activity where action = 'created';
+delete from tasks.task_activity where action = 'created';
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-0000000043b1', true);
 
 create temporary table report as
-  select public.work_report('2026-10-04', '2026-10-17') as r;
+  select tasks.work_report('2026-10-04', '2026-10-17') as r;
 grant select on report to authenticated;
 
 select check_that('finished in the period, of what the manager can see',
@@ -98,7 +98,7 @@ select check_that('…with their progress',
   and (select (r -> 'projects' -> 0 ->> 'total')::int from report) = 4);
 
 select check_that('by month, a month is one bar',
-  jsonb_array_length(public.work_report('2026-10-04', '2026-10-17', 'month') -> 'buckets') = 1);
+  jsonb_array_length(tasks.work_report('2026-10-04', '2026-10-17', 'month') -> 'buckets') = 1);
 
 reset role;
 

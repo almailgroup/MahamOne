@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { createAdminClient } from "@/lib/supabase/admin";
+import type { ServerAccess } from "@/lib/supabase/server-access";
 import { isMissingFunction } from "@/lib/supabase/missing";
 import { COMPANY_TIME_ZONE } from "@/lib/work-week";
 
@@ -9,13 +9,13 @@ import { COMPANY_TIME_ZONE } from "@/lib/work-week";
  * faults, on which pages, and how many reminders could not be delivered,
  * since the last note — with a link to the details in the portal.
  *
- * Sent from the scheduled run, with the service key, so it keeps office
+ * Sent from the scheduled run, with the server's secret, so it keeps office
  * hours like everything else that reaches a person. Counts and page paths
  * only: a fault's own text can carry a fragment of what it failed on, and
- * stays in the portal (admin_alert_digest, migration 45).
+ * stays in the portal (tasks.srv_admin_alert_digest).
  */
 
-type Admin = ReturnType<typeof createAdminClient>;
+type Admin = ServerAccess;
 
 export type AlertDigest = {
   since: string;
@@ -99,11 +99,11 @@ export async function alertAdmins(supabase: Admin, now: Date = new Date()): Prom
   const reached = results.filter(Boolean).length;
 
   if (reached > 0) {
-    const { error: recordError } = await supabase.from("admin_alerts").insert({
-      sent_at: now.toISOString(),
-      faults: digest.faults,
-      failures: digest.failedReminders,
-      reached,
+    const { error: recordError } = await supabase.rpc("record_admin_alert", {
+      p_sent_at: now.toISOString(),
+      p_faults: digest.faults,
+      p_failures: digest.failedReminders,
+      p_reached: reached,
     });
     if (recordError) console.error(`[alerts] admin_alerts: ${recordError.message}`);
   }

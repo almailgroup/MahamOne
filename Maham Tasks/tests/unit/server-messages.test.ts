@@ -31,7 +31,6 @@ function sources(): string[] {
 /** Internal wording that never reaches a reader. */
 const INTERNAL = [
   /^Worker replied/,
-  /^Your account has no profile yet/,
   /^[A-Za-z0-9]+$/,
   /^I deleted the wrong one$/,
   /^Choose your password$/,

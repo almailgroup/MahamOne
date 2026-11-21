@@ -24,16 +24,16 @@ insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-0000000000a1', 'boss@example.test'),
   ('00000000-0000-4000-8000-0000000000a2', 'hand@example.test');
 
-alter table public.profiles disable trigger profiles_guard_role_change;
-update public.profiles set role = 'admin'
+alter table tasks.profiles disable trigger profiles_guard_role_change;
+update tasks.profiles set role = 'admin'
  where id = '00000000-0000-4000-8000-0000000000a1';
-alter table public.profiles enable trigger profiles_guard_role_change;
+alter table tasks.profiles enable trigger profiles_guard_role_change;
 
-insert into public.projects (id, name, created_by)
+insert into tasks.projects (id, name, created_by)
 values ('11111111-1111-4111-8111-0000000000a1', 'Warehouse Move',
         '00000000-0000-4000-8000-0000000000a1');
 
-insert into public.tasks (id, project_id, title, status, created_by)
+insert into tasks.tasks (id, project_id, title, status, created_by)
 values
   ('22222222-2222-4222-8222-0000000000a1', '11111111-1111-4111-8111-0000000000a1',
    'Move the racking', 'done', '00000000-0000-4000-8000-0000000000a1'),
@@ -49,7 +49,7 @@ declare
   complaint text;
 begin
   begin
-    perform public.set_project_archived('11111111-1111-4111-8111-0000000000a1', true);
+    perform tasks.set_project_archived('11111111-1111-4111-8111-0000000000a1', true);
   exception when others then
     complaint := sqlerrm;
   end;
@@ -62,38 +62,38 @@ end $$;
 
 select check_that(
   'and it is still live',
-  (select archived_at is null from public.projects
+  (select archived_at is null from tasks.projects
     where id = '11111111-1111-4111-8111-0000000000a1'));
 
 -- --- once the work is finished ----------------------------------------------
-update public.tasks set status = 'done'
+update tasks.tasks set status = 'done'
  where id = '22222222-2222-4222-8222-0000000000a2';
 
-select public.set_project_archived('11111111-1111-4111-8111-0000000000a1', true);
+select tasks.set_project_archived('11111111-1111-4111-8111-0000000000a1', true);
 
 select check_that(
   'a finished project can be archived',
-  (select archived_at is not null from public.projects
+  (select archived_at is not null from tasks.projects
     where id = '11111111-1111-4111-8111-0000000000a1'));
 
 select check_that(
   'and nothing of it is destroyed',
-  (select count(*) from public.tasks
+  (select count(*) from tasks.tasks
     where project_id = '11111111-1111-4111-8111-0000000000a1') = 2,
-  (select count(*)::text from public.tasks
+  (select count(*)::text from tasks.tasks
     where project_id = '11111111-1111-4111-8111-0000000000a1'));
 
 select check_that(
   'and it can still be read',
-  (select name from public.projects
+  (select name from tasks.projects
     where id = '11111111-1111-4111-8111-0000000000a1') = 'Warehouse Move');
 
 -- --- and brought back --------------------------------------------------------
-select public.set_project_archived('11111111-1111-4111-8111-0000000000a1', false);
+select tasks.set_project_archived('11111111-1111-4111-8111-0000000000a1', false);
 
 select check_that(
   'archiving is reversible',
-  (select archived_at is null from public.projects
+  (select archived_at is null from tasks.projects
     where id = '11111111-1111-4111-8111-0000000000a1'));
 
 -- --- who may do it ------------------------------------------------------------
@@ -104,7 +104,7 @@ declare
   complaint text;
 begin
   begin
-    perform public.set_project_archived('11111111-1111-4111-8111-0000000000a1', true);
+    perform tasks.set_project_archived('11111111-1111-4111-8111-0000000000a1', true);
   exception when others then
     complaint := sqlerrm;
   end;
@@ -119,7 +119,7 @@ reset role;
 
 select check_that(
   'and it really is still live',
-  (select archived_at is null from public.projects
+  (select archived_at is null from tasks.projects
     where id = '11111111-1111-4111-8111-0000000000a1'));
 
 -- --- results ---------------------------------------------------------------
