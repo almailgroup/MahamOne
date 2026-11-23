@@ -20,14 +20,14 @@ export async function ErrorLog({ errors }: { errors: AppError[] }) {
   if (errors.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-2 rounded-2xl bg-foreground/[0.05] p-3">
+    <div className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
       <div className="flex items-start gap-3">
-        <span className="mt-0.5 text-muted-foreground [&_svg]:size-4">
+        <span className="mt-0.5 text-slate-500 [&_svg]:size-4">
           <Bug />
         </span>
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           <div>
-            <p className="text-sm font-medium">{t("errors.title")}</p>
+            <p className="text-sm font-medium text-slate-900">{t("errors.title")}</p>
             <p className="text-xs text-muted-foreground">{t("errors.subtitle")}</p>
           </div>
 
@@ -35,7 +35,7 @@ export async function ErrorLog({ errors }: { errors: AppError[] }) {
             {errors.slice(0, 10).map((entry, index) => (
               <li
                 key={`${entry.message}-${entry.route}-${index}`}
-                className="flex flex-col gap-0.5 rounded-md bg-muted/50 px-2.5 py-1.5"
+                className="flex flex-col gap-0.5 rounded-md bg-surface px-2.5 py-1.5 ring-1 ring-inset ring-slate-200"
               >
                 <span className="flex items-baseline justify-between gap-2">
                   {/* `tm`, because a recorded fault is either a key this

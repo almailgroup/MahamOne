@@ -17,7 +17,7 @@ const contentMotion =
   "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-1 data-[side=top]:slide-in-from-bottom-1 data-[side=left]:slide-in-from-end-1 data-[side=right]:slide-in-from-start-1";
 
 const itemBase =
-  "relative flex cursor-default select-none items-center gap-2 rounded-xl px-2.5 py-2 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 pointer-coarse:min-h-11 [&_svg]:size-4 [&_svg]:shrink-0";
+  "relative flex cursor-default select-none items-center gap-2 rounded-md px-2.5 py-2 text-sm text-slate-700 outline-none transition-colors focus:bg-slate-100 focus:text-slate-900 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 pointer-coarse:min-h-11 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-slate-400";
 
 function DropdownMenuContent({
   className,
@@ -30,7 +30,7 @@ function DropdownMenuContent({
         data-slot="dropdown-menu-content"
         sideOffset={sideOffset}
         className={cn(
-          "z-50 min-w-[9rem] overflow-hidden rounded-2xl bg-popover p-1.5 text-popover-foreground shadow-[var(--shadow-lg)] focus-visible:ring-0 focus-visible:ring-offset-0",
+          "z-50 min-w-[9rem] overflow-hidden rounded-lg border border-slate-200 bg-popover p-1 text-popover-foreground shadow-lg focus-visible:outline-none",
           contentMotion,
           className,
         )}
@@ -127,7 +127,7 @@ function DropdownMenuSeparator({
   return (
     <DropdownMenuPrimitive.Separator
       data-slot="dropdown-menu-separator"
-      className={cn("my-1 h-1", className)}
+      className={cn("-mx-1 my-1 h-px bg-slate-100", className)}
       {...props}
     />
   );
@@ -182,7 +182,7 @@ function DropdownMenuSubContent({
     <DropdownMenuPrimitive.SubContent
       data-slot="dropdown-menu-sub-content"
       className={cn(
-        "z-50 min-w-[8rem] overflow-hidden rounded-2xl bg-popover p-1.5 text-popover-foreground shadow-[var(--shadow-lg)] focus-visible:ring-0 focus-visible:ring-offset-0",
+        "z-50 min-w-[8rem] overflow-hidden rounded-lg border border-slate-200 bg-popover p-1 text-popover-foreground shadow-lg focus-visible:outline-none",
         contentMotion,
         className,
       )}

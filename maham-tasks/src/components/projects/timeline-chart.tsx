@@ -83,24 +83,24 @@ export function TimelineChart({
 
   return (
     <section
-      className="flex flex-col gap-4 rounded-[1.75rem] bg-card p-5 shadow-[var(--shadow-sm)]"
+      className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-surface p-4 shadow-xs sm:p-5"
       aria-label={t("timeline.title")}
     >
       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
         <div className="min-w-0">
-          <h2 className="text-[0.9375rem] font-semibold">{t("timeline.title")}</h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">
+          <h2 className="text-base font-semibold text-slate-900">{t("timeline.title")}</h2>
+          <p className="mt-0.5 text-sm text-slate-500">
             {t("timeline.range", { from: dayLabel(layout.first), to: dayLabel(layout.last) })}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-          <LegendKey swatch="size-3 rounded-full bg-primary" label={t("timeline.legendMilestone")} />
-          <LegendKey swatch="size-2.5 rounded-full bg-foreground/55" label={t("timeline.legendTask")} />
+          <LegendKey swatch="size-3 rounded-full bg-primary-solid" label={t("timeline.legendMilestone")} />
+          <LegendKey swatch="size-2.5 rounded-full bg-primary-400" label={t("timeline.legendTask")} />
           <LegendKey swatch="size-2.5 rounded-full bg-warning-marker" label={t("timeline.legendLate")} />
         </div>
       </div>
 
-      <div ref={scroller} className="-mx-5 overflow-x-auto px-5 pb-1 [scrollbar-width:thin]">
+      <div ref={scroller} className="-mx-4 overflow-x-auto px-4 pb-1 [scrollbar-width:thin] sm:-mx-5 sm:px-5">
         <div ref={plot} className="relative" style={{ minWidth: `${Math.ceil(minWidth)}px` }}>
           {/* Today: a soft column the height of the chart, not a rule. */}
           <div
@@ -113,14 +113,14 @@ export function TimelineChart({
             {layout.ticks.filter((tick) => !underToday(tick.at)).map((tick) => (
               <span
                 key={tick.day}
-                className="absolute top-1 whitespace-nowrap text-[0.6875rem] tabular-nums text-muted-foreground"
+                className="absolute top-1 whitespace-nowrap text-[0.6875rem] tabular-nums text-slate-500"
                 style={at(tick.at)}
               >
                 {tickLabel(tick.day)}
               </span>
             ))}
             <span
-              className="absolute top-0 z-10 -translate-x-1/2 rounded-full bg-primary px-2 py-0.5 text-[0.6875rem] font-semibold text-primary-foreground rtl:translate-x-1/2"
+              className="absolute top-0 z-10 -translate-x-1/2 rounded-full bg-primary-solid px-2 py-0.5 text-[0.6875rem] font-semibold text-on-primary shadow-xs rtl:translate-x-1/2"
               style={at(layout.today)}
             >
               {t("timeline.today")}
@@ -171,21 +171,22 @@ function Lane({
     <li className="flex flex-col gap-1">
       {/* Held at the start edge while the chart scrolls under it. */}
       <span className="sticky start-0 flex w-fit max-w-[16rem] items-center gap-1.5 text-xs">
-        <span className="truncate font-medium">{name}</span>
+        <span className="truncate font-medium text-slate-700">{name}</span>
         {milestone && (
-          <span className={cn("shrink-0 tabular-nums", late ? "font-semibold text-warning" : "text-muted-foreground")}>
+          <span className={cn("shrink-0 tabular-nums", late ? "font-semibold text-warning" : "text-slate-500")}>
             {dayLabel(milestone.due_on)}
           </span>
         )}
       </span>
 
-      <div className="relative h-8 rounded-full bg-foreground/[0.035]">
+      {/* Translucent slate, so the Today column behind the lanes shows through. */}
+      <div className="relative h-8 rounded-full bg-slate-100/70">
         {lane.to > lane.from && (
           <span
             aria-hidden
             className={cn(
               "absolute top-1/2 h-2.5 -translate-y-1/2 rounded-full",
-              milestone ? "bg-foreground/[0.1]" : "bg-foreground/[0.06]",
+              milestone ? "bg-slate-300/70" : "bg-slate-200/70",
             )}
             style={{ ...at(lane.from), width: `${(lane.to - lane.from) * 100}%` }}
           />
@@ -208,17 +209,15 @@ function Lane({
           >
             <span
               className={cn(
-                "flex size-4 items-center justify-center rounded-full text-primary-foreground transition-transform group-hover:scale-125 group-focus-visible:scale-125",
-                late
-                  ? "bg-warning-marker shadow-[0_0_0_4px_color-mix(in_srgb,var(--warning-marker)_20%,transparent),0_0_14px_color-mix(in_srgb,var(--warning-marker)_45%,transparent)]"
-                  : "bg-primary shadow-[0_0_0_4px_color-mix(in_srgb,var(--primary)_16%,transparent),0_0_12px_color-mix(in_srgb,var(--primary)_35%,transparent)]",
+                "flex size-4 items-center justify-center rounded-full text-on-primary ring-4 transition-transform group-hover:scale-125 group-focus-visible:scale-125",
+                late ? "bg-warning-marker ring-warning-marker/20" : "bg-primary-solid ring-primary-500/20",
               )}
             >
               {reached && <Check className="size-2.5" strokeWidth={3.5} />}
             </span>
             <Tip at={lane.to}>
-              <span className="block font-semibold">{milestone.title}</span>
-              <span className="block text-muted-foreground">{dayLabel(milestone.due_on)}</span>
+              <span className="block font-semibold text-slate-900">{milestone.title}</span>
+              <span className="block text-slate-500">{dayLabel(milestone.due_on)}</span>
             </Tip>
           </button>
         )}
@@ -257,13 +256,13 @@ function TaskDot({
     >
       <span
         className={cn(
-          "size-2.5 rounded-full ring-2 ring-card transition-transform group-hover:scale-150 group-focus-visible:scale-150",
-          point.overdue ? "bg-warning-marker" : done ? "bg-primary/45" : "bg-foreground/55",
+          "size-2.5 rounded-full ring-2 ring-surface transition-transform group-hover:scale-150 group-focus-visible:scale-150",
+          point.overdue ? "bg-warning-marker" : done ? "bg-primary-200" : "bg-primary-400",
         )}
       />
       <Tip at={point.at}>
-        <span className="block font-semibold">{task.title}</span>
-        <span className={cn("block", point.overdue ? "font-semibold text-warning" : "text-muted-foreground")}>
+        <span className="block font-semibold text-slate-900">{task.title}</span>
+        <span className={cn("block", point.overdue ? "font-semibold text-warning" : "text-slate-500")}>
           {due}
         </span>
       </Tip>
@@ -277,7 +276,7 @@ function Tip({ at, children }: { at: number; children: React.ReactNode }) {
     <span
       role="presentation"
       className={cn(
-        "pointer-events-none absolute bottom-full z-30 mb-1 hidden w-max max-w-56 rounded-2xl bg-popover px-3 py-2 text-start text-xs shadow-[var(--shadow-md)] group-hover:block group-focus-visible:block",
+        "pointer-events-none absolute bottom-full z-30 mb-1 hidden w-max max-w-56 rounded-lg border border-slate-200 bg-surface px-3 py-2 text-start text-xs shadow-lg group-hover:block group-focus-visible:block",
         at < 0.2 ? "start-0" : at > 0.8 ? "end-0" : "start-1/2 -translate-x-1/2 rtl:translate-x-1/2",
       )}
     >

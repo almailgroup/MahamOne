@@ -173,10 +173,9 @@ export function SidebarClock() {
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger
         className={cn(
-          "flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-start transition-colors",
-          "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
-          "data-[state=open]:bg-accent data-[state=open]:text-accent-foreground",
+          "flex w-full items-center gap-3 rounded-xl px-3 py-1.5 text-start transition-colors",
+          "text-slate-500 hover:bg-surface/70 hover:text-slate-700",
+          "data-[state=open]:bg-surface data-[state=open]:shadow-xs data-[state=open]:ring-1 data-[state=open]:ring-slate-900/5",
         )}
         aria-label={
           today
@@ -189,7 +188,7 @@ export function SidebarClock() {
       >
         <CalendarDays className="size-4 shrink-0" />
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-medium tabular-nums leading-tight text-foreground">
+          <span className="block text-sm font-medium tabular-nums leading-tight text-slate-800">
             {today ? formats.time.format(today) : "--:--:--"}
           </span>
           <span className="block truncate text-xs leading-tight">
@@ -284,14 +283,13 @@ export function SidebarClock() {
                   setFocusedDay(day);
                 }}
                 className={cn(
-                  "press flex h-9 items-center justify-center rounded-lg text-sm tabular-nums transition-colors pointer-coarse:h-10",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  inMonth ? "text-foreground" : "text-muted-foreground/50",
-                  !isSelected && !isToday && "hover:bg-accent",
+                  "flex h-9 items-center justify-center rounded-md text-sm tabular-nums transition-colors pointer-coarse:h-10",
+                  inMonth ? "text-slate-900" : "text-slate-400",
+                  !isSelected && !isToday && "hover:bg-slate-100",
                   // Today is outlined, the selection is filled — so both can
                   // be seen at once, which is the whole point of the panel.
-                  isToday && !isSelected && "font-semibold ring-1 ring-inset ring-foreground/40",
-                  isSelected && "bg-primary font-semibold text-primary-foreground",
+                  isToday && !isSelected && "bg-primary-50 font-semibold text-primary-700 ring-1 ring-inset ring-primary-600/20",
+                  isSelected && "bg-primary-solid font-semibold text-on-primary",
                 )}
               >
                 {day.getDate()}
@@ -304,15 +302,12 @@ export function SidebarClock() {
         <div
           aria-live="polite"
           className={cn(
-            "mt-3 rounded-xl px-3 py-2.5",
-            selected
-              ? "bg-muted/60"
-              : "bg-foreground/[0.04]",
+            "mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5",
           )}
         >
           {selected && gap !== null ? (
             <>
-              <p className="text-lg font-bold leading-tight tracking-tight">
+              <p className="text-lg font-semibold leading-tight text-slate-900">
                 {describeDayGap(gap, i18n)}
               </p>
               <p className="mt-0.5 truncate text-xs text-muted-foreground">

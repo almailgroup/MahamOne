@@ -133,7 +133,7 @@ export function MentionTextarea({
       {open && (
         <ul
           role="listbox"
-          className="absolute bottom-full start-0 z-50 mb-1 w-64 overflow-hidden rounded-xl bg-popover p-1 shadow-md"
+          className="absolute bottom-full start-0 z-50 mb-1 w-64 overflow-hidden rounded-lg border border-slate-200 bg-surface p-1 shadow-lg"
         >
           {matches.map((person, index) => (
             <li key={person.id}>
@@ -148,10 +148,10 @@ export function MentionTextarea({
                 }}
                 onMouseEnter={() => setHighlight(index)}
                 className={cn(
-                  "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-start text-sm transition-colors",
+                  "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-start text-sm transition-colors",
                   index === highlight
-                    ? "bg-accent text-accent-foreground"
-                    : "text-foreground",
+                    ? "bg-slate-100 text-slate-900"
+                    : "text-slate-700",
                 )}
               >
                 <Avatar className="size-5">

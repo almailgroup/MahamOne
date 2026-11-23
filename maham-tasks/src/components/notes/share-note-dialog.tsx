@@ -102,7 +102,7 @@ export function ShareNoteDialog({
         onClick={() => setOpen(true)}
         aria-label={count === 0 ? t("share.this") : tn("share.sharedWith", count)}
         title={count === 0 ? t("share.short") : t("notes.sharedWith", { n: count })}
-        className={cn(count > 0 && "text-foreground")}
+        className={cn(count > 0 && "text-primary-700")}
       >
         <Users />
       </Button>
@@ -222,7 +222,7 @@ function Person({
   if (!person) return null;
 
   return (
-    <li className="flex items-center gap-2.5 rounded-md px-1 py-1.5">
+    <li className="flex items-center gap-2.5 rounded-lg px-1 py-1.5">
       <Avatar className="size-7">
         {person.avatar_url && <AvatarImage src={person.avatar_url} alt="" />}
         <AvatarFallback className="text-[10px]">
@@ -231,15 +231,15 @@ function Person({
       </Avatar>
 
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-medium">
+        <span className="block truncate text-sm font-medium text-slate-900">
           {person.full_name ?? person.email}
           {you && (
-            <span className="ms-1.5 text-xs font-normal text-muted-foreground">
+            <span className="ms-1.5 text-xs font-normal text-slate-500">
               {t("common.you")}
             </span>
           )}
         </span>
-        <span className="block truncate text-xs text-muted-foreground">
+        <span className="block truncate text-xs text-slate-500">
           {badge ?? person.email}
         </span>
       </span>

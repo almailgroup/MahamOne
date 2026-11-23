@@ -455,7 +455,7 @@ export function TaskDialog({
                         key={option.key}
                         type="button"
                         onClick={() => setDue(option.value())}
-                        className="rounded-full bg-foreground/[0.05] px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-foreground/[0.09] hover:text-foreground pointer-coarse:min-h-11"
+                        className="rounded-lg bg-surface px-2.5 py-1 text-xs font-medium text-slate-600 ring-1 ring-inset ring-slate-200 transition-colors hover:bg-slate-50 hover:text-slate-900 pointer-coarse:min-h-11"
                       >
                         {option.label}
                       </button>
@@ -463,7 +463,7 @@ export function TaskDialog({
                     <button
                       type="button"
                       onClick={() => setDue(null)}
-                      className="rounded-full px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground pointer-coarse:min-h-11 pointer-coarse:px-3"
+                      className="rounded-lg px-2.5 py-1 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 pointer-coarse:min-h-11 pointer-coarse:px-3"
                     >
                       {t("task.noDate")}
                     </button>
@@ -579,7 +579,7 @@ export function TaskDialog({
                 screen. The form is tall enough on a phone that Save sat some
                 seven hundred pixels down, and the way you found it was to
                 scroll looking for it. */}
-            <div className="sticky bottom-0 z-10 -mx-5 mt-1 flex flex-wrap items-center justify-between gap-2 bg-popover px-5 py-3">
+            <div className="sticky bottom-0 z-10 -mx-5 mt-1 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 bg-surface px-5 py-3">
               {editing ? (
                 <Button
                   type="button"

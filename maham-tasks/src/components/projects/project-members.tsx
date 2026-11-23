@@ -93,7 +93,7 @@ export function ProjectMembers({
         variant="outline"
         size="sm"
         onClick={() => setOpen(true)}
-        className="gap-2 font-normal"
+        className="gap-2"
       >
         <Users />
         {tn("count.members", members.length)}
@@ -110,7 +110,7 @@ export function ProjectMembers({
           </DialogHeader>
 
           {members.length === 0 && (
-            <p className="rounded-2xl bg-foreground/[0.05] px-3 py-4 text-center text-sm text-muted-foreground">
+            <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-4 text-center text-sm text-slate-500">
               {t("members.nobody")}
             </p>
           )}
@@ -131,10 +131,10 @@ export function ProjectMembers({
                 </Avatar>
 
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium">
+                  <span className="block truncate text-sm font-medium text-slate-900">
                     {person.full_name ?? person.email}
                   </span>
-                  <span className="block truncate text-xs text-muted-foreground">
+                  <span className="block truncate text-xs text-slate-500">
                     {person.job_title ?? person.email}
                   </span>
                 </span>

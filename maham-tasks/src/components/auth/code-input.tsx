@@ -38,10 +38,9 @@ export function CodeInput({
       placeholder="000000"
       dir="ltr"
       className={cn(
-        "h-14 text-center text-2xl font-semibold tabular-nums tracking-[0.5em] placeholder:text-muted-foreground/40",
-        // It is focused from the start, so a ring would sit round it the whole
-        // time; the composers' glow says the same without a line.
-        "focus-visible:ring-0 focus-visible:shadow-[0_6px_24px_-6px_color-mix(in_oklab,var(--primary)_45%,transparent)]",
+        // It is focused from the start, so it keeps the field's own soft focus
+        // ring, as every field in Maham One does.
+        "h-14 text-center text-2xl font-semibold tabular-nums tracking-[0.5em] placeholder:text-slate-300",
         className,
       )}
     />

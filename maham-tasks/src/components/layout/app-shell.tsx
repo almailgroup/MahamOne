@@ -13,6 +13,7 @@ import { NotificationBell } from "@/components/notifications/notification-bell";
 import {
   CommandHint,
   CommandPalette,
+  CommandSearchButton,
 } from "@/components/layout/command-palette";
 import { SidebarResizer } from "@/components/layout/sidebar-resizer";
 import { AssistantPanel } from "@/components/assistant/assistant-panel";
@@ -29,6 +30,7 @@ import { cn } from "@/lib/utils";
 import { useScrollLock } from "@/lib/use-scroll-lock";
 import { useI18n } from "@/lib/i18n/client";
 import { LanguageSelector } from "@/components/layout/language-selector";
+import { MahamOneLogo, MahamOneMark } from "@/components/layout/maham-one-logo";
 import type {
   Notification,
   Profile,
@@ -61,6 +63,14 @@ export function AppShell({
   const pathname = usePathname();
   const { t } = useI18n();
   const [drawerOpen, setDrawerOpen] = React.useState(false);
+
+  // On a computer the page scrolls inside its panel, as in Maham One: a new
+  // page starts at the top of it. (A phone scrolls the window, which Next.js
+  // looks after.)
+  const panelRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    if (panelRef.current) panelRef.current.scrollTop = 0;
+  }, [pathname]);
 
   // The drawer covers the page; the page should not move under it.
   const leavingPage = React.useRef(false);
@@ -224,9 +234,10 @@ export function AppShell({
   }, [drawerOpen, assistantOpen, closeAssistant]);
 
   return (
-    // On a wide screen the sidebar and header are one frame, and the page is
-    // a rounded panel set inside it. Tone and shape separate them; there are
-    // no lines between the parts of the chrome any more.
+    // Maham One's frame (its app/layout.tsx): on a wide screen the menu sits
+    // on the tinted backdrop and the page in a rounded white panel that
+    // scrolls inside itself, with the header at its top. On a phone the page
+    // scrolls as a whole under a white header.
     <div className="min-h-svh bg-background lg:bg-chrome">
       {/*
        * Without this, reaching the page content by keyboard meant tabbing
@@ -237,7 +248,7 @@ export function AppShell({
       <a
         href="#content"
         className={cn(
-          "sr-only z-50 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-[var(--shadow-lg)]",
+          "sr-only z-50 rounded-lg bg-primary-solid px-4 py-2.5 text-sm font-medium text-on-primary shadow-lg",
           "focus:not-sr-only focus:fixed focus:start-4 focus:top-4",
         )}
       >
@@ -254,22 +265,9 @@ export function AppShell({
           animating && "transition-[width] duration-200 ease-out",
         )}
       >
-        <div className="flex h-14 items-center gap-2.5 px-4">
-          <Link
-            href="/today"
-            className="group flex items-center gap-2.5 rounded-full transition-opacity hover:opacity-80"
-          >
-            <span className="flex size-7 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
-              M
-            </span>
-            <span className="flex flex-col leading-none">
-              <span className="text-sm font-semibold tracking-tight">
-                {t("shell.brand")}
-              </span>
-              <span className="mt-0.5 text-[10px] text-muted-foreground">
-                {t("shell.tagline")}
-              </span>
-            </span>
+        <div className="flex h-14 items-center px-5 pt-1">
+          <Link href="/dashboard" className="flex rounded-lg outline-offset-2">
+            <MahamOneLogo className="h-8" />
           </Link>
         </div>
         <div className="h-[calc(100svh-3.5rem)]">
@@ -303,14 +301,14 @@ export function AppShell({
           <button
             type="button"
             aria-label={t("shell.closeNavigation")}
-            className="absolute inset-0 bg-black/60 backdrop-blur-[2px]"
+            className="absolute inset-0 bg-overlay/40"
             onClick={() => setDrawerOpen(false)}
           />
           <aside
             className={cn(
               // Rounded on its open edge, and no line along it: the scrim
               // behind is what says it sits over the page.
-              "absolute inset-y-0 start-0 flex max-w-[92vw] flex-col overflow-hidden rounded-e-3xl bg-chrome shadow-[var(--shadow-lg)]",
+              "absolute inset-y-0 start-0 flex max-w-[92vw] flex-col overflow-hidden rounded-e-3xl bg-chrome shadow-2xl",
               // Its foot holds the clock and the assistant launcher, and it
               // runs to the bottom of the screen: without this the home
               // indicator crosses them.
@@ -323,9 +321,7 @@ export function AppShell({
                 header sits under the status bar. It carries the notch the same
                 way the page header does. */}
             <div className="flex h-[calc(3.5rem+var(--safe-top))] items-center justify-between px-4 pt-[var(--safe-top)]">
-              <span className="text-sm font-medium tracking-tight">
-                {t("shell.brand")}
-              </span>
+              <MahamOneLogo className="h-7" />
               <Button
                 variant="ghost"
                 size="icon-sm"
@@ -360,45 +356,60 @@ export function AppShell({
 
       <div
         className={cn(
-          "lg:ps-[var(--sidebar-width)]",
-          animating && "transition-[padding] duration-200 ease-out",
+          "lg:fixed lg:inset-y-[var(--panel-gap)] lg:start-[var(--sidebar-width)] lg:end-[var(--panel-gap)]",
+          animating && "transition-[inset-inline-start] duration-200 ease-out",
         )}
       >
-        {/* `pt` and `h-auto`, not a taller box: with a cover viewport the status
-            bar overlaps the top of the page, so the header carries the notch
-            as padding and keeps its own 3.5rem of content below it. */}
-        <header className="sticky top-0 z-20 flex h-[calc(3.5rem+var(--safe-top))] items-center justify-between gap-3 bg-chrome/80 px-4 pt-[var(--safe-top)] backdrop-blur-md supports-[backdrop-filter]:bg-chrome/70 sm:px-6">
-          <div className="flex min-w-0 items-center gap-2">
-            <CommandHint />
-          </div>
-
-          <div className="flex items-center gap-1">
-            <LanguageSelector />
-            <NotificationBell
-              profile={profile}
-              initialItems={notifications}
-              initialUnread={unreadCount}
-            />
-            <ThemeToggle />
-            <UserMenu profile={profile} />
-          </div>
-        </header>
-
-        {/* Bottom padding clears the navigation bar on a phone, so the last
-            card in a list is not sitting underneath it. */}
-        <main
-          id="content"
-          tabIndex={-1}
+        <div
+          ref={panelRef}
           className={cn(
-            "ambient min-h-[calc(100svh-3.5rem-var(--panel-gap))] pb-[calc(var(--nav-space)+var(--safe-bottom))] focus:outline-none lg:pb-0",
-            // The panel. `clip` rather than `hidden` keeps its corners clean
-            // without making it a scroll container, which would strand
-            // anything sticky inside it.
-            "lg:me-[var(--panel-gap)] lg:mb-[var(--panel-gap)] lg:overflow-clip lg:rounded-3xl lg:bg-background lg:shadow-[var(--shadow-xs)]",
+            "min-h-svh bg-background",
+            // The panel. Its own scroll keeps its corners and the header in
+            // place; `scroll-pt` keeps what is scrolled to out from under the
+            // header.
+            "lg:h-full lg:min-h-0 lg:overflow-y-auto lg:scroll-pt-16 lg:rounded-3xl lg:bg-surface scrollbar-thin",
+            "lg:shadow-[0_1px_3px_rgb(15_23_42/0.05),0_12px_40px_-16px_rgb(15_23_42/0.18)] lg:ring-1 lg:ring-slate-900/[0.04]",
           )}
         >
-          {children}
-        </main>
+          {/* `pt` and `h-auto`, not a taller box: with a cover viewport the
+              status bar overlaps the top of the page, so the header carries the
+              notch as padding and keeps its own 3.5rem of content below it. */}
+          <header className="sticky top-0 z-20 flex h-[calc(3.5rem+var(--safe-top))] items-center gap-2 bg-surface/85 px-3 pt-[var(--safe-top)] backdrop-blur-md sm:px-6 lg:h-16 lg:px-8">
+            <Link
+              href="/dashboard"
+              className="flex shrink-0 items-center gap-2 rounded-md lg:hidden"
+            >
+              <MahamOneMark className="size-8" />
+              <span aria-hidden className="h-5 w-px bg-slate-200" />
+              <span className="truncate text-sm font-semibold text-slate-900">
+                {t("shell.brand")}
+              </span>
+            </Link>
+            <CommandHint />
+            <div className="flex-1" />
+            <div className="flex items-center gap-1">
+              <CommandSearchButton />
+              <ThemeToggle />
+              <LanguageSelector />
+              <NotificationBell
+                profile={profile}
+                initialItems={notifications}
+                initialUnread={unreadCount}
+              />
+              <UserMenu profile={profile} />
+            </div>
+          </header>
+
+          {/* Bottom padding clears the navigation bar on a phone, so the last
+              card in a list is not sitting underneath it. */}
+          <main
+            id="content"
+            tabIndex={-1}
+            className="min-h-[calc(100svh-3.5rem)] pb-[calc(var(--nav-space)+var(--safe-bottom))] focus:outline-none lg:min-h-0 lg:pb-0"
+          >
+            {children}
+          </main>
+        </div>
       </div>
 
       <BottomNav onOpenMore={() => setDrawerOpen(true)} />

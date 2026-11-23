@@ -43,7 +43,7 @@ export function OfflineBar() {
     <div
       role="status"
       aria-live="polite"
-      className="fixed inset-x-0 top-0 z-[60] flex items-center justify-center gap-2 bg-foreground px-3 py-1.5 text-xs font-medium text-background"
+      className="fixed inset-x-0 top-0 z-[60] flex items-center justify-center gap-2 bg-slate-900 px-3 py-1.5 text-xs font-medium text-surface"
       style={{ paddingTop: "calc(0.375rem + var(--safe-top, 0px))" }}
     >
       <CloudOff className="size-3.5" />

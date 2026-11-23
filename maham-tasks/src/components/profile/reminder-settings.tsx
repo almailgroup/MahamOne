@@ -157,7 +157,7 @@ export function ReminderSettings({
                 {t("remind.disconnectTelegram")}
               </Button>
             ) : code ? (
-              <div className="rounded-xl bg-muted p-3 text-sm">
+              <div className="rounded-lg bg-surface p-3 text-sm ring-1 ring-inset ring-slate-200">
                 <p className="leading-relaxed">
                   {t("remind.openBot", { bot: MARK })
                     .split(MARK)
@@ -170,7 +170,7 @@ export function ReminderSettings({
                               href={`https://t.me/${botUsername}?start=${code}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="font-medium underline underline-offset-4"
+                              className="font-medium text-primary-700 underline underline-offset-4"
                             >
                               @{botUsername}
                             </a>
@@ -184,7 +184,7 @@ export function ReminderSettings({
                     )}
                 </p>
                 <div className="mt-2 flex items-center gap-2">
-                  <code className="rounded-md bg-background shadow-[var(--shadow-xs)] px-2 py-1 font-mono text-sm tracking-widest">
+                  <code className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 font-mono text-sm tracking-widest text-slate-900">
                     /start {code}
                   </code>
                   <Button
@@ -252,7 +252,7 @@ export function ReminderSettings({
       <Separator />
 
       <fieldset className="flex flex-col gap-3">
-        <legend className="text-sm font-medium">{t("remind.when")}</legend>
+        <legend className="text-sm font-medium text-slate-900">{t("remind.when")}</legend>
 
         <Toggle
           id="remindAssigned"
@@ -339,20 +339,20 @@ function Channel({
   return (
     <div
       className={cn(
-        "rounded-2xl bg-foreground/[0.05] p-3",
+        "rounded-lg border border-slate-200 bg-slate-50 p-3",
         !available && "opacity-70",
       )}
     >
       <div className="flex items-start gap-3">
-        <span className="mt-0.5 text-muted-foreground [&_svg]:size-4">
+        <span className="mt-0.5 text-slate-500 [&_svg]:size-4">
           {icon}
         </span>
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">{title}</span>
+            <span className="text-sm font-medium text-slate-900">{title}</span>
             {enabled && available && (
-              <Badge variant="secondary">
+              <Badge variant="green">
                 <Check className="size-3" />
                 {t("remind.on")}
               </Badge>

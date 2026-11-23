@@ -221,7 +221,7 @@ export function DirectThread({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <header className="flex items-center gap-2 px-2 py-2 sm:px-3">
+      <header className="flex items-center gap-2 border-b border-slate-100 px-2 py-2 sm:px-3">
         {/* One screen at a time on a phone; both panes from `lg`. */}
         <Button variant="ghost" size="icon-sm" asChild className="lg:hidden">
           <Link href="/messages" aria-label={t("dm.back")}>
@@ -241,10 +241,10 @@ export function DirectThread({
           </Avatar>
 
           <span className="min-w-0 flex-1 text-start">
-            <span className="block truncate text-sm font-semibold leading-tight">
+            <span className="block truncate text-sm font-semibold leading-tight text-slate-900">
               {name}
             </span>
-            <span className="block truncate text-[0.6875rem] leading-tight text-muted-foreground">
+            <span className="block truncate text-xs leading-tight text-slate-500">
               {partnerTyping ? t("chat.typing") : (partner?.job_title ?? "")}
             </span>
           </span>
@@ -252,7 +252,7 @@ export function DirectThread({
 
         {/* Said once, at the top, rather than on every message. */}
         <span
-          className="flex shrink-0 items-center gap-1 text-[0.6875rem] text-muted-foreground"
+          className="flex shrink-0 items-center gap-1 text-xs text-slate-500"
           title={t("dm.subtitle")}
         >
           <Lock className="size-3" />
@@ -269,7 +269,7 @@ export function DirectThread({
         className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto px-3 py-2 focus-visible:outline-none sm:px-4"
       >
         {messages.length === 0 ? (
-          <p className="m-auto max-w-xs text-center text-sm leading-relaxed text-muted-foreground">
+          <p className="m-auto max-w-xs text-center text-sm leading-relaxed text-slate-500">
             {t("dm.draft")}
           </p>
         ) : (
@@ -295,7 +295,7 @@ export function DirectThread({
 
       <p
         aria-live="polite"
-        className="flex h-4 items-center gap-1.5 px-4 text-xs text-muted-foreground"
+        className="flex h-4 items-center gap-1.5 px-4 text-xs text-slate-500"
       >
         {partnerTyping && (
           <>
@@ -303,7 +303,7 @@ export function DirectThread({
               {[0, 1, 2].map((dot) => (
                 <span
                   key={dot}
-                  className="size-1 animate-pulse rounded-full bg-muted-foreground"
+                  className="size-1 animate-pulse rounded-full bg-slate-400"
                   style={{ animationDelay: `${dot * 180}ms` }}
                 />
               ))}
@@ -322,14 +322,12 @@ export function DirectThread({
       >
         <div
           className={cn(
-            "flex items-end gap-1 rounded-3xl bg-card p-1.5 shadow-[var(--shadow-xs)]",
-            // Lit as one control when the caret is in it: a soft glow of the
-            // theme's colour round the whole box, nothing inside it. A glow, not
-            // a ring: these boxes hold the caret for long stretches (the
-            // assistant focuses its own the moment it opens), and a ring read as
-            // an outline round the box the whole time.
-            "transition-shadow duration-200",
-            "focus-within:shadow-[0_6px_24px_-6px_color-mix(in_oklab,var(--primary)_45%,transparent)]",
+            "flex items-end gap-1 rounded-xl border border-slate-300 bg-surface p-1.5 shadow-xs",
+            // Lit as one control when the caret is in it, the way Maham One
+            // marks a field with focus: the edge in the main colour and a
+            // faint ring round the whole box, nothing inside it.
+            "transition-[border-color,box-shadow] duration-200",
+            "focus-within:border-primary-500 focus-within:ring-3 focus-within:ring-primary-500/15",
           )}
         >
           <Textarea
@@ -347,9 +345,7 @@ export function DirectThread({
             rows={1}
             maxLength={MAX_LENGTH}
             className={cn(
-              "min-h-0 flex-1 resize-none overflow-y-auto rounded-none px-3 py-1.5 text-[0.9375rem] leading-6",
-              // Bold, so a message being written is easy to read back.
-              "font-semibold placeholder:font-semibold",
+              "min-h-0 flex-1 resize-none overflow-y-auto rounded-none border-0 px-3 py-1.5 text-[0.9375rem] leading-6 text-slate-900",
               "max-h-40 bg-transparent hover:bg-transparent focus-visible:bg-transparent",
               "shadow-none focus-visible:shadow-none",
               "focus-visible:ring-0 focus-visible:ring-offset-0",
@@ -362,7 +358,7 @@ export function DirectThread({
               <span
                 className={cn(
                   "text-[0.6875rem] tabular-nums",
-                  left <= 0 ? "text-warning" : "text-muted-foreground",
+                  left <= 0 ? "text-warning" : "text-slate-500",
                 )}
               >
                 {left}
@@ -408,7 +404,7 @@ function PersonHeader({
     <PersonMenu person={person} me={me}>
       <button
         type="button"
-        className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-1 py-0.5 transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-1 py-0.5 transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         {children}
       </button>
@@ -450,10 +446,12 @@ function Bubble({
     >
       <div
         className={cn(
-          "max-w-[82%] rounded-[1.25rem] px-3.5 py-2 text-sm leading-relaxed sm:max-w-[70%]",
+          // Maham One's chat bubbles (its assistant's): yours in the main
+          // colour, theirs grey.
+          "max-w-[82%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed sm:max-w-[70%]",
           mine
-            ? "bg-primary text-primary-foreground"
-            : "bg-card shadow-[var(--shadow-xs)]",
+            ? "bg-primary-solid text-on-primary"
+            : "bg-slate-100 text-slate-900",
           // The corner nearest the speaker is clipped, which is what makes a
           // bubble point at whoever said it.
           mine ? "rounded-ee-md" : "rounded-es-md",
@@ -464,7 +462,7 @@ function Bubble({
           dateTime={message.created_at}
           className={cn(
             "mt-0.5 block text-[0.625rem] tabular-nums",
-            mine ? "text-primary-foreground/70" : "text-muted-foreground",
+            mine ? "text-on-primary/70" : "text-slate-500",
           )}
         >
           {formatTimeOfDay(message.created_at, tag, timeZone, { bare: true })}

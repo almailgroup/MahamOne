@@ -376,14 +376,14 @@ export function CommandPalette({
     <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent
-        className="max-w-lg gap-0 overflow-hidden p-0"
+        className="max-w-xl gap-0 overflow-hidden p-0 sm:ring-1 sm:ring-slate-900/10"
         showCloseButton={false}
       >
         <DialogTitle className="sr-only">{t("palette.title")}</DialogTitle>
         <DialogDescription className="sr-only">{t("palette.description")}</DialogDescription>
 
-        <div className="flex items-center gap-2.5 px-4 pt-1">
-          <Search className="size-4 shrink-0 text-muted-foreground" />
+        <div className="flex items-center gap-3 border-b border-slate-200 px-4 sm:px-5">
+          <Search className="size-5 shrink-0 text-slate-400" />
           <input
             ref={inputRef}
             value={query}
@@ -391,21 +391,21 @@ export function CommandPalette({
             onKeyDown={onKeyDown}
             placeholder={t("palette.placeholder")}
             // The caret shows where typing goes; the dialog is the focus. The
-            // global ring drew a square frame here, against a round dialog.
-            className="h-12 w-full bg-transparent text-[0.9375rem] outline-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground"
+            // global ring drew a frame here, inside the dialog's own.
+            className="h-14 w-full bg-transparent text-base text-slate-900 outline-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-slate-400"
             autoFocus
             aria-label={t("shell.search")}
           />
         </div>
 
         {results.length === 0 ? (
-          <p className="px-3 py-8 text-center text-sm text-muted-foreground">
+          <p className="px-3 py-10 text-center text-sm text-slate-500">
             {searching ? t("palette.searching") : t("palette.noMatch", { query })}
           </p>
         ) : (
           <ul
             ref={listRef}
-            className="scrollbar-thin max-h-80 overflow-y-auto p-1.5"
+            className="scrollbar-thin max-h-[min(24rem,60svh)] overflow-y-auto overscroll-contain p-2"
             role="listbox"
           >
             {results.map((entry, index) => {
@@ -416,7 +416,7 @@ export function CommandPalette({
               return (
                 <React.Fragment key={entry.id}>
                   {showGroup && (
-                    <li className="px-2 pb-1 pt-2 text-xs font-medium text-muted-foreground">
+                    <li className="px-3 pb-1.5 pt-3 text-xs font-semibold text-slate-500">
                       {entry.group}
                     </li>
                   )}
@@ -428,23 +428,35 @@ export function CommandPalette({
                       onMouseEnter={() => setActive(index)}
                       onClick={() => go(entry)}
                       className={cn(
-                        "flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-start text-sm transition-colors",
-                        index === active
-                          ? "bg-accent text-accent-foreground"
-                          : "text-foreground",
+                        "flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2 text-start transition-colors",
+                        index === active ? "bg-primary-50" : "hover:bg-slate-50",
                       )}
                     >
-                      <Icon className="size-4 shrink-0 text-muted-foreground" />
+                      {/* Maham One's result rows: the icon in a small tile,
+                          white and in the main colour on the chosen row. */}
+                      <span
+                        aria-hidden
+                        className={cn(
+                          "flex size-8 shrink-0 items-center justify-center rounded-md",
+                          index === active
+                            ? "bg-surface text-primary-700 shadow-xs ring-1 ring-slate-200"
+                            : "bg-slate-100 text-slate-500",
+                        )}
+                      >
+                        <Icon className="size-4" />
+                      </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate">{entry.label}</span>
+                        <span className="block truncate text-sm font-medium text-slate-900">
+                          {entry.label}
+                        </span>
                         {entry.detail && entry.hint && (
-                          <span className="block truncate text-xs text-muted-foreground">
+                          <span className="block truncate text-xs text-slate-500">
                             {entry.hint}
                           </span>
                         )}
                       </span>
                       {index === active && (
-                        <CornerDownLeft className="size-3 shrink-0 text-muted-foreground rtl:-scale-x-100" />
+                        <CornerDownLeft className="hidden size-4 shrink-0 text-slate-400 sm:block rtl:-scale-x-100" />
                       )}
                     </button>
                   </li>
@@ -454,7 +466,7 @@ export function CommandPalette({
           </ul>
         )}
 
-        <div className="flex items-center justify-between px-5 pt-2 pb-3.5 text-xs text-muted-foreground">
+        <div className="flex items-center justify-between border-t border-slate-100 px-5 py-2.5 text-xs text-slate-500">
           <span>
             <Kbd>↑</Kbd> <Kbd>↓</Kbd> {t("palette.move")} · <Kbd>↵</Kbd> {t("palette.open")}
           </span>
@@ -470,31 +482,48 @@ export function CommandPalette({
 
 function Kbd({ children }: { children: React.ReactNode }) {
   return (
-    <kbd className="rounded-md bg-muted px-1.5 font-mono text-[10px] leading-4">
+    <kbd className="inline-block min-w-5 rounded border border-slate-200 bg-slate-50 px-1 py-px text-center font-sans text-[0.6875rem] text-slate-600">
       {children}
     </kbd>
   );
 }
 
-/** The header affordance that tells people the palette exists. */
+const openPalette = () =>
+  window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }));
+
+/** The header's search box on a computer, as Maham One draws it. */
 export function CommandHint() {
   const { t } = useI18n();
   return (
     <button
       type="button"
-      onClick={() =>
-        window.dispatchEvent(
-          new KeyboardEvent("keydown", { key: "k", metaKey: true }),
-        )
-      }
-      aria-label={t("shell.search")}
-      className="flex items-center gap-2 rounded-2xl bg-foreground/[0.05] px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-foreground/[0.09] hover:text-foreground pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:justify-center pointer-coarse:px-3"
+      onClick={openPalette}
+      aria-keyshortcuts="Control+K Meta+K"
+      className="group hidden h-10 w-full max-w-sm items-center gap-2.5 rounded-xl bg-slate-100/80 ps-3.5 pe-2 text-sm text-slate-500 transition-colors hover:bg-slate-100 lg:flex"
     >
-      <Search className="size-4 sm:size-3.5" />
-      <span className="hidden sm:inline">{t("shell.search")}</span>
-      <kbd className="hidden rounded-md bg-muted px-1 font-mono text-[10px] leading-4 sm:inline">
+      <Search className="size-4 text-slate-400 group-hover:text-slate-500" aria-hidden />
+      <span className="flex-1 text-start">{t("shell.search")}</span>
+      <kbd
+        dir="ltr"
+        className="rounded-md bg-surface px-1.5 py-0.5 font-sans text-xs text-slate-500 shadow-xs ring-1 ring-slate-900/5"
+      >
         ⌘K
       </kbd>
+    </button>
+  );
+}
+
+/** The same on a phone: a search button among the header's icons. */
+export function CommandSearchButton() {
+  const { t } = useI18n();
+  return (
+    <button
+      type="button"
+      onClick={openPalette}
+      aria-label={t("shell.search")}
+      className="flex size-9 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 pointer-coarse:size-11 lg:hidden"
+    >
+      <Search className="size-4" />
     </button>
   );
 }

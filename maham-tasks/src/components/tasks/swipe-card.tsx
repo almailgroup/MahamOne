@@ -239,10 +239,10 @@ export function SwipeCard({
         <div
           aria-hidden
           className={cn(
-            "absolute inset-0 flex items-center rounded-[1.75rem] px-3 font-semibold transition-colors",
+            "absolute inset-0 flex items-center rounded-xl px-3 font-semibold transition-colors",
             side > 0
-              ? cn("justify-start", armed ? "bg-primary text-primary-foreground" : "bg-primary/15 text-primary")
-              : cn("justify-end", armed ? "bg-foreground/[0.16] text-foreground" : "bg-foreground/[0.07] text-muted-foreground"),
+              ? cn("justify-start", armed ? "bg-primary-solid text-on-primary" : "bg-primary-50 text-primary-700")
+              : cn("justify-end", armed ? "bg-slate-300 text-slate-900" : "bg-slate-100 text-slate-500"),
           )}
         >
           {/* Stacked and narrow, so it fits the gap a swipe opens before

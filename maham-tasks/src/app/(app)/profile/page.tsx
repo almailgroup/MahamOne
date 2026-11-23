@@ -66,7 +66,7 @@ export default async function ProfilePage() {
       />
 
       <Card>
-        <CardContent className="pt-4">
+        <CardContent className="pt-4 sm:pt-5">
           <ProfileForm profile={profile} />
         </CardContent>
       </Card>

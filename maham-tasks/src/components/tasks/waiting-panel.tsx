@@ -111,14 +111,14 @@ export function WaitingPanel({
   }
 
   const row = (task: TaskRef, removable: boolean) => (
-    <li key={task.id} className="group flex items-center gap-2 rounded-[1.25rem] bg-foreground/[0.04] py-1.5 pe-1.5 ps-3.5">
+    <li key={task.id} className="group flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 py-1.5 pe-1.5 ps-3">
       <button
         type="button"
         onClick={() => onOpenTask?.(task.id)}
         disabled={!onOpenTask}
         className={cn(
-          "min-w-0 flex-1 truncate text-start text-sm",
-          task.status === "done" && "text-muted-foreground line-through",
+          "min-w-0 flex-1 truncate text-start text-sm text-slate-800",
+          task.status === "done" && "text-slate-500 line-through",
           onOpenTask && "hover:underline",
         )}
       >
@@ -146,7 +146,7 @@ export function WaitingPanel({
         <span className="text-muted-foreground [&_svg]:size-4">
           <Hourglass />
         </span>
-        <span className="text-sm font-medium">{t("dependency.title")}</span>
+        <span className="text-sm font-semibold text-slate-900">{t("dependency.title")}</span>
         {links.waitingOn.length > 0 && (
           <span className="text-xs tabular-nums text-muted-foreground">
             {open === 0 ? t("dependency.allDone") : t("dependency.openCount", { n: open })}
@@ -160,7 +160,7 @@ export function WaitingPanel({
 
       {canEdit && (
         <div className="relative">
-          <Search className="pointer-events-none absolute start-3.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Search className="pointer-events-none absolute start-3 top-1/2 size-3.5 -translate-y-1/2 text-slate-400" />
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -170,26 +170,26 @@ export function WaitingPanel({
             }}
             placeholder={t("dependency.find")}
             aria-label={t("dependency.find")}
-            className="h-9 ps-9"
+            className="h-9 ps-8"
           />
           {(searching || busy) && (
-            <Loader2 className="absolute end-3.5 top-1/2 size-3.5 -translate-y-1/2 animate-spin text-muted-foreground" />
+            <Loader2 className="absolute end-3 top-1/2 size-3.5 -translate-y-1/2 animate-spin text-slate-400" />
           )}
         </div>
       )}
 
       {canEdit && offered.length > 0 && (
-        <ul className="flex flex-col gap-0.5 rounded-[1.25rem] bg-popover p-1 shadow-[var(--shadow-md)]" aria-label={t("dependency.results")}>
+        <ul className="flex flex-col gap-0.5 rounded-lg border border-slate-200 bg-surface p-1 shadow-lg" aria-label={t("dependency.results")}>
           {offered.map((hit) => (
             <li key={hit.id}>
               <button
                 type="button"
                 onClick={() => add(hit)}
                 disabled={busy}
-                className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-start text-sm transition-colors hover:bg-accent"
+                className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-start text-sm transition-colors hover:bg-slate-100"
               >
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate font-medium">{hit.title}</span>
+                  <span className="block truncate font-medium text-slate-900">{hit.title}</span>
                   <span className="block truncate text-xs text-muted-foreground">
                     {hit.projectName ?? t("common.general")}
                   </span>

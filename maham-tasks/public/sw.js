@@ -14,11 +14,11 @@
  *
  * Bumping CACHE retires everything from the previous one on activate.
  */
-const CACHE = "almail-v3";
+const CACHE = "almail-v4";
 const OFFLINE_URL = "/offline";
 
 /** Immutable, content-hashed, and safe to serve to anybody. */
-const CACHEABLE = [/^\/_next\/static\//, /^\/icon-\d+\.png$/, /^\/icon\.svg$/];
+const CACHEABLE = [/^\/_next\/static\//, /^\/icon(-[\w-]+)?\.png$/, /^\/brand\//];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

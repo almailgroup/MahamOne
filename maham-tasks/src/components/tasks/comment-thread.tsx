@@ -255,7 +255,7 @@ export function CommentThread({
 
                 <div className="min-w-0 flex-1">
                   <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <span className="font-medium text-foreground">
+                    <span className="font-medium text-slate-900">
                       {author?.full_name ?? author?.email ?? t("comment.unknownUser")}
                     </span>
                     <span>{formatTime(comment.created_at, t, tag)}</span>
@@ -306,7 +306,7 @@ export function CommentThread({
             </Avatar>
             <div className="min-w-0 flex-1">
               <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span className="font-medium text-foreground">
+                <span className="font-medium text-slate-900">
                   {currentProfile.full_name ?? currentProfile.email}
                 </span>
                 <span className="inline-flex items-center gap-1">

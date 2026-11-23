@@ -62,7 +62,7 @@ export function AssigneePicker({
             size="sm"
             className="justify-start gap-2 font-normal"
           >
-            <UserPlus className="text-muted-foreground" />
+            <UserPlus className="text-slate-400" />
             {chosen.length === 0
               ? t("filter.unassigned")
               : tn("assign.count", chosen.length)}
@@ -111,7 +111,7 @@ export function AssigneePicker({
               onClick={() => toggle(person.id)}
               // A chip is a tap target on a phone: tall enough for a thumb
               // there, and no larger than it needs to be under a mouse.
-              className="inline-flex items-center gap-1.5 rounded-full bg-foreground/[0.05] px-2.5 py-0.5 text-xs transition-colors hover:bg-foreground/[0.09] pointer-coarse:min-h-9 pointer-coarse:px-2.5"
+              className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 py-0.5 ps-0.5 pe-2.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-500/10 transition-colors hover:bg-slate-200 hover:text-slate-900 pointer-coarse:min-h-9 pointer-coarse:px-2.5"
               aria-label={t("assign.remove", { name: person.full_name ?? person.email })}
             >
               <Avatar className="size-4">

@@ -259,10 +259,10 @@ export function TeamChat({
           role="log"
           aria-label={t("chat.transcript")}
           tabIndex={0}
-          className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto rounded-3xl bg-card shadow-[var(--shadow-xs)] px-2 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:px-3"
+          className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto rounded-xl border border-slate-200 bg-surface px-2 py-2 shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:px-3"
         >
           {messages.length === 0 ? (
-            <p className="m-auto max-w-sm text-center text-sm leading-relaxed text-muted-foreground">
+            <p className="m-auto max-w-sm text-center text-sm leading-relaxed text-slate-500">
               {t("chat.empty")}
             </p>
           ) : (
@@ -294,7 +294,7 @@ export function TeamChat({
             people start and stop typing. */}
         <p
           aria-live="polite"
-          className="flex h-4 items-center gap-1.5 px-2 text-xs text-muted-foreground"
+          className="flex h-4 items-center gap-1.5 px-2 text-xs text-slate-500"
         >
           {typingNames.length > 0 && (
             <>
@@ -324,14 +324,12 @@ export function TeamChat({
               of the field once it does. */}
           <div
             className={cn(
-              "flex items-end gap-1 rounded-3xl bg-card p-1.5 shadow-[var(--shadow-xs)]",
-              // Lit as one control when the caret is in it: a soft glow of the
-              // theme's colour round the whole box, nothing inside it. A glow, not
-              // a ring: these boxes hold the caret for long stretches (the
-              // assistant focuses its own the moment it opens), and a ring read as
-              // an outline round the box the whole time.
-              "transition-shadow duration-200",
-              "focus-within:shadow-[0_6px_24px_-6px_color-mix(in_oklab,var(--primary)_45%,transparent)]",
+              "flex items-end gap-1 rounded-xl border border-slate-300 bg-surface p-1.5 shadow-xs",
+              // Lit as one control when the caret is in it, the way Maham One
+              // marks a field with focus: the edge in the main colour and a
+              // faint ring round the whole box, nothing inside it.
+              "transition-[border-color,box-shadow] duration-200",
+              "focus-within:border-primary-500 focus-within:ring-3 focus-within:ring-primary-500/15",
             )}
           >
             {/* The roster is a column of its own from `lg` up. Below that
@@ -367,9 +365,7 @@ export function TeamChat({
                 // 24px of line in 12px of padding is 36px, which is exactly
                 // the height of the buttons beside it, so one line of text
                 // sits on their centre line without being nudged there.
-                "min-h-0 flex-1 resize-none overflow-y-auto rounded-none px-3 py-1.5 text-[0.9375rem] leading-6",
-                // Bold, so a message being written is easy to read back.
-                "font-semibold placeholder:font-semibold",
+                "min-h-0 flex-1 resize-none overflow-y-auto rounded-none border-0 px-3 py-1.5 text-[0.9375rem] leading-6 text-slate-900",
                 "max-h-40 bg-transparent hover:bg-transparent focus-visible:bg-transparent",
                 // The container carries the focus affordance. Without this the
                 // global focus ring drew a second rounded box inside the first.
@@ -386,7 +382,7 @@ export function TeamChat({
                 <span
                   className={cn(
                     "text-[0.6875rem] tabular-nums",
-                    left <= 0 ? "text-warning" : "text-muted-foreground",
+                    left <= 0 ? "text-warning" : "text-slate-500",
                   )}
                 >
                   {left}
@@ -414,7 +410,7 @@ export function TeamChat({
           same side of the screen. */}
       <aside
         aria-label={t("chat.members")}
-        className="hidden w-60 shrink-0 flex-col rounded-3xl bg-card shadow-[var(--shadow-xs)] p-3 lg:flex"
+        className="hidden w-60 shrink-0 flex-col rounded-xl border border-slate-200 bg-surface p-3 shadow-xs lg:flex"
       >
         <Roster people={people} me={profile} here={here} onlineCount={onlineCount} />
       </aside>
@@ -424,7 +420,7 @@ export function TeamChat({
           <DialogHeader>
             <DialogTitle className="flex items-baseline gap-2">
               {t("chat.members")}
-              <span className="text-xs font-normal tabular-nums text-muted-foreground">
+              <span className="text-xs font-normal tabular-nums text-slate-500">
                 {tn("chat.onlineCount", onlineCount)}
               </span>
             </DialogTitle>
@@ -470,10 +466,10 @@ function Roster({
     <>
       {heading && (
         <div className="flex items-baseline justify-between px-1.5 pb-2">
-          <span className="text-[0.6875rem] font-semibold uppercase tracking-wider text-muted-foreground">
+          <span className="text-xs font-semibold text-slate-500">
             {t("chat.members")}
           </span>
-          <span className="text-[0.6875rem] tabular-nums text-muted-foreground">
+          <span className="text-xs tabular-nums text-slate-500">
             {tn("chat.onlineCount", onlineCount)}
           </span>
         </div>
@@ -492,7 +488,7 @@ function Roster({
               <PersonMenu person={person} me={me}>
                 <button
                   type="button"
-                  className="flex w-full items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-start transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex w-full items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-start transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <span className="relative shrink-0">
                     <Avatar className={cn("size-7", !online && "opacity-55")}>
@@ -502,23 +498,22 @@ function Roster({
                       </AvatarFallback>
                     </Avatar>
                     {/* Ringed in the card's own colour so the dot reads as
-                        sitting on the avatar rather than behind it. Greyscale,
-                        because in this palette the one colour means late work
-                        and nothing else — being online is not an alarm. */}
+                        sitting on the avatar rather than behind it. Green for
+                        here, as Maham One marks things that are on. */}
                     <span
                       aria-hidden
                       className={cn(
-                        "absolute -bottom-0.5 -end-0.5 size-2.5 rounded-full ring-2 ring-card",
-                        online ? "bg-foreground" : "bg-muted-foreground/35",
+                        "absolute -bottom-0.5 -end-0.5 size-2.5 rounded-full ring-2 ring-surface",
+                        online ? "bg-emerald-500" : "bg-slate-300",
                       )}
                     />
                   </span>
 
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[0.8125rem] font-medium leading-tight">
+                    <span className="block truncate text-[0.8125rem] font-medium leading-tight text-slate-900">
                       {name}
                       {person.id === me.id && (
-                        <span className="font-normal text-muted-foreground">
+                        <span className="font-normal text-slate-500">
                           {" · "}
                           {t("chat.you")}
                         </span>
@@ -527,7 +522,7 @@ function Roster({
                     <span
                       className={cn(
                         "block truncate text-[0.6875rem] leading-tight",
-                        typing ? "text-foreground" : "text-muted-foreground",
+                        typing ? "text-primary-700" : "text-slate-500",
                       )}
                     >
                       {typing
@@ -552,7 +547,7 @@ function TypingDots() {
       {[0, 1, 2].map((dot) => (
         <span
           key={dot}
-          className="size-1 animate-pulse rounded-full bg-muted-foreground"
+          className="size-1 animate-pulse rounded-full bg-slate-400"
           style={{ animationDelay: `${dot * 180}ms` }}
         />
       ))}
@@ -619,7 +614,7 @@ function Message({
   return (
     <div
       className={cn(
-        "group/message flex gap-2.5 rounded-lg px-1.5 py-0.5 transition-colors hover:bg-accent/40",
+        "group/message flex gap-2.5 rounded-lg px-1.5 py-0.5 transition-colors hover:bg-slate-50",
         grouped ? "mt-px" : "mt-2 first:mt-0",
       )}
     >
@@ -629,7 +624,7 @@ function Message({
           // the column stays the same width and nothing steps sideways.
           <time
             dateTime={message.created_at}
-            className="mt-0.5 block whitespace-nowrap text-end text-[0.625rem] leading-5 tabular-nums text-muted-foreground opacity-0 transition-opacity group-hover/message:opacity-100"
+            className="mt-0.5 block whitespace-nowrap text-end text-[0.625rem] leading-5 tabular-nums text-slate-500 opacity-0 transition-opacity group-hover/message:opacity-100"
           >
             {gutter}
           </time>
@@ -650,19 +645,19 @@ function Message({
           <div className="flex items-baseline gap-2">
             {/* Whoever said it is a person, and a person answers a click. */}
             <PersonFace person={message.author} me={me}>
-              <span className="truncate text-sm font-semibold leading-5 hover:underline">
+              <span className="truncate text-sm font-semibold leading-5 text-slate-900 hover:underline">
                 {mine ? t("chat.you") : name}
               </span>
             </PersonFace>
             <time
               dateTime={message.created_at}
-              className="shrink-0 text-[0.6875rem] text-muted-foreground"
+              className="shrink-0 text-xs text-slate-500"
             >
               {at}
             </time>
           </div>
         )}
-        <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+        <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-800">
           {message.body}
         </p>
       </div>

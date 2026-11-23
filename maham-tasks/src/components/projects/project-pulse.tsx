@@ -29,10 +29,10 @@ export function ProjectPulse({ tasks }: { tasks: TaskWithAssignees[] }) {
   ].filter(Boolean);
 
   return (
-    <div className="flex flex-col gap-1.5 rounded-[1.75rem] bg-card px-5 py-3.5 shadow-[var(--shadow-xs)]">
+    <div className="flex flex-col gap-1.5 rounded-xl border border-slate-200 bg-surface px-4 py-3.5 shadow-xs sm:px-5">
       <div className="flex items-center justify-between gap-3 text-xs">
-        <span className="text-muted-foreground">{parts.join(" · ")}</span>
-        <span className="font-medium tabular-nums">{percent}%</span>
+        <span className="text-slate-500">{parts.join(" · ")}</span>
+        <span className="font-semibold tabular-nums text-slate-900">{percent}%</span>
       </div>
       <ProgressBar value={percent} label={t("pulse.label", { n: percent })} />
     </div>

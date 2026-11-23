@@ -23,13 +23,13 @@ export default async function OfflinePage() {
   return (
     <main className="flex min-h-svh flex-col items-center justify-center gap-4 px-6 text-center">
       <span
-        className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground [&_svg]:size-5"
+        className="flex size-12 items-center justify-center rounded-full bg-slate-100 text-slate-500 [&_svg]:size-5"
         aria-hidden
       >
         <CloudOff />
       </span>
-      <h1 className="text-lg font-semibold tracking-tight">{t("offline.heading")}</h1>
-      <p className="max-w-sm text-sm text-muted-foreground">{t("offline.body")}</p>
+      <h1 className="text-lg font-semibold tracking-tight text-slate-900">{t("offline.heading")}</h1>
+      <p className="max-w-sm text-sm text-slate-500">{t("offline.body")}</p>
       <RetryButton label={t("offline.retry")} />
     </main>
   );

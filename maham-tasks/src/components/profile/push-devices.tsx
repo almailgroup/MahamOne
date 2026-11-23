@@ -130,14 +130,14 @@ export function PushDevices({
   }
 
   return (
-    <div className="rounded-2xl bg-foreground/[0.05] p-3">
+    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
       <div className="flex items-start gap-3">
-        <span className="mt-0.5 text-muted-foreground [&_svg]:size-4">
+        <span className="mt-0.5 text-slate-500 [&_svg]:size-4">
           <BellRing />
         </span>
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           <div>
-            <p className="text-sm font-medium">{t("push.title")}</p>
+            <p className="text-sm font-medium text-slate-900">{t("push.title")}</p>
             <p className="text-xs text-muted-foreground">{t("push.subtitle")}</p>
           </div>
 
@@ -146,7 +146,7 @@ export function PushDevices({
               {devices.map((device) => (
                 <li
                   key={device.endpoint}
-                  className="flex items-center justify-between gap-2 rounded-md bg-muted/50 px-2.5 py-1.5"
+                  className="flex items-center justify-between gap-2 rounded-md bg-surface px-2.5 py-1.5 ring-1 ring-inset ring-slate-200"
                 >
                   <span className="flex min-w-0 items-center gap-2">
                     <Smartphone className="size-3.5 shrink-0 text-muted-foreground" />

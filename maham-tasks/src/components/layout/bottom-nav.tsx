@@ -42,13 +42,13 @@ export function BottomNav({ onOpenMore }: { onOpenMore: () => void }) {
     <nav
       aria-label={t("nav.tasks")}
       className={cn(
-        // A floating pill, with no line across the screen. It stands off the
-        // home indicator by the safe-area gap, and every page that sizes
-        // itself to the screen leaves --nav-space for it.
-        "chrome-touch fixed inset-x-3 bottom-[var(--safe-bottom)] z-30 h-[4.25rem] rounded-full lg:hidden",
+        // Maham One's tab bar (its features/shell/bottom-bar.tsx): a floating
+        // rounded bar clear of the home indicator by the safe-area gap. Every
+        // page that sizes itself to the screen leaves --nav-space for it.
+        "chrome-touch fixed inset-x-3 bottom-[var(--safe-bottom)] z-30 h-16 rounded-2xl lg:hidden",
         // Solid, not frosted: at any translucency the card underneath showed
         // through as ghosted text behind the labels.
-        "bg-chrome shadow-[0_8px_30px_-6px_rgb(0_0_0/0.22),0_2px_8px_-2px_rgb(0_0_0/0.12)] ring-1 ring-foreground/[0.06]",
+        "bg-surface shadow-[0_10px_30px_-8px_rgb(15_23_42/0.3)] ring-1 ring-slate-900/5",
       )}
     >
       <ul className="mx-auto flex h-full max-w-lg items-stretch px-1.5">
@@ -87,18 +87,16 @@ export function BottomNav({ onOpenMore }: { onOpenMore: () => void }) {
 
 function itemClass(active: boolean) {
   return cn(
-    "group flex h-full w-full flex-col items-center justify-center rounded-full outline-none",
+    "group flex h-full w-full flex-col items-center justify-center rounded-xl outline-none",
     "focus-visible:ring-2 focus-visible:ring-ring",
-    active ? "text-foreground" : "text-muted-foreground",
+    active ? "text-primary-700" : "text-slate-600",
   );
 }
 
 /**
- * The icon and its label. The page you are on rises out of the row: its icon
- * sits in a soft, glowing wash of the theme's main colour, and the pair lifts a few
- * pixels with a little spring, so the choice is seen from the corner of the
- * eye rather than read. Everything else stays flat and quiet, and gives a
- * small press when touched.
+ * The icon and its label. The page you are on is in the main colour, as in
+ * Maham One, and the pair lifts a few pixels with a little spring, so the
+ * choice is seen from the corner of the eye rather than read.
  */
 function NavGlyph({
   icon: Icon,
@@ -114,34 +112,13 @@ function NavGlyph({
       data-active={active || undefined}
       className={cn(
         "flex flex-col items-center gap-1 transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] motion-reduce:transition-none",
-        active ? "-translate-y-1" : "group-active:scale-90",
+        active && "-translate-y-1",
       )}
     >
-      <span
-        className={cn(
-          "flex h-8 w-14 items-center justify-center rounded-full transition-[background-color,color,box-shadow] duration-300 motion-reduce:transition-none",
-          // A wash of the theme's colour rather than a solid block of it,
-          // strongest at the top and thinning towards the bar beneath, and a
-          // glow of the same colour blurred out until it has no edge — so
-          // the pill dissolves into the bar instead of sitting on it.
-          //
-          // The glow is a shadow because a shadow is drawn only outside the
-          // pill: a blurred layer behind it would deepen the wash under the
-          // icon too. tests/unit/themes.test.ts holds the icon to 3:1 where
-          // the wash is strongest.
-          active
-            ? "bg-linear-to-b from-primary/24 to-primary/6 text-primary shadow-[0_5px_16px_-5px_color-mix(in_oklab,var(--primary)_42%,transparent),0_0_22px_-4px_color-mix(in_oklab,var(--primary)_20%,transparent)]"
-            : "group-hover:bg-foreground/[0.06]",
-        )}
-      >
-        <Icon className={cn("size-[1.15rem]", active && "stroke-[2.25]")} aria-hidden />
+      <span className="flex h-6 w-14 items-center justify-center transition-colors">
+        <Icon className="size-5" aria-hidden />
       </span>
-      <span
-        className={cn(
-          "max-w-full truncate px-0.5 text-[0.6875rem] leading-none",
-          active ? "font-semibold" : "font-medium",
-        )}
-      >
+      <span className="max-w-full truncate px-0.5 text-xs leading-none font-medium">
         {label}
       </span>
     </span>

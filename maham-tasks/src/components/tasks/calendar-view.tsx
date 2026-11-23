@@ -287,13 +287,13 @@ export function CalendarView({
         }
       />
 
-      <h2 className="-mt-1 text-lg font-semibold tracking-tight" aria-live="polite">
+      <h2 className="-mt-1 text-lg font-semibold tracking-tight text-slate-900" aria-live="polite">
         {month.toLocaleDateString(tag, { month: "long", year: "numeric" })}
       </h2>
 
       <div
         className={cn(
-          "overflow-hidden rounded-3xl bg-card p-1.5 shadow-[var(--shadow-sm)] transition-opacity sm:p-2",
+          "overflow-hidden rounded-xl border border-slate-200 bg-surface p-1.5 shadow-xs transition-opacity sm:p-2",
           // Dimmed rather than replaced: a skeleton here would throw the grid
           // away and put it back a moment later, which reads as the page
           // reloading rather than as a month arriving.
@@ -309,8 +309,8 @@ export function CalendarView({
           ))}
         </div>
 
-        {/* Days are separate rounded cells with space between them, not
-            squares in a ruled grid. */}
+        {/* Days are separate cells, each with its own edge, with space
+            between them rather than squares in a ruled grid. */}
         <div className="grid grid-cols-7 gap-1 sm:gap-1.5" role="grid" aria-label={t("cal.gridLabel")}>
           {days.map((day) => {
             const key = dayKey(day);
@@ -329,12 +329,12 @@ export function CalendarView({
                 role="gridcell"
                 aria-selected={selected}
                 className={cn(
-                  "relative flex min-h-[4.25rem] flex-col rounded-[1rem] bg-foreground/[0.035] p-1 transition-colors sm:min-h-[6.5rem] sm:rounded-[1.25rem] sm:p-2",
-                  "hover:bg-foreground/[0.06]",
-                  !inMonth(day) && "bg-transparent text-muted-foreground",
-                  dayOff && inMonth(day) && "bg-foreground/[0.055]",
-                  isToday && "bg-primary/[0.07]",
-                  selected && "bg-primary/[0.12] shadow-[var(--shadow-xs)]",
+                  "relative flex min-h-[4.25rem] flex-col rounded-md border border-slate-200 bg-surface p-1 transition-colors sm:min-h-[6.5rem] sm:rounded-lg sm:p-2",
+                  "hover:bg-slate-50",
+                  !inMonth(day) && "border-transparent bg-transparent text-muted-foreground",
+                  dayOff && inMonth(day) && "bg-slate-50",
+                  isToday && "border-primary-200 bg-primary-50/60",
+                  selected && "border-primary-300 bg-primary-50 shadow-xs",
                 )}
               >
                 {/* The whole square is the control, laid underneath what it
@@ -352,7 +352,7 @@ export function CalendarView({
                   ]
                     .filter(Boolean)
                     .join(", ")}
-                  className="absolute inset-0 rounded-[inherit] transition-colors hover:bg-accent/60"
+                  className="absolute inset-0 rounded-[inherit] transition-colors hover:bg-slate-100/60"
                 />
 
                 <span
@@ -360,7 +360,7 @@ export function CalendarView({
                     // Centred, under its weekday heading: in the corner it sat in the
                     // curve, and out of line with the heading above it.
                     "pointer-events-none relative mb-0.5 flex size-6 items-center justify-center self-center rounded-full text-xs tabular-nums sm:size-7",
-                    isToday && "bg-primary font-semibold text-primary-foreground",
+                    isToday && "bg-primary-solid font-semibold text-on-primary",
                   )}
                 >
                   {day.getDate()}
@@ -371,7 +371,7 @@ export function CalendarView({
                 {holiday && (
                   <span
                     aria-hidden
-                    className="pointer-events-none relative mx-auto size-1.5 rounded-full bg-muted-foreground/60 sm:hidden"
+                    className="pointer-events-none relative mx-auto size-1.5 rounded-full bg-slate-400 sm:hidden"
                   />
                 )}
                 {holiday && (
@@ -387,7 +387,7 @@ export function CalendarView({
                   <span
                     className={cn(
                       "pointer-events-none relative mt-auto self-center rounded-full px-2 text-[0.6875rem] font-medium tabular-nums md:hidden",
-                      late > 0 ? "bg-warning-surface text-warning" : "bg-muted text-foreground",
+                      late > 0 ? "bg-warning-surface text-warning" : "bg-slate-100 text-slate-700",
                     )}
                   >
                     {list.length}
@@ -402,8 +402,8 @@ export function CalendarView({
                         onClick={() => openTask(task)}
                         title={task.title}
                         className={cn(
-                          "w-full truncate rounded-full px-2.5 py-0.5 text-start text-xs transition-colors hover:bg-accent",
-                          task.status === "done" && "text-muted-foreground line-through",
+                          "w-full truncate rounded-md px-2 py-0.5 text-start text-xs text-slate-700 transition-colors hover:bg-slate-100",
+                          task.status === "done" && "text-slate-500 line-through",
                           isOverdue(task.due_at, task.status) &&
                             "bg-warning-surface text-warning",
                         )}
@@ -417,7 +417,7 @@ export function CalendarView({
                       <button
                         type="button"
                         onClick={() => openDay(day)}
-                        className="px-2.5 text-xs text-muted-foreground hover:text-foreground"
+                        className="px-2 text-xs text-slate-500 hover:text-slate-900"
                       >
                         {t("cal.more", { n: list.length - 3 })}
                       </button>
@@ -460,12 +460,12 @@ export function CalendarView({
                   <button
                     type="button"
                     onClick={() => openTask(task)}
-                    className="lift flex w-full flex-col gap-1.5 rounded-2xl bg-card p-3 text-start shadow-[var(--shadow-xs)] sm:flex-row sm:items-center sm:justify-between"
+                    className="lift flex w-full flex-col gap-1.5 rounded-lg border border-slate-200 bg-surface p-3 text-start shadow-xs hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <span className="flex min-w-0 items-center gap-2">
                       <PriorityIndicator priority={task.priority} />
                       <span className="min-w-0">
-                        <span className="block truncate text-sm font-medium">{task.title}</span>
+                        <span className="block truncate text-sm font-medium text-slate-900">{task.title}</span>
                         <span className="block truncate text-xs text-muted-foreground">
                           {projectName(task.project_id)}
                         </span>

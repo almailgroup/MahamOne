@@ -27,7 +27,7 @@ import type {
   TaskStatus,
 } from "@/lib/supabase/database.types";
 
-/** Status pill. Weight, not hue, carries the meaning. */
+/** Status badge, in Maham One's tones. */
 export function StatusBadge({ status }: { status: TaskStatus }) {
   const { t } = useI18n();
   const meta = statusMeta(status);
@@ -35,8 +35,8 @@ export function StatusBadge({ status }: { status: TaskStatus }) {
 }
 
 /**
- * Four-bar severity ramp. Colourless by design: filled bars count up with
- * priority, and the label is exposed to assistive tech.
+ * Four-bar severity ramp: filled bars count up with priority, in the theme's
+ * colour (amber when urgent), and the label is exposed to assistive tech.
  */
 export function PriorityIndicator({
   priority,
@@ -68,8 +68,8 @@ export function PriorityIndicator({
               bar <= meta.weight
                 ? urgent
                   ? "bg-warning-marker"
-                  : "bg-foreground"
-                : "bg-border",
+                  : "bg-primary-solid"
+                : "bg-slate-200",
             )}
           />
         ))}
@@ -187,9 +187,9 @@ export function DueDate({
       className={cn(
         "inline-flex items-center gap-1 text-xs",
         overdue
-          // The one place colour is allowed. A dotted underline was easy to
+          // Late work is amber, as a badge. A dotted underline was easy to
           // scan straight past on a board full of dates.
-          ? "rounded-full bg-warning-surface px-2.5 py-0.5 font-semibold text-warning"
+          ? "rounded-full bg-warning-surface px-2 py-0.5 font-medium text-warning ring-1 ring-inset ring-warning-border"
           : "text-muted-foreground",
         className,
       )}
@@ -223,7 +223,7 @@ export function AssigneeStack({
       {shown.map((person) => (
         <Avatar
           key={person.id}
-          className="size-5 ring-1 ring-background"
+          className="size-5 ring-2 ring-surface"
           title={person.full_name ?? person.email}
         >
           {person.avatar_url && <AvatarImage src={person.avatar_url} alt="" />}
@@ -233,7 +233,7 @@ export function AssigneeStack({
         </Avatar>
       ))}
       {overflow > 0 && (
-        <span className="flex size-5 items-center justify-center rounded-full bg-muted text-[9px] font-medium text-muted-foreground ring-1 ring-background">
+        <span className="flex size-5 items-center justify-center rounded-full bg-slate-100 text-[9px] font-medium text-slate-600 ring-2 ring-surface">
           +{overflow}
         </span>
       )}
@@ -260,7 +260,7 @@ export function TaskProvenance({
   const name = creator?.full_name ?? creator?.email ?? null;
 
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500 ring-1 ring-inset ring-slate-200">
       <span className="inline-flex min-w-0 items-center gap-1.5">
         <Avatar className="size-5">
           {creator?.avatar_url && <AvatarImage src={creator.avatar_url} alt="" />}
@@ -271,7 +271,7 @@ export function TaskProvenance({
         <span className="truncate">
           {t("meta.createdBy")}{" "}
           {name ? (
-            <span className="font-medium text-foreground">{name}</span>
+            <span className="font-medium text-slate-900">{name}</span>
           ) : (
             <span className="italic">{t("meta.removedAccount")}</span>
           )}

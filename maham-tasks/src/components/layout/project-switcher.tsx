@@ -4,7 +4,6 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Check, ChevronsUpDown, FolderPlus, Layers } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,19 +37,19 @@ export function ProjectSwitcher({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full justify-between gap-2 font-normal"
+        {/* Maham One's company switcher, for projects. */}
+        <button
+          type="button"
+          className="flex w-full items-center gap-3 rounded-2xl bg-surface p-2 text-start shadow-xs ring-1 ring-slate-900/5 transition-shadow hover:shadow-sm pointer-coarse:min-h-12"
         >
-          <span className="flex min-w-0 items-center gap-2">
-            <Layers className="size-3.5 shrink-0 text-muted-foreground" />
-            <span className="truncate">
-              {activeProject?.name ?? t("nav.selectProject")}
-            </span>
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+            <Layers className="size-4" />
           </span>
-          <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground" />
-        </Button>
+          <span className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900">
+            {activeProject?.name ?? t("nav.selectProject")}
+          </span>
+          <ChevronsUpDown className="size-4 shrink-0 text-slate-400" />
+        </button>
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="start" className="w-[15rem]">

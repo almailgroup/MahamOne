@@ -115,8 +115,8 @@ export function SidebarResizer({
         className={
           "pointer-events-none absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 rounded-full transition-colors " +
           (dragging
-            ? "bg-foreground/40"
-            : "bg-transparent group-hover:bg-foreground/20 group-focus-visible:bg-foreground/40")
+            ? "bg-primary-500"
+            : "bg-transparent group-hover:bg-slate-300 group-focus-visible:bg-primary-500")
         }
       />
     </div>

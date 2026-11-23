@@ -25,8 +25,8 @@ export function MetricCard({
   href?: string;
 }) {
   const className = cn(
-    "group block rounded-[1.5rem] bg-card p-3.5 shadow-[var(--shadow-sm)] sm:rounded-3xl sm:p-5",
-    emphasis && "bg-warning-surface",
+    "group block rounded-xl border border-slate-200 bg-surface p-3.5 shadow-xs sm:p-5",
+    emphasis && "border-warning-border bg-warning-surface",
     href && "lift focus-visible:outline-none",
   );
 
@@ -35,8 +35,8 @@ export function MetricCard({
       <div className="flex items-center justify-between gap-2">
         <span
           className={cn(
-            "text-xs font-medium sm:text-[0.8125rem]",
-            emphasis ? "text-warning" : "text-muted-foreground",
+            "text-xs font-medium sm:text-sm",
+            emphasis ? "text-warning" : "text-slate-500",
           )}
         >
           {label}
@@ -44,11 +44,10 @@ export function MetricCard({
         {icon && (
           <span
             className={cn(
-              // The icon in a small tinted bubble of the theme's colour
-              // rather than loose beside the label: a touch of colour on
-              // every tile, and it swells a little when the tile is hovered.
-              "flex size-7 items-center justify-center rounded-full transition-transform duration-300 ease-[var(--ease-spring)] group-hover:scale-110 sm:size-8 [&_svg]:size-3.5 sm:[&_svg]:size-4",
-              emphasis ? "bg-warning/15 text-warning" : "bg-primary/10 text-primary",
+              // The icon in a small tinted tile of the theme's colour rather
+              // than loose beside the label: a touch of colour on every tile.
+              "flex size-7 items-center justify-center rounded-lg sm:size-8 [&_svg]:size-3.5 sm:[&_svg]:size-4",
+              emphasis ? "bg-warning/15 text-warning" : "bg-primary-50 text-primary-600",
             )}
           >
             {icon}
@@ -56,7 +55,7 @@ export function MetricCard({
         )}
       </div>
 
-      <p className="mt-1.5 text-[1.625rem] font-bold tabular-nums leading-none tracking-[-0.02em] sm:mt-3 sm:text-[2rem]">
+      <p className="mt-1.5 text-2xl font-semibold tabular-nums leading-none tracking-tight text-slate-900 sm:mt-2.5">
         {value}
       </p>
 
@@ -64,7 +63,7 @@ export function MetricCard({
           the line on a desktop and is a third of the tile on a phone, where
           six of them were most of the first screen. */}
       {hint && (
-        <p className="mt-1.5 hidden items-center gap-1 text-xs text-muted-foreground sm:mt-2 sm:flex">
+        <p className="mt-1.5 hidden items-center gap-1 text-xs text-slate-500 sm:mt-2 sm:flex">
           {hint}
           {href && (
             <ArrowRight
@@ -86,7 +85,7 @@ export function MetricCard({
   );
 }
 
-/** Colourless progress bar: filled portion in the foreground tone. */
+/** Progress bar, as in Maham One: a slate track filled in the theme's colour. */
 export function ProgressBar({
   value,
   label,
@@ -103,10 +102,10 @@ export function ProgressBar({
       aria-valuemin={0}
       aria-valuemax={100}
       aria-label={label}
-      className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
+      className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100"
     >
       <div
-        className="h-full rounded-full bg-foreground transition-[width] duration-300"
+        className="h-full rounded-full bg-primary-solid transition-[width] duration-300"
         style={{ width: `${clamped}%` }}
       />
     </div>

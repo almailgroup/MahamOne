@@ -266,7 +266,7 @@ export function NoteEditor({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="flex items-center gap-1 px-2 py-2 sm:px-3">
+      <header className="flex items-center gap-1 border-b border-slate-100 px-2 py-2 sm:px-3">
         <Button
           variant="ghost"
           size="sm"
@@ -278,7 +278,7 @@ export function NoteEditor({
           {t("notes.notes")}
         </Button>
 
-        <span className="min-w-0 flex-1 truncate px-2 text-xs text-muted-foreground">
+        <span className="min-w-0 flex-1 truncate px-2 text-xs text-slate-500">
           {status === "saving"
             ? t("notes.saving")
             : status === "saved"
@@ -338,16 +338,16 @@ export function NoteEditor({
             placeholder={t("notes.titlePlaceholder")}
             maxLength={200}
             aria-label={t("notes.titleLabel")}
-            /* A raised card rather than bare text, because without a shape
-               there was nothing on screen to say this was a place you could
-               type: the title and the body read as printed text, and the empty
-               half of the pane read as nothing at all. Focus rings it softly,
-               like every other field. */
+            /* A field with an edge, as Maham One draws its inputs, rather
+               than bare text, because without a shape there was nothing on
+               screen to say this was a place you could type: the title and the
+               body read as printed text, and the empty half of the pane read
+               as nothing at all. Focus marks it like every other field. */
             className={cn(
-              "w-full rounded-[1.25rem] bg-card px-4 py-2.5 text-xl font-semibold tracking-tight shadow-[var(--shadow-xs)]",
-              "transition-shadow duration-200",
-              "placeholder:font-normal placeholder:text-muted-foreground",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-0",
+              "w-full rounded-lg border border-slate-300 bg-surface px-3.5 py-2 text-xl font-semibold tracking-tight text-slate-900 shadow-xs",
+              "transition-colors hover:border-slate-400",
+              "placeholder:font-normal placeholder:text-slate-400",
+              "focus-visible:border-primary-500 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-500/15 focus-visible:ring-offset-0",
             )}
           />
 
@@ -366,11 +366,11 @@ export function NoteEditor({
                   className={cn(
                     // A generous hit box around a small circle: the tick is
                     // the most-tapped thing on this page.
-                    "press mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-150",
+                    "mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors duration-150",
                     "pointer-coarse:size-7",
                     item.done
-                      ? "bg-foreground text-background"
-                      : "border-input",
+                      ? "border-primary-solid bg-primary-solid text-on-primary"
+                      : "border-slate-300 hover:border-primary-500",
                   )}
                 >
                   {item.done && <Check className="size-3.5 animate-pop" />}
@@ -409,8 +409,8 @@ export function NoteEditor({
                     // A line of a list: the caret is the focus. The global
                     // ring drew a square frame round it.
                     "focus-visible:ring-0 focus-visible:ring-offset-0",
-                    "placeholder:text-muted-foreground",
-                    item.done && "text-muted-foreground line-through",
+                    "text-slate-900 placeholder:text-slate-400",
+                    item.done && "text-slate-400 line-through",
                   )}
                 />
 
@@ -419,8 +419,8 @@ export function NoteEditor({
                   onClick={() => removeItem(item)}
                   aria-label={t("notes.removeLine", { line: item.content || t("notes.thisLine") })}
                   className={cn(
-                    "mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors",
-                    "hover:bg-accent hover:text-foreground",
+                    "mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md text-slate-400 transition-colors",
+                    "hover:bg-slate-100 hover:text-slate-700",
                     // Quiet until you reach for it with a mouse; always there
                     // on touch, where there is no hover to reveal it.
                     "opacity-0 focus-visible:opacity-100 group-hover/line:opacity-100",
@@ -438,11 +438,11 @@ export function NoteEditor({
             onClick={addItem}
             disabled={adding}
             className={cn(
-              "-mt-1 flex items-center gap-3 rounded-md py-1.5 text-start text-[0.9375rem] text-muted-foreground transition-colors",
-              "hover:text-foreground disabled:opacity-50",
+              "-mt-1 flex items-center gap-3 rounded-lg py-1.5 text-start text-[0.9375rem] text-slate-500 transition-colors",
+              "hover:text-slate-900 disabled:opacity-50",
             )}
           >
-            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-foreground/[0.05] pointer-coarse:size-7">
+            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-slate-100 pointer-coarse:size-7">
               <Plus className="size-3.5" />
             </span>
             {t("notes.addTodo")}
@@ -459,10 +459,10 @@ export function NoteEditor({
                short box with dead space under it — the part you write in
                should be the part that is enclosed. */
             className={cn(
-              "min-h-40 w-full flex-1 resize-none rounded-[1.25rem] bg-card px-4 py-3 text-[0.9375rem] leading-relaxed shadow-[var(--shadow-xs)]",
-              "transition-shadow duration-200",
-              "placeholder:text-muted-foreground",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-0",
+              "min-h-40 w-full flex-1 resize-none rounded-lg border border-slate-300 bg-surface px-3.5 py-2.5 text-[0.9375rem] leading-relaxed text-slate-900 shadow-xs",
+              "transition-colors hover:border-slate-400",
+              "placeholder:text-slate-400",
+              "focus-visible:border-primary-500 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-500/15 focus-visible:ring-offset-0",
             )}
           />
         </div>

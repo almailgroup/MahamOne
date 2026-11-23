@@ -57,14 +57,14 @@ export function StatusMoveMenu({
           onClick={(event) => event.stopPropagation()}
           onPointerDown={(event) => event.stopPropagation()}
           className={cn(
-            "press inline-flex items-center gap-1 rounded-full bg-card shadow-[var(--shadow-xs)] px-2.5 py-1 text-xs font-medium",
-            "transition-colors hover:bg-accent",
+            "inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-surface px-2 py-1 text-xs font-medium text-slate-700 shadow-xs",
+            "transition-colors hover:bg-slate-50 hover:text-slate-900",
             "pointer-coarse:min-h-11 pointer-coarse:px-3",
             className,
           )}
         >
           {current}
-          <MoveRight className="size-3 text-muted-foreground" />
+          <MoveRight className="size-3 text-slate-400" />
         </button>
       </DropdownMenuTrigger>
 

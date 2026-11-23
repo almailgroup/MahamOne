@@ -60,7 +60,7 @@ export function TemplateSettings({ templates }: { templates: TaskTemplate[] }) {
 
       <CardContent>
         {templates.length === 0 ? (
-          <p className="rounded-[1.25rem] bg-foreground/[0.04] px-4 py-3 text-sm text-muted-foreground">
+          <p className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-muted-foreground">
             {t("template.none")}
           </p>
         ) : (
@@ -69,7 +69,7 @@ export function TemplateSettings({ templates }: { templates: TaskTemplate[] }) {
               editing?.id === template.id ? (
                 <li
                   key={template.id}
-                  className="flex flex-col gap-2.5 rounded-[1.25rem] bg-foreground/[0.04] px-4 py-3 sm:flex-row sm:items-center"
+                  className="flex flex-col gap-2.5 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 sm:flex-row sm:items-center"
                 >
                   <Input
                     value={editing.name}
@@ -103,10 +103,10 @@ export function TemplateSettings({ templates }: { templates: TaskTemplate[] }) {
               ) : (
                 <li
                   key={template.id}
-                  className="flex items-center justify-between gap-3 rounded-[1.25rem] bg-foreground/[0.04] px-4 py-2.5"
+                  className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5"
                 >
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-medium">{template.name}</span>
+                    <span className="block truncate text-sm font-medium text-slate-900">{template.name}</span>
                     <span className="block text-xs text-muted-foreground">
                       {tn("template.steps", template.steps.length)}
                       {template.due_in_working_days !== null &&

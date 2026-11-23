@@ -34,12 +34,12 @@ export default function ErrorBoundary({
   }, [error]);
 
   return (
-    <div className="flex min-h-svh items-center justify-center bg-background px-4">
-      <div className="w-full max-w-sm rounded-3xl bg-card p-6 text-center shadow-[var(--shadow-md)]">
-        <h1 className="text-base font-semibold tracking-tight">
+    <div className="flex min-h-svh items-center justify-center bg-page px-4">
+      <div className="w-full max-w-sm rounded-xl border border-slate-200 bg-surface p-6 text-center shadow-xs">
+        <h1 className="text-base font-semibold tracking-tight text-slate-900">
           {t("error.title")}
         </h1>
-        <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+        <p className="mt-1.5 text-sm leading-relaxed text-slate-500">
           {t("error.body")}
         </p>
         {error.digest && (

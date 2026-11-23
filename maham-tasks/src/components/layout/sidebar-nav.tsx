@@ -22,6 +22,7 @@ import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ProjectSwitcher } from "@/components/layout/project-switcher";
+import { TASKS_TONE } from "@/components/layout/maham-one-logo";
 import { SidebarClock } from "@/components/layout/sidebar-clock";
 import { ProjectDialog } from "@/components/projects/project-dialog";
 import { cn } from "@/lib/utils";
@@ -63,126 +64,153 @@ export function SidebarNav({
 
   return (
     <>
-      <div className="flex h-full flex-col gap-4 p-3">
-        <ProjectSwitcher
-          projects={projects}
-          activeProject={activeProject}
-          canCreate={canManage}
-          onCreate={() => setDialogOpen(true)}
-        />
-
-        <nav className="flex flex-col gap-0.5" aria-label={t("nav.tasks")}>
-          <NavLink
+      {/* Maham One's sidebar: a card to switch what you are in (there, the
+          company; here, the project), the app open, then its pages as rows
+          on the tinted backdrop, the current one a white pill. */}
+      <div className="flex h-full flex-col gap-2 px-3 pt-1 pb-3">
+        <div className="space-y-1.5">
+          <ProjectSwitcher
+            projects={projects}
+            activeProject={activeProject}
+            canCreate={canManage}
+            onCreate={() => setDialogOpen(true)}
+          />
+          <Link
             href="/dashboard"
-            icon={<LayoutDashboard />}
-            label={t("nav.dashboard")}
-            active={pathname === "/dashboard"}
-            onNavigate={onNavigate}
-          />
-          <NavLink
-            href="/today"
-            icon={<Sunrise />}
-            label={t("nav.today")}
-            active={pathname === "/today"}
-            onNavigate={onNavigate}
-          />
-          <NavLink
-            href="/calendar"
-            icon={<CalendarDays />}
-            label={t("nav.calendar")}
-            active={pathname === "/calendar"}
-            onNavigate={onNavigate}
-          />
-          <NavLink
-            href="/my-list"
-            icon={<ListChecks />}
-            label={t("nav.myList")}
-            active={pathname === "/my-list"}
-            onNavigate={onNavigate}
-          />
-          <NavLink
-            href="/general"
-            icon={<ClipboardList />}
-            label={t("nav.general")}
-            active={pathname === "/general"}
-            onNavigate={onNavigate}
-          />
-          <NavLink
-            href="/team"
-            icon={<Users />}
-            label={t("nav.team")}
-            active={pathname === "/team"}
-            onNavigate={onNavigate}
-          />
-          <NavLink
-            href="/chat"
-            icon={<MessagesSquare />}
-            label={t("nav.chat")}
-            active={pathname === "/chat"}
-            onNavigate={onNavigate}
-          />
-          <NavLink
-            href="/messages"
-            icon={<Send />}
-            label={t("nav.messages")}
-            active={pathname.startsWith("/messages")}
-            badge={unreadMessages}
-            onNavigate={onNavigate}
-          />
-          {canManage && (
-            <NavLink
-              href="/reports"
-              icon={<ChartColumn />}
-              label={t("nav.reports")}
-              active={pathname === "/reports"}
-              onNavigate={onNavigate}
-            />
-          )}
-          {canManage && (
-            <NavLink
-              href="/settings"
-              icon={<Settings />}
-              label={t("nav.settings")}
-              active={pathname === "/settings"}
-              onNavigate={onNavigate}
-            />
-          )}
-        </nav>
-
-        <div className="flex min-h-0 flex-1 flex-col gap-1">
-          <div className="flex items-center justify-between px-2 py-1">
-            <span className="text-xs font-medium text-muted-foreground">
-              {t("nav.projects")}
+            onClick={onNavigate}
+            className="flex items-center gap-2.5 rounded-xl px-2 py-1.5 transition-colors hover:bg-surface/70"
+          >
+            <span
+              aria-hidden
+              className={cn(
+                "flex size-7 shrink-0 items-center justify-center rounded-lg [&_svg]:size-4",
+                TASKS_TONE,
+              )}
+            >
+              <ListChecks />
             </span>
-            {canManage && (
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => setDialogOpen(true)}
-                aria-label={t("nav.newProject")}
-              >
-                <Plus />
-              </Button>
-            )}
-          </div>
+            <span className="truncate text-sm font-semibold text-slate-800">
+              {t("shell.brand")}
+            </span>
+          </Link>
+        </div>
 
-          <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto">
-            {projects.length === 0 ? (
-              <p className="px-2 py-1.5 text-sm leading-relaxed text-muted-foreground">
-                {canManage ? t("nav.createFirstProject") : t("nav.noProjects")}
-              </p>
-            ) : (
-              projects.map((project) => (
-                <NavLink
-                  key={project.id}
-                  href={`/projects/${project.id}`}
-                  icon={<Hash />}
-                  label={project.name}
-                  active={project.id === currentProjectId}
-                  onNavigate={onNavigate}
-                />
-              ))
+        {/* The pages and the projects scroll together, as Maham One's menu
+            does, so a short screen still reaches every project. */}
+        <div className="scrollbar-thin -mx-3 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain px-3 py-0.5">
+          <nav className="flex flex-col gap-0.5" aria-label={t("nav.tasks")}>
+            <NavLink
+              href="/dashboard"
+              icon={<LayoutDashboard />}
+              label={t("nav.dashboard")}
+              active={pathname === "/dashboard"}
+              onNavigate={onNavigate}
+            />
+            <NavLink
+              href="/today"
+              icon={<Sunrise />}
+              label={t("nav.today")}
+              active={pathname === "/today"}
+              onNavigate={onNavigate}
+            />
+            <NavLink
+              href="/calendar"
+              icon={<CalendarDays />}
+              label={t("nav.calendar")}
+              active={pathname === "/calendar"}
+              onNavigate={onNavigate}
+            />
+            <NavLink
+              href="/my-list"
+              icon={<ListChecks />}
+              label={t("nav.myList")}
+              active={pathname === "/my-list"}
+              onNavigate={onNavigate}
+            />
+            <NavLink
+              href="/general"
+              icon={<ClipboardList />}
+              label={t("nav.general")}
+              active={pathname === "/general"}
+              onNavigate={onNavigate}
+            />
+            <NavLink
+              href="/team"
+              icon={<Users />}
+              label={t("nav.team")}
+              active={pathname === "/team"}
+              onNavigate={onNavigate}
+            />
+            <NavLink
+              href="/chat"
+              icon={<MessagesSquare />}
+              label={t("nav.chat")}
+              active={pathname === "/chat"}
+              onNavigate={onNavigate}
+            />
+            <NavLink
+              href="/messages"
+              icon={<Send />}
+              label={t("nav.messages")}
+              active={pathname.startsWith("/messages")}
+              badge={unreadMessages}
+              onNavigate={onNavigate}
+            />
+            {canManage && (
+              <NavLink
+                href="/reports"
+                icon={<ChartColumn />}
+                label={t("nav.reports")}
+                active={pathname === "/reports"}
+                onNavigate={onNavigate}
+              />
             )}
+            {canManage && (
+              <NavLink
+                href="/settings"
+                icon={<Settings />}
+                label={t("nav.settings")}
+                active={pathname === "/settings"}
+                onNavigate={onNavigate}
+              />
+            )}
+          </nav>
+
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center justify-between ps-3 pe-1 pt-2">
+              <span className="text-xs font-semibold text-slate-500">
+                {t("nav.projects")}
+              </span>
+              {canManage && (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => setDialogOpen(true)}
+                  aria-label={t("nav.newProject")}
+                >
+                  <Plus />
+                </Button>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-0.5">
+              {projects.length === 0 ? (
+                <p className="px-3 py-1.5 text-sm leading-relaxed text-slate-500">
+                  {canManage ? t("nav.createFirstProject") : t("nav.noProjects")}
+                </p>
+              ) : (
+                projects.map((project) => (
+                  <NavLink
+                    key={project.id}
+                    href={`/projects/${project.id}`}
+                    icon={<Hash />}
+                    label={project.name}
+                    active={project.id === currentProjectId}
+                    onNavigate={onNavigate}
+                  />
+                ))
+              )}
+            </div>
           </div>
         </div>
 
@@ -192,22 +220,20 @@ export function SidebarNav({
             onClick={onOpenAssistant}
             data-assistant-launcher
             className={cn(
-              "group/assistant lift flex items-center gap-2.5 rounded-2xl bg-card px-2.5 py-2.5 text-start shadow-[var(--shadow-xs)]",
-              "hover:border-foreground/25 hover:bg-accent",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
+              "group/assistant flex items-center gap-2.5 rounded-2xl bg-surface p-2 text-start shadow-xs ring-1 ring-slate-900/5 transition-shadow hover:shadow-sm",
             )}
           >
             <span
               aria-hidden
-              className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground"
+              className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-600"
             >
-              <Sparkles className="size-3.5" />
+              <Sparkles className="size-4" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-medium leading-tight">
+              <span className="block text-sm font-semibold leading-tight text-slate-900">
                 {t("nav.assistant")}
               </span>
-              <span className="block truncate text-xs leading-tight text-muted-foreground">
+              <span className="block truncate text-xs leading-tight text-slate-500">
                 {t("nav.assistantHint")}
               </span>
             </span>
@@ -259,16 +285,14 @@ function NavLink({
       prefetch={eager ? true : undefined}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "chrome-touch relative flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm transition-all duration-150",
-        // This is the whole of the navigation inside the phone drawer, and it
-        // was the shortest target left in the app at 36px.
-        "pointer-coarse:min-h-11",
-        "[&_svg]:size-4 [&_svg]:shrink-0",
+        // Maham One's sidebar rows (its features/shell/sidebar.tsx): 44px on
+        // touch, the current page a white pill in the main colour.
+        "chrome-touch relative flex h-[2.125rem] w-full items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors",
+        "pointer-coarse:h-11",
+        "[&_svg]:size-[1.125rem] [&_svg]:shrink-0",
         active
-          // Inverted fill: the current page should be unmistakable at a glance,
-          // which a hairline marker on the leading edge never was.
-          ? "bg-primary font-semibold text-primary-foreground shadow-[var(--shadow-sm)] [&_svg]:text-primary-foreground"
-          : "text-muted-foreground hover:bg-accent hover:text-foreground [&_svg]:text-muted-foreground",
+          ? "bg-surface text-primary-700 shadow-xs ring-1 ring-slate-900/5 [&_svg]:text-primary-600"
+          : "text-slate-700 hover:bg-surface/70 hover:text-slate-900 [&_svg]:text-slate-500 hover:[&_svg]:text-slate-600",
       )}
     >
       <NavIcon>{icon}</NavIcon>
@@ -278,8 +302,8 @@ function NavLink({
           className={cn(
             "ms-auto flex min-w-5 shrink-0 items-center justify-center rounded-full px-1 text-[0.625rem] font-semibold tabular-nums",
             active
-              ? "bg-primary-foreground text-primary"
-              : "bg-primary text-primary-foreground",
+              ? "bg-primary-100 text-primary-700"
+              : "bg-primary-solid text-on-primary",
           )}
         >
           {badge > 99 ? "99+" : badge}

@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/client";
 import type { Label, LabelColour } from "@/lib/supabase/database.types";
 
-/** Six round swatches; the chosen one is ringed by space rather than a line. */
+/** Six round swatches; the chosen one is ringed in the main colour, as Maham One marks a theme. */
 function ColourChoice({
   value,
   onChange,
@@ -36,8 +36,8 @@ function ColourChoice({
           aria-label={t(`label.colour.${colour}`)}
           onClick={() => onChange(colour)}
           className={cn(
-            "flex size-7 items-center justify-center rounded-full transition-colors hover:bg-foreground/[0.06]",
-            value === colour && "bg-foreground/[0.08]",
+            "flex size-7 items-center justify-center rounded-full transition-shadow",
+            value === colour ? "ring-2 ring-primary-600" : "hover:ring-2 hover:ring-slate-300",
           )}
         >
           <span className={cn("size-3.5 rounded-full", LABEL_DOT[colour])} />
@@ -105,7 +105,7 @@ export function LabelSettings({ labels }: { labels: Label[] }) {
 
       <CardContent className="flex flex-col gap-5">
         {labels.length === 0 ? (
-          <p className="rounded-[1.25rem] bg-foreground/[0.04] px-4 py-3 text-sm text-muted-foreground">
+          <p className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-muted-foreground">
             {t("label.emptySettings")}
           </p>
         ) : (
@@ -114,7 +114,7 @@ export function LabelSettings({ labels }: { labels: Label[] }) {
               editing?.id === label.id ? (
                 <li
                   key={label.id}
-                  className="flex flex-col gap-2.5 rounded-[1.25rem] bg-foreground/[0.04] px-4 py-3 sm:flex-row sm:items-center"
+                  className="flex flex-col gap-2.5 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 sm:flex-row sm:items-center"
                 >
                   <Input
                     value={editing.name}
@@ -149,11 +149,11 @@ export function LabelSettings({ labels }: { labels: Label[] }) {
               ) : (
                 <li
                   key={label.id}
-                  className="flex items-center justify-between gap-3 rounded-[1.25rem] bg-foreground/[0.04] px-4 py-2.5"
+                  className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5"
                 >
                   <span className="flex min-w-0 items-center gap-2.5">
                     <span aria-hidden className={cn("size-2.5 shrink-0 rounded-full", LABEL_DOT[label.colour])} />
-                    <span className="truncate text-sm font-medium">{label.name}</span>
+                    <span className="truncate text-sm font-medium text-slate-900">{label.name}</span>
                   </span>
                   <span className="flex shrink-0 gap-0.5">
                     <Button

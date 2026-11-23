@@ -6,7 +6,7 @@ import { expect, test } from "@playwright/test";
  * These assert the icons and manifest stay wired up.
  */
 test("serves a favicon, an apple touch icon and a manifest", async ({ request }) => {
-  for (const asset of ["/icon.svg", "/apple-icon.png", "/manifest.webmanifest"]) {
+  for (const asset of ["/icon.png", "/apple-icon.png", "/manifest.webmanifest"]) {
     const response = await request.get(asset);
     expect(response.status(), `${asset} should be served`).toBe(200);
   }

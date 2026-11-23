@@ -31,13 +31,13 @@ export function ForgotPasswordForm() {
   if (result?.ok) {
     return (
       <div className="flex flex-col gap-4">
-        <div className="flex flex-col items-center gap-3 rounded-2xl bg-muted/50 px-4 py-6 text-center">
-          <span className="flex size-11 items-center justify-center rounded-full bg-card shadow-[var(--shadow-xs)]">
+        <div className="flex flex-col items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-6 text-center">
+          <span className="flex size-11 items-center justify-center rounded-full bg-primary-50 text-primary-600">
             <MailCheck className="size-5" />
           </span>
           <div className="flex flex-col gap-1">
-            <p className="font-medium">{t("auth.checkEmail")}</p>
-            <p className="text-sm leading-relaxed text-muted-foreground">
+            <p className="font-semibold text-slate-900">{t("auth.checkEmail")}</p>
+            <p className="text-sm leading-relaxed text-slate-600">
               <Emphasised sentence={t("auth.resetSent", { email: MARK })}>
                 {result.data.sentTo}
               </Emphasised>
@@ -76,7 +76,7 @@ export function ForgotPasswordForm() {
         <FieldError message={errors?.email} />
       </div>
 
-      <Button type="submit" disabled={pending} className="mt-1">
+      <Button type="submit" size="lg" disabled={pending} className="mt-1">
         {pending && <Loader2 className="animate-spin" />}
         {pending ? t("auth.sending") : t("auth.emailMeLink")}
       </Button>

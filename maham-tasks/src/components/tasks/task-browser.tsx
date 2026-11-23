@@ -141,11 +141,11 @@ export function TaskBrowser({
               href={`/tasks?filter=${entry.value}${label === "all" ? "" : `&label=${label}`}`}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "press inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-all duration-150",
+                "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium ring-1 ring-inset transition-colors duration-150",
                 "pointer-coarse:min-h-11 pointer-coarse:px-3",
                 active
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-foreground/[0.06] text-muted-foreground hover:bg-accent hover:text-foreground",
+                  ? "bg-primary-50 text-primary-700 ring-primary-600/20"
+                  : "bg-surface text-slate-600 ring-slate-200 hover:bg-slate-50 hover:text-slate-900",
               )}
             >
               {t(entry.label)}
@@ -164,7 +164,7 @@ export function TaskBrowser({
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-[10rem] flex-1 sm:max-w-xs">
-          <Search className="pointer-events-none absolute start-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Search className="pointer-events-none absolute start-2.5 top-1/2 size-3.5 -translate-y-1/2 text-slate-400" />
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -188,7 +188,7 @@ export function TaskBrowser({
             {t("browser.countOf", { shown: visible.length, total })}
           </span>
           {truncated && (
-            <span className="rounded-full bg-muted px-2 py-0.5">
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-600 ring-1 ring-inset ring-slate-500/10">
               {t("browser.narrowToSeeRest", { shown: tasks.length })}
             </span>
           )}

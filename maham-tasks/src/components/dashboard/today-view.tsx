@@ -202,10 +202,10 @@ export function TodayView({
                 key={task.id}
                 type="button"
                 onClick={() => openTask(task)}
-                className="flex flex-wrap items-center gap-2 rounded-xl bg-foreground/[0.05] px-2.5 py-2 text-start transition-colors"
+                className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-start transition-colors hover:bg-slate-100"
               >
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[0.9375rem] font-medium">
+                  <span className="block truncate text-sm font-medium text-slate-900">
                     {task.title}
                   </span>
                   {task.follow_up_note && (
@@ -320,7 +320,7 @@ function Section({
       className={cn(
         emphasis &&
           tasks.length > 0 &&
-          "bg-warning-surface",
+          "border-warning-border bg-warning-surface",
       )}
     >
       <CardHeader>
@@ -410,7 +410,7 @@ function TodayRow({
   return (
     <div
       onClick={open}
-      className="flex cursor-pointer items-center gap-2.5 rounded-[1.25rem] bg-card px-3.5 py-2.5 shadow-[var(--shadow-sm)] transition-colors sm:px-4"
+      className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-slate-200 bg-surface px-3.5 py-2.5 shadow-xs transition-shadow hover:shadow-sm sm:px-4"
     >
       <PriorityIndicator priority={task.priority} />
 
@@ -420,7 +420,7 @@ function TodayRow({
           onClick={() => onOpen(task)}
           className="block w-full min-w-0 text-start focus-visible:outline-none"
         >
-          <span className="block truncate text-[0.9375rem] font-medium leading-snug">
+          <span className="block truncate text-sm font-medium leading-snug text-slate-900">
             {task.title}
           </span>
         </button>

@@ -57,8 +57,8 @@ export function PasswordMeter({ value }: { value: string }) {
               step <= score
                 ? score === 0
                   ? "bg-warning"
-                  : "bg-foreground"
-                : "bg-border",
+                  : "bg-primary-solid"
+                : "bg-slate-200",
             )}
           />
         ))}

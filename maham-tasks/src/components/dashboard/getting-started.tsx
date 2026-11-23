@@ -139,18 +139,18 @@ export function GettingStarted({
   return (
     <section
       aria-label={t("guide.title")}
-      className="flex flex-col gap-4 rounded-[1.75rem] bg-card p-5 shadow-[var(--shadow-sm)]"
+      className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-surface p-4 shadow-xs sm:p-5"
     >
       <div className="flex items-start gap-3">
         <span
           aria-hidden
-          className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary [&_svg]:size-5"
+          className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-600 [&_svg]:size-[1.125rem]"
         >
           <Compass />
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className="text-[0.9375rem] font-semibold">{t("guide.title")}</h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">{t(`guide.intro.${role}` as TranslationKey)}</p>
+          <h2 className="text-base font-semibold text-slate-900">{t("guide.title")}</h2>
+          <p className="mt-0.5 text-sm text-slate-500">{t(`guide.intro.${role}` as TranslationKey)}</p>
         </div>
         <Button
           variant="ghost"
@@ -171,14 +171,14 @@ export function GettingStarted({
           aria-valuemax={items.length}
           aria-valuenow={done}
           aria-label={t("guide.progress", { done, total: items.length })}
-          className="h-2 overflow-hidden rounded-full bg-foreground/[0.07]"
+          className="h-2 overflow-hidden rounded-full bg-slate-100"
         >
           <div
-            className="h-full rounded-full bg-primary transition-[width] duration-500"
+            className="h-full rounded-full bg-primary-solid transition-[width] duration-500"
             style={{ width: `${(done / items.length) * 100}%` }}
           />
         </div>
-        <p className="text-xs tabular-nums text-muted-foreground">
+        <p className="text-xs font-medium tabular-nums text-slate-500">
           {t("guide.progress", { done, total: items.length })}
         </p>
       </div>
@@ -204,25 +204,33 @@ export function GettingStarted({
             <li
               key={step}
               className={cn(
-                "flex items-start gap-3 rounded-[1.25rem] px-3.5 py-3",
-                isDone ? "bg-foreground/[0.025]" : "bg-foreground/[0.045]",
+                // A step still to do is a grey tile; a done one recedes to white.
+                "flex items-start gap-3 rounded-lg border border-slate-200 px-3.5 py-3",
+                isDone ? "bg-surface" : "bg-slate-50",
               )}
             >
               <span
                 className={cn(
-                  "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full [&_svg]:size-3.5",
-                  isDone ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground shadow-[var(--shadow-xs)]",
+                  "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg [&_svg]:size-3.5",
+                  isDone
+                    ? "bg-primary-solid text-on-primary"
+                    : "bg-surface text-slate-500 shadow-xs ring-1 ring-inset ring-slate-200",
                 )}
               >
                 {isDone ? <Check strokeWidth={3} aria-hidden /> : <Icon aria-hidden />}
                 <span className="sr-only">{isDone ? t("guide.done") : t("guide.toDo")}</span>
               </span>
               <div className="min-w-0 flex-1">
-                <p className={cn("text-sm font-semibold leading-snug", isDone && "text-muted-foreground")}>
+                <p
+                  className={cn(
+                    "text-sm font-medium leading-snug",
+                    isDone ? "text-slate-500" : "text-slate-900",
+                  )}
+                >
                   {t(`guide.${step}.title` as TranslationKey)}
                 </p>
                 {!isDone && (
-                  <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                  <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
                     {t(`guide.${step}.body` as TranslationKey)}
                   </p>
                 )}

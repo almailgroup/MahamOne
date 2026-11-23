@@ -95,7 +95,7 @@ export function ProjectTimeline({
   return (
     <div className="flex flex-col gap-4">
       {milestones === null && (
-        <p className="rounded-[1.25rem] bg-foreground/[0.04] px-4 py-3 text-sm text-muted-foreground">
+        <p className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
           {t("milestone.notYet")}
         </p>
       )}
@@ -123,6 +123,7 @@ export function ProjectTimeline({
       {milestones !== null && milestones.length === 0 && (
         <EmptyState
           compact
+          className="border border-slate-200 bg-surface shadow-xs"
           icon={<Flag />}
           title={t("milestone.emptyTitle")}
           description={t(canPlan ? "milestone.emptyPlanner" : "milestone.emptyMember")}
@@ -149,13 +150,13 @@ export function ProjectTimeline({
       {milestones !== null && milestones.length > 0 && loose.length > 0 && (
         <section
           aria-label={t("timeline.loose")}
-          className="flex flex-col gap-2 rounded-[1.75rem] bg-foreground/[0.035] p-5"
+          className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5"
         >
-          <h3 className="text-sm font-semibold">
+          <h3 className="text-sm font-semibold text-slate-900">
             {t("timeline.loose")}
-            <span className="ms-2 text-xs font-normal tabular-nums text-muted-foreground">{loose.length}</span>
+            <span className="ms-2 text-xs font-medium tabular-nums text-slate-500">{loose.length}</span>
           </h3>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-slate-500">
             {t(canPlan ? "timeline.looseHintPlanner" : "timeline.looseHint")}
           </p>
           <TaskRows tasks={loose} onOpenTask={onOpenTask} />
@@ -200,7 +201,7 @@ function MilestoneForm({
   return (
     <form
       onSubmit={save}
-      className="flex w-full flex-col gap-2 rounded-[1.25rem] bg-foreground/[0.04] p-2.5 sm:flex-row sm:items-center"
+      className="flex w-full flex-col gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2.5 sm:flex-row sm:items-center"
       aria-label={milestone ? t("milestone.edit", { title: milestone.title }) : t("milestone.add")}
     >
       <Input
@@ -295,7 +296,7 @@ function MilestoneCard({
     <li
       id={`milestone-${milestone.id}`}
       tabIndex={-1}
-      className="flex scroll-mt-24 flex-col gap-3 rounded-[1.75rem] bg-card p-5 shadow-[var(--shadow-sm)] outline-none focus-visible:shadow-[var(--shadow-md)]"
+      className="flex scroll-mt-24 flex-col gap-3 rounded-xl border border-slate-200 bg-surface p-4 shadow-xs outline-none focus-visible:border-primary-300 focus-visible:shadow-md sm:p-5"
     >
       {editing ? (
         <MilestoneForm projectId={projectId} milestone={milestone} onDone={() => setEditing(false)} />
@@ -304,30 +305,30 @@ function MilestoneCard({
           <span
             aria-hidden
             className={cn(
-              "flex size-9 shrink-0 items-center justify-center rounded-full [&_svg]:size-4",
+              "flex size-9 shrink-0 items-center justify-center rounded-lg [&_svg]:size-4",
               state === "late"
                 ? "bg-warning-surface text-warning"
                 : state === "reached"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-primary/10 text-primary",
+                  ? "bg-primary-solid text-on-primary"
+                  : "bg-primary-50 text-primary-600",
             )}
           >
             {state === "reached" ? <Check strokeWidth={3} /> : <Flag />}
           </span>
 
           <div className="min-w-0 flex-1">
-            <h3 className="text-[0.9375rem] font-semibold leading-snug">{milestone.title}</h3>
+            <h3 className="text-sm font-semibold leading-snug text-slate-900">{milestone.title}</h3>
             <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
-              <span className="tabular-nums text-muted-foreground">{date}</span>
+              <span className="tabular-nums text-slate-500">{date}</span>
               {state === "late" ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-warning-surface px-2.5 py-0.5 font-semibold text-warning">
+                <span className="inline-flex items-center gap-1 rounded-full bg-warning-surface px-2 py-0.5 font-medium text-warning ring-1 ring-inset ring-warning-border">
                   <Clock className="size-3" aria-hidden />
                   {tn("milestone.daysLate", -daysLeft)}
                 </span>
               ) : state === "reached" ? (
-                <span className="font-medium text-primary">{t("milestone.reached")}</span>
+                <span className="font-medium text-primary-700">{t("milestone.reached")}</span>
               ) : (
-                <span className="text-muted-foreground">
+                <span className="text-slate-500">
                   {daysLeft === 0 ? t("milestone.dueToday") : tn("milestone.daysLeft", daysLeft)}
                 </span>
               )}
@@ -398,14 +399,14 @@ function MilestoneCard({
             done: progress.done,
             total: progress.total,
           })}
-          className="h-2 overflow-hidden rounded-full bg-foreground/[0.07]"
+          className="h-2 overflow-hidden rounded-full bg-slate-100"
         >
           <div
-            className="h-full rounded-full bg-primary transition-[width] duration-500"
+            className="h-full rounded-full bg-primary-solid transition-[width] duration-500"
             style={{ width: `${percent}%` }}
           />
         </div>
-        <p className="text-xs tabular-nums text-muted-foreground">
+        <p className="text-xs tabular-nums text-slate-500">
           {progress.total === 0
             ? t("milestone.noTasks")
             : t("milestone.progress", { done: progress.done, total: progress.total })}
@@ -440,12 +441,14 @@ function TaskRows({
           <button
             type="button"
             onClick={() => onOpenTask(task)}
-            className="flex w-full items-center gap-2 rounded-[1rem] bg-foreground/[0.035] px-3.5 py-2 text-start transition-colors hover:bg-foreground/[0.07]"
+            // White rows with an edge: they sit on a milestone's white card and
+            // on the grey "not under a milestone" box alike.
+            className="flex w-full items-center gap-2 rounded-lg bg-surface px-3.5 py-2 text-start ring-1 ring-inset ring-slate-200 transition-colors hover:bg-slate-50"
           >
             <span
               className={cn(
-                "min-w-0 flex-1 truncate text-sm",
-                task.status === "done" && "text-muted-foreground line-through",
+                "min-w-0 flex-1 truncate text-sm text-slate-800",
+                task.status === "done" && "text-slate-500 line-through",
               )}
             >
               {task.title}

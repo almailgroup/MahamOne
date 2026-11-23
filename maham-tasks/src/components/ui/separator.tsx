@@ -17,9 +17,8 @@ function Separator({
       decorative={decorative}
       orientation={orientation}
       className={cn(
-        // Space, not a rule: the interface draws no lines. Kept as an element
-        // for its role and its spacing.
-        "shrink-0 bg-transparent",
+        // A hairline, as in Maham One.
+        "shrink-0 bg-slate-200",
         orientation === "horizontal" ? "h-px w-full" : "h-full w-px",
         className,
       )}

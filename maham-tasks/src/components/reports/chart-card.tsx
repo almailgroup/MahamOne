@@ -20,7 +20,7 @@ export function LegendKey({
   icon?: React.ReactNode;
 }) {
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+    <span className="inline-flex items-center gap-1.5 text-xs text-slate-600">
       <span aria-hidden className={cn("h-2.5 w-3.5 rounded-[3px]", swatch)} />
       {icon}
       {label}
@@ -49,13 +49,16 @@ export function ChartCard({
   const [asTable, setAsTable] = React.useState(false);
 
   return (
-    <section className="flex flex-col gap-4 rounded-[1.75rem] bg-card p-5 shadow-[var(--shadow-sm)]" aria-label={title}>
+    <section
+      className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-surface p-4 shadow-xs sm:p-5"
+      aria-label={title}
+    >
       {/* The table switch stays at the top corner, however long the
           subtitle runs; it wrapped under the title on a phone. */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <h2 className="text-[0.9375rem] font-semibold">{title}</h2>
-          {subtitle && <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>}
+          <h2 className="text-base font-semibold text-slate-900">{title}</h2>
+          {subtitle && <p className="mt-0.5 text-sm text-slate-500">{subtitle}</p>}
         </div>
         {table && (
           <Button
@@ -64,7 +67,7 @@ export function ChartCard({
             size="sm"
             onClick={() => setAsTable((current) => !current)}
             aria-pressed={asTable}
-            className="-me-2 -mt-1 shrink-0 text-muted-foreground"
+            className="-me-2 -mt-1 shrink-0 text-slate-500"
           >
             {asTable ? <ChartColumn /> : <Table2 />}
             {asTable ? t("reports.showChart") : t("reports.showTable")}
@@ -77,30 +80,29 @@ export function ChartCard({
   );
 }
 
-/** The table behind a chart: plain rows, numbers aligned. */
+/** The table behind a chart: plain rows with a line between, numbers aligned. */
 export function ChartTable({ head, rows }: { head: string[]; rows: (string | number)[][] }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-xs text-muted-foreground">
+          <tr className="border-b border-slate-200 text-xs text-slate-500">
             {head.map((cell, index) => (
-              <th key={cell} className={cn("px-2 py-1.5 font-medium", index === 0 ? "text-start" : "text-end")}>
+              <th key={cell} className={cn("px-2 py-2 font-medium", index === 0 ? "text-start" : "text-end")}>
                 {cell}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody>
+        <tbody className="divide-y divide-slate-100">
           {rows.map((row, index) => (
-            <tr key={index} className="odd:bg-foreground/[0.03]">
+            <tr key={index}>
               {row.map((cell, column) => (
                 <td
                   key={column}
                   className={cn(
                     "px-2 py-1.5",
-                    column === 0 ? "rounded-s-xl text-start" : "text-end tabular-nums",
-                    column === row.length - 1 && "rounded-e-xl",
+                    column === 0 ? "text-start text-slate-600" : "text-end tabular-nums text-slate-900",
                   )}
                 >
                   {cell}

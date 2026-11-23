@@ -195,13 +195,12 @@ export function TaskTable({
   return (
     <>
       {/* Desktop */}
-      {/* No rules between rows: each row is its own rounded band, told
-          apart by spacing and a faint alternating tint, and it lights up as
-          a pill under the pointer. */}
-      <div className="hidden overflow-hidden rounded-3xl bg-card p-2 shadow-[var(--shadow-sm)] md:block">
-        <table className="w-full border-separate border-spacing-0 text-sm">
+      {/* Maham One's table: a card, with a hairline between rows and a slate
+          tint under the pointer. */}
+      <div className="hidden overflow-hidden rounded-xl border border-slate-200 bg-surface shadow-xs md:block">
+        <table className="w-full text-sm">
           <thead>
-            <tr className="text-start">
+            <tr className="border-b border-slate-100 text-start">
               {selectable && (
                 <Th className="w-10">
                   <Checkbox
@@ -234,15 +233,14 @@ export function TaskTable({
               {canReschedule && <Th className="w-10 text-end sr-only">{t("table.moveDate")}</Th>}
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-slate-100">
             {rows.map((task) => (
               <tr
                 key={task.id}
                 onClick={() => onOpenTask(task)}
                 className={cn(
-                  "cursor-pointer transition-colors even:bg-foreground/[0.025] hover:bg-foreground/[0.06]",
-                  "[&>td:first-child]:rounded-s-2xl [&>td:last-child]:rounded-e-2xl",
-                  selected.has(task.id) && "bg-primary/[0.08] even:bg-primary/[0.08] hover:bg-primary/[0.11]",
+                  "cursor-pointer transition-colors hover:bg-slate-50",
+                  selected.has(task.id) && "bg-primary-50 hover:bg-primary-50",
                 )}
               >
                 {selectable && (
@@ -257,7 +255,7 @@ export function TaskTable({
                 <td className="px-4 py-3.5">
                   <button
                     type="button"
-                    className="text-start font-medium focus-visible:outline-none"
+                    className="text-start font-medium text-slate-900 hover:text-primary-700 focus-visible:outline-none"
                     onClick={(event) => {
                       event.stopPropagation();
                       onOpenTask(task);
@@ -321,10 +319,9 @@ export function TaskTable({
               canComplete={canComplete}
               canReschedule={canReschedule}
               className={cn(
-                "lift relative rounded-[1.75rem] bg-card p-3.5 shadow-[var(--shadow-sm)]",
-                // Opaque, unlike a tint: what a swipe reveals sits beneath.
-                isSelected &&
-                  "bg-[color-mix(in_srgb,var(--primary)_7%,var(--card))] shadow-[var(--shadow-md)]",
+                "lift relative rounded-xl border border-slate-200 bg-surface p-3.5 shadow-xs",
+                // Opaque, unlike a translucent tint: what a swipe reveals sits beneath.
+                isSelected && "border-primary-200 bg-primary-50",
               )}
             >
               <button
@@ -346,7 +343,7 @@ export function TaskTable({
                     line of their own whenever the row was full. */}
                 <div className="flex items-start gap-2">
                   <div className="min-w-0 flex-1">
-                    <p className="text-[0.9375rem] font-medium leading-snug">
+                    <p className="text-sm font-medium leading-snug text-slate-900">
                       {task.title}
                     </p>
                     {projectName && (
@@ -441,8 +438,8 @@ function SortTh({
         type="button"
         onClick={() => onSort(column)}
         className={cn(
-          "-mx-1.5 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 transition-colors hover:text-foreground",
-          active && "text-foreground",
+          "-mx-1.5 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 transition-colors hover:text-slate-900",
+          active && "text-slate-900",
         )}
       >
         {children}

@@ -45,7 +45,7 @@ export async function DeliveryFailures({
   if (mine.length === 0 && team.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl bg-warning-surface p-3">
+    <div className="flex flex-col gap-3 rounded-lg border border-warning-border bg-warning-surface p-3">
       <div className="flex items-start gap-3">
         <span className="mt-0.5 text-warning [&_svg]:size-4">
           <AlertTriangle />

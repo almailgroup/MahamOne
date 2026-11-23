@@ -45,14 +45,14 @@ function Tile({
 }) {
   const Arrow = !change || change.amount === 0 ? Minus : change.amount > 0 ? ArrowUpRight : ArrowDownRight;
   return (
-    <div className="flex flex-col gap-1 rounded-[1.75rem] bg-card p-5 shadow-[var(--shadow-sm)]">
-      <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+    <div className="flex flex-col gap-1 rounded-xl border border-slate-200 bg-surface p-4 shadow-xs sm:p-5">
+      <span className="flex items-center gap-1.5 text-xs font-medium text-slate-500 sm:text-sm">
         {icon}
         {label}
       </span>
-      <span className="text-3xl font-semibold tracking-tight">{value}</span>
+      <span className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{value}</span>
       {change && (
-        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+        <span className="flex items-center gap-1 text-xs text-slate-500">
           <Arrow className="size-3.5" aria-hidden />
           {change.text}
         </span>
@@ -76,10 +76,10 @@ export function ReportView({ report, range }: { report: WorkReport | null; range
           href={`/reports?period=${period}`}
           aria-current={period === range.period ? "page" : undefined}
           className={cn(
-            "press inline-flex items-center rounded-full px-3.5 py-1.5 text-xs transition-colors pointer-coarse:min-h-11",
+            "inline-flex items-center rounded-lg px-3 py-1.5 text-sm font-medium ring-1 ring-inset transition-colors pointer-coarse:min-h-11",
             period === range.period
-              ? "bg-primary text-primary-foreground"
-              : "bg-foreground/[0.06] text-muted-foreground hover:bg-accent hover:text-foreground",
+              ? "bg-primary-50 text-primary-700 ring-primary-600/20"
+              : "bg-surface text-slate-600 ring-slate-200 hover:bg-slate-50 hover:text-slate-900",
           )}
         >
           {t(PERIOD_LABEL[period])}
@@ -92,7 +92,7 @@ export function ReportView({ report, range }: { report: WorkReport | null; range
     return (
       <>
         {periods}
-        <p className="rounded-[1.75rem] bg-card p-5 text-sm text-muted-foreground shadow-[var(--shadow-sm)]">
+        <p className="rounded-xl border border-slate-200 bg-surface p-4 text-sm text-slate-500 shadow-xs sm:p-5">
           {t("reports.notYet")}
         </p>
       </>
@@ -148,7 +148,7 @@ export function ReportView({ report, range }: { report: WorkReport | null; range
         subtitle={t("reports.byWeekHint")}
         legend={
           <>
-            <LegendKey swatch="bg-primary" label={t("reports.finished")} />
+            <LegendKey swatch="bg-primary-solid" label={t("reports.finished")} />
             <LegendKey swatch="bg-[color-mix(in_srgb,var(--foreground)_28%,var(--card))]" label={t("reports.added")} />
           </>
         }
@@ -168,7 +168,7 @@ export function ReportView({ report, range }: { report: WorkReport | null; range
           subtitle={t("reports.byPersonHint")}
           legend={
             <>
-              <LegendKey swatch="bg-foreground" label={t("reports.onTrack")} />
+              <LegendKey swatch="bg-primary-solid" label={t("reports.onTrack")} />
               <LegendKey
                 swatch="bg-warning"
                 icon={<Clock className="size-3 text-warning" aria-hidden />}
@@ -196,13 +196,16 @@ export function ReportView({ report, range }: { report: WorkReport | null; range
                 return (
                   <li key={project.id} className="flex flex-col gap-1.5">
                     <div className="flex items-baseline justify-between gap-3">
-                      <Link href={`/projects/${project.id}`} className="truncate text-sm font-medium hover:underline">
+                      <Link
+                        href={`/projects/${project.id}`}
+                        className="truncate text-sm font-medium text-slate-900 hover:text-primary-700 hover:underline"
+                      >
                         {project.name}
                       </Link>
-                      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                      <span className="shrink-0 text-xs tabular-nums text-slate-500">
                         {t("reports.doneOf", { done: project.done, total: project.total })}
                         {project.overdue > 0 && (
-                          <span className="ms-2 inline-flex items-center gap-1 text-foreground">
+                          <span className="ms-2 inline-flex items-center gap-1 text-slate-900">
                             <Clock className="size-3 text-warning" aria-hidden />
                             {t("reports.overdueCount", { n: project.overdue })}
                           </span>
@@ -215,9 +218,9 @@ export function ReportView({ report, range }: { report: WorkReport | null; range
                       aria-valuemax={100}
                       aria-valuenow={share}
                       aria-label={project.name}
-                      className="h-2 overflow-hidden rounded-full bg-primary/15"
+                      className="h-2 overflow-hidden rounded-full bg-slate-100"
                     >
-                      <div className="h-full rounded-full bg-primary" style={{ width: `${share}%` }} />
+                      <div className="h-full rounded-full bg-primary-solid" style={{ width: `${share}%` }} />
                     </div>
                   </li>
                 );

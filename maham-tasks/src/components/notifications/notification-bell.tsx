@@ -170,38 +170,45 @@ export function NotificationBell({
         >
           <Bell />
           {unread > 0 && (
-            <span className="absolute end-1 top-1 flex min-w-3.5 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-semibold leading-[14px] text-primary-foreground">
+            <span className="absolute -end-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-solid px-1 text-[0.625rem] font-semibold leading-none text-white">
               {unread > 9 ? "9+" : unread}
             </span>
           )}
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-80 p-0">
-        <div className="flex items-center justify-between px-4 pt-3.5 pb-2">
-          <span className="text-xs font-medium text-muted-foreground">
+      {/* Maham One's updates panel: a white menu with an edge, the title in
+          its header and the rows under it. */}
+      <DropdownMenuContent
+        align="end"
+        className="w-[24rem] max-w-[calc(100vw-1.5rem)] rounded-xl p-0"
+      >
+        <div className="flex min-h-12 items-center justify-between gap-3 px-4 py-2">
+          <span className="text-sm font-semibold text-slate-900">
             {t("bell.label")}
           </span>
           {unread > 0 && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="xs"
               onClick={onMarkAll}
-              className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+              className="-me-2"
             >
-              <CheckCheck className="size-3" />
+              <CheckCheck />
               {t("bell.markAllRead")}
-            </button>
+            </Button>
           )}
         </div>
 
-        <Separator />
+        <Separator className="bg-slate-100" />
 
         {items.length === 0 ? (
-          <p className="px-5 py-8 text-center text-sm text-muted-foreground">
+          <p className="px-4 py-8 text-center text-sm text-slate-500">
             {t("bell.empty")}
           </p>
         ) : (
-          <ul className="scrollbar-thin flex max-h-96 flex-col gap-0.5 overflow-y-auto p-1.5 pt-0">
+          <ul className="scrollbar-thin flex max-h-[60vh] flex-col gap-0.5 overflow-y-auto p-1.5">
             {items.map((notification) => {
               const Icon = ICONS[notification.type] ?? Bell;
               // A private message points at the conversation it came from;
@@ -220,29 +227,29 @@ export function NotificationBell({
                     href={href}
                     onClick={() => onOpenItem(notification)}
                     className={cn(
-                      "flex items-start gap-2.5 rounded-xl px-3 py-2.5 transition-colors hover:bg-accent/60",
-                      notification.read_at === null && "bg-accent/40",
+                      "flex items-start gap-3 rounded-lg px-2.5 py-2 transition-colors hover:bg-slate-50 focus-visible:bg-slate-50",
+                      notification.read_at === null && "bg-primary-50/50 hover:bg-primary-50",
                     )}
                   >
-                    <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                    <Icon className="mt-0.5 size-4 shrink-0 text-slate-400" />
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center gap-1.5">
-                        <span className="truncate text-sm font-medium">
+                        <span className="truncate text-sm font-medium text-slate-900">
                           {notification.title}
                         </span>
                         {notification.read_at === null && (
                           <span
-                            className="size-1.5 shrink-0 rounded-full bg-foreground"
+                            className="size-2 shrink-0 rounded-full bg-primary-500"
                             aria-hidden
                           />
                         )}
                       </span>
                       {notification.body && (
-                        <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                        <span className="mt-0.5 block truncate text-xs text-slate-600">
                           {notification.body}
                         </span>
                       )}
-                      <span className="mt-0.5 block text-xs text-muted-foreground">
+                      <span className="mt-0.5 block text-xs text-slate-500">
                         {relativeTime(notification.created_at, t, tag)}
                       </span>
                     </span>

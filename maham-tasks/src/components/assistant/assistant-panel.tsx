@@ -119,20 +119,22 @@ export function AssistantPanel({
   }, [active]);
 
   return (
-    <div className="flex h-full flex-col">
-      <header className="flex items-start justify-between gap-2 px-3 py-2.5">
+    // Maham One's assistant panel: a white card on the rail's backdrop, its
+    // header and composer set off by hairlines.
+    <div className="mx-3 mt-1 mb-3 flex h-[calc(100%-1rem)] flex-col overflow-hidden rounded-2xl bg-surface shadow-xs ring-1 ring-slate-900/5">
+      <header className="flex items-start justify-between gap-2 border-b border-slate-100 px-3 py-2.5">
         <div className="flex min-w-0 items-center gap-2.5">
           <span
             aria-hidden
-            className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground"
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-700"
           >
-            <Sparkles className="size-3.5" />
+            <Sparkles className="size-4" />
           </span>
           <div className="min-w-0">
-            <h2 className="text-sm font-semibold leading-tight tracking-tight">
+            <h2 className="text-sm font-semibold leading-tight text-slate-900">
               {t("nav.assistant")}
             </h2>
-            <p className="truncate text-[0.6875rem] leading-tight text-muted-foreground">
+            <p className="truncate text-xs leading-tight text-slate-500">
               {t("assistant.subtitle")}
             </p>
           </div>
@@ -190,7 +192,7 @@ export function AssistantPanel({
       </div>
 
       <form
-        className="p-2.5"
+        className="border-t border-slate-100 p-2.5"
         onSubmit={(event) => {
           event.preventDefault();
           voice.stop();
@@ -202,8 +204,8 @@ export function AssistantPanel({
             Putting that in the textarea would move the caret under anyone
             trying to correct what has already settled. */}
         {voice.listening && (
-          <div className="mb-1.5 flex flex-col gap-1 rounded-[1.25rem] bg-muted/60 px-3.5 py-2.5">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="mb-1.5 flex flex-col gap-1 rounded-xl bg-slate-50 px-3.5 py-2.5 ring-1 ring-inset ring-slate-200">
+            <div className="flex items-center gap-2 text-xs text-slate-500">
               <span
                 aria-hidden
                 className="size-1.5 shrink-0 animate-pulse rounded-full bg-warning-marker"
@@ -218,10 +220,10 @@ export function AssistantPanel({
                 decided, which is why it is here and not there. */}
             <p
               aria-live="polite"
-              className="min-h-4 text-xs leading-snug text-foreground/90"
+              className="min-h-4 text-xs leading-snug text-slate-800"
             >
               {voice.interim || (
-                <span className="text-muted-foreground">
+                <span className="text-slate-500">
                   {t("voice.listening")}
                 </span>
               )}
@@ -232,7 +234,7 @@ export function AssistantPanel({
         {(voice.error || voiceNote) && (
           <p
             aria-live="polite"
-            className="mb-1.5 px-1 text-xs leading-snug text-muted-foreground"
+            className="mb-1.5 px-1 text-xs leading-snug text-slate-500"
           >
             {voice.error ? tm(voice.error) : t("voice.unsupported")}
           </p>
@@ -247,7 +249,7 @@ export function AssistantPanel({
           * textarea inside it is bare; the whole thing lights up together when
           * the caret is in it, which is what makes it read as one control.
           *
-          * The box's corners are deep, so the padding sets the first line well
+          * The box's corners are round, so the padding sets the first line
           * clear of where the curve is still turning — text that starts there
           * looks crowded into it. The text also starts on the same line as the
           * microphone icon below it — 16px of padding, the button's -4px,
@@ -255,14 +257,12 @@ export function AssistantPanel({
           */}
         <div
           className={cn(
-            "flex flex-col gap-1 rounded-3xl bg-card px-4 pt-3 pb-2 shadow-[var(--shadow-xs)]",
-            // Lit as one control when the caret is in it: a soft glow of the
-            // theme's colour round the whole box, nothing inside it. A glow, not
-            // a ring: these boxes hold the caret for long stretches (the
-            // assistant focuses its own the moment it opens), and a ring read as
-            // an outline round the box the whole time.
+            "flex flex-col gap-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 pt-3 pb-2",
+            // Lit as one control when the caret is in it, as Maham One's
+            // assistant box is: a ring of the main colour round the whole box,
+            // nothing inside it.
             "transition-shadow duration-200",
-            "focus-within:shadow-[0_6px_24px_-6px_color-mix(in_oklab,var(--primary)_45%,transparent)]",
+            "focus-within:ring-2 focus-within:ring-primary-500/40",
             pending && "opacity-60",
           )}
         >
@@ -281,10 +281,10 @@ export function AssistantPanel({
             rows={1}
             maxLength={2000}
             className={cn(
-              "max-h-40 min-h-0 resize-none overflow-y-auto rounded-none bg-transparent px-[7px] py-0",
-              // Bold, and a size up: the one thing on the panel meant to be
-              // read at a glance, typed or not.
-              "text-[0.9375rem] leading-6 font-semibold placeholder:font-semibold",
+              "max-h-40 min-h-0 resize-none overflow-y-auto rounded-none border-0 bg-transparent px-[7px] py-0",
+              // A size up: the one thing on the panel meant to be read at a
+              // glance, typed or not.
+              "text-[0.9375rem] leading-6 text-slate-900",
               "hover:bg-transparent focus-visible:bg-transparent",
               // The container carries the focus affordance. Without this the
               // global focus ring drew a second rounded box inside the first.
@@ -333,7 +333,7 @@ export function AssistantPanel({
                 <span
                   className={cn(
                     "text-[0.6875rem] tabular-nums",
-                    draft.length >= 2000 ? "text-warning" : "text-muted-foreground",
+                    draft.length >= 2000 ? "text-warning" : "text-slate-500",
                   )}
                 >
                   {2000 - draft.length}
@@ -370,11 +370,11 @@ function Welcome({
   const { t } = useI18n();
   return (
     <div className="flex flex-col gap-3 py-1">
-      <p className="text-sm leading-relaxed text-muted-foreground">
+      <p className="text-sm leading-relaxed text-slate-500">
         {t("assistant.welcome")}
       </p>
 
-      <div className="flex flex-col items-start gap-1.5">
+      <div className="flex flex-col gap-2">
         {STARTERS.map((starter) => (
           <button
             key={starter}
@@ -382,9 +382,10 @@ function Welcome({
             disabled={disabled}
             onClick={() => onPick(t(starter))}
             className={cn(
-              "max-w-full rounded-full bg-foreground/[0.05] px-3 py-1.5 text-start text-xs transition-colors",
-              "text-muted-foreground hover:bg-accent hover:text-foreground",
-              "disabled:pointer-events-none disabled:opacity-50",
+              // Maham One's suggested questions: outlined rows, tinted on hover.
+              "w-full rounded-xl border border-slate-200 px-3 py-2 text-start text-sm transition-colors",
+              "text-slate-700 hover:border-primary-300 hover:bg-primary-50",
+              "disabled:pointer-events-none disabled:opacity-50 pointer-coarse:min-h-11",
             )}
           >
             {t(starter)}
@@ -416,18 +417,20 @@ function Bubble({
       {!mine && (
         <span
           aria-hidden
-          className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-xl bg-muted"
+          className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-600"
         >
-          <Sparkles className="size-2.5" />
+          <Sparkles className="size-3.5" />
         </span>
       )}
 
       <div
         className={cn(
-          "max-w-[88%] rounded-[1.25rem] px-3.5 py-2.5 text-[0.8125rem] leading-relaxed",
+          // Maham One's bubbles: yours in the main colour, its answers grey,
+          // the corner nearest the speaker clipped.
+          "max-w-[88%] rounded-2xl px-3.5 py-2.5 text-[0.8125rem] leading-relaxed",
           mine
-            ? "bg-primary text-primary-foreground"
-            : "bg-card shadow-[var(--shadow-xs)]",
+            ? "rounded-ee-md bg-primary-solid text-on-primary"
+            : "rounded-es-md bg-slate-100 text-slate-900",
         )}
       >
         <span className="sr-only">
@@ -482,20 +485,20 @@ function Proposal({
   if (!preview) return null;
 
   return (
-    <div className="mt-2.5 rounded-[1.25rem] bg-background p-3 shadow-[var(--shadow-xs)]">
-      <p className="text-xs font-semibold leading-tight">{preview.heading}</p>
+    <div className="mt-2.5 rounded-lg border border-slate-200 bg-surface p-3 shadow-xs">
+      <p className="text-xs font-semibold leading-tight text-slate-900">{preview.heading}</p>
 
       <dl className="mt-2 flex flex-col gap-1">
         {preview.rows.map((row) => (
           <div key={row.label} className="flex gap-2 text-xs leading-snug">
-            <dt className="w-20 shrink-0 text-muted-foreground">{row.label}</dt>
-            <dd className="min-w-0 break-words">{row.value}</dd>
+            <dt className="w-20 shrink-0 text-slate-500">{row.label}</dt>
+            <dd className="min-w-0 break-words text-slate-800">{row.value}</dd>
           </div>
         ))}
       </dl>
 
       {outcome ? (
-        <p className="mt-2.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+        <p className="mt-2.5 flex items-center gap-1.5 text-xs text-slate-500">
           {outcome === "done" && <Check aria-hidden className="size-3.5" />}
           {t(outcome === "done" ? "assistant.done" : "assistant.dismissed")}
         </p>
@@ -556,7 +559,7 @@ function AnswerText({ text }: { text: string }) {
       <ul key={`list-${blocks.length}`} className="flex flex-col gap-1">
         {bullets.map((item, index) => (
           <li key={index} className="flex gap-1.5">
-            <span aria-hidden className="select-none text-muted-foreground">
+            <span aria-hidden className="select-none opacity-60">
               •
             </span>
             <span className="min-w-0">{item}</span>
@@ -592,15 +595,15 @@ function Thinking() {
     <div className="flex items-center gap-2" aria-live="polite">
       <span
         aria-hidden
-        className="flex size-5 shrink-0 items-center justify-center rounded-xl bg-muted"
+        className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-600"
       >
-        <Sparkles className="size-2.5" />
+        <Sparkles className="size-3.5" />
       </span>
-      <span className="flex items-center gap-1 rounded-3xl bg-card shadow-[var(--shadow-xs)] px-3.5 py-3">
+      <span className="flex items-center gap-1 rounded-2xl rounded-es-md bg-slate-100 px-3.5 py-3">
         {[0, 1, 2].map((dot) => (
           <span
             key={dot}
-            className="size-1.5 animate-pulse rounded-full bg-muted-foreground"
+            className="size-1.5 animate-pulse rounded-full bg-slate-400"
             style={{ animationDelay: `${dot * 160}ms` }}
           />
         ))}

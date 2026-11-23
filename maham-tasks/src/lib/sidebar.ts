@@ -8,7 +8,7 @@
  */
 export const SIDEBAR_MIN = 208;
 export const SIDEBAR_MAX = 440;
-export const SIDEBAR_DEFAULT = 240;
+export const SIDEBAR_DEFAULT = 256;
 export const SIDEBAR_STORAGE_KEY = "almailgroup:sidebar-width";
 
 /**

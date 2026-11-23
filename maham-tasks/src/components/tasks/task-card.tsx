@@ -81,8 +81,8 @@ export const TaskCard = React.forwardRef<
     <div
       ref={ref}
       className={cn(
-        "group lift rounded-2xl bg-card p-3.5 shadow-[var(--shadow-sm)] sm:p-4",
-        "hover:border-foreground/30",
+        "group lift rounded-lg border border-slate-200 bg-surface p-3.5 shadow-xs hover:shadow-sm sm:p-4",
+        "hover:border-slate-300",
         // The whole card opens the task. Only the title did, which is a small
         // target on something that looks pressable end to end — and on a phone
         // it was a game of hitting one line of text.
@@ -116,7 +116,7 @@ export const TaskCard = React.forwardRef<
         // replacement for this.
         className="w-full text-start focus-visible:outline-none pointer-coarse:-my-2 pointer-coarse:py-2"
       >
-        <p className="text-[0.9375rem] font-medium leading-snug">{task.title}</p>
+        <p className="text-sm font-medium leading-snug text-slate-900">{task.title}</p>
       </button>
       {/* Outside the button, so its name stays the task's title. */}
       <LabelPills ids={task.labelIds} className="mt-1.5" />

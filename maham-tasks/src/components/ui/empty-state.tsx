@@ -26,7 +26,7 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center rounded-3xl bg-foreground/[0.035] text-center",
+        "flex flex-col items-center justify-center rounded-xl text-center",
         compact ? "gap-2 px-4 py-8" : "gap-3 px-6 py-16",
         className,
       )}
@@ -34,7 +34,7 @@ export function EmptyState({
       {icon && (
         <span
           className={cn(
-            "flex items-center justify-center rounded-full bg-primary/10 text-primary",
+            "flex items-center justify-center rounded-full bg-primary-50 text-primary-600",
             compact ? "size-8 [&_svg]:size-4" : "size-11 [&_svg]:size-5",
           )}
           aria-hidden
@@ -44,11 +44,11 @@ export function EmptyState({
       )}
 
       <div className="flex flex-col gap-1">
-        <p className={cn("font-medium", compact ? "text-sm" : "text-base")}>
+        <p className={cn("font-semibold text-slate-900", compact ? "text-sm" : "text-base")}>
           {title}
         </p>
         {description && (
-          <p className="mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground">
+          <p className="mx-auto max-w-sm text-sm leading-relaxed text-slate-500">
             {description}
           </p>
         )}

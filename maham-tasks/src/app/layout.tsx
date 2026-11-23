@@ -3,7 +3,7 @@ import localFont from "next/font/local";
 
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { ThemeColorSync } from "@/components/theme/theme-color-sync";
-import { THEME_IDS } from "@/lib/themes";
+import { THEME_IDS, themeColor } from "@/lib/themes";
 import { I18nProvider } from "@/lib/i18n/client";
 import { directionFor } from "@/lib/i18n";
 import { getLocale, getTimeZone } from "@/lib/i18n/server";
@@ -20,28 +20,24 @@ import "./globals.css";
  * next/font" and nothing to do but wait. They were self-hosted at run time
  * either way, so visitors see no difference.
  */
-const geistSans = localFont({
-  src: "./fonts/geist-latin.woff2",
-  variable: "--font-geist-sans",
+// Maham One's fonts: Inter for Latin text, IBM Plex Sans Arabic for Arabic.
+// The Arabic face is limited to Arabic characters, so digits and Latin
+// words inside an Arabic sentence still come from Inter, as in Maham One.
+const inter = localFont({
+  src: "./fonts/inter-latin.woff2",
+  variable: "--font-inter",
   weight: "100 900",
   display: "swap",
 });
 
-const geistMono = localFont({
-  src: "./fonts/geist-mono-latin.woff2",
-  variable: "--font-geist-mono",
-  weight: "100 900",
-  display: "swap",
-});
-
-// Geist has no Arabic glyphs. Loaded for every page so switching language
-// never waits on a font, and only used when the document is Arabic. Limited
-// to Arabic characters, as Google's own stylesheet does, so digits and Latin
-// text inside Arabic still come from Geist.
-const notoArabic = localFont({
-  src: "./fonts/noto-sans-arabic.woff2",
+const plexArabic = localFont({
+  src: [
+    { path: "./fonts/ibm-plex-sans-arabic-400.woff2", weight: "400" },
+    { path: "./fonts/ibm-plex-sans-arabic-500.woff2", weight: "500" },
+    { path: "./fonts/ibm-plex-sans-arabic-600.woff2", weight: "600" },
+    { path: "./fonts/ibm-plex-sans-arabic-700.woff2", weight: "700" },
+  ],
   variable: "--font-arabic",
-  weight: "400 700",
   display: "swap",
   declarations: [
     {
@@ -96,11 +92,11 @@ export const viewport: Viewport = {
    * bottom.
    */
   viewportFit: "cover",
-  // Matches the page grounds, so the browser chrome on a phone blends into
-  // the app instead of framing it in a colour the design never uses.
+  // Maham One's toolbar colours for Classic and Midnight, the themes the
+  // device's light and dark settings show. ThemeColorSync follows any other.
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f3f3f4" },
-    { media: "(prefers-color-scheme: dark)", color: "#2c2d32" },
+    { media: "(prefers-color-scheme: light)", color: themeColor("classic") },
+    { media: "(prefers-color-scheme: dark)", color: themeColor("midnight") },
   ],
 };
 
@@ -134,16 +130,16 @@ export default async function RootLayout({
         crossOrigin="use-credentials"
       />
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${notoArabic.variable}`}
+        className={`${inter.variable} ${plexArabic.variable}`}
       >
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
           enableSystem
           themes={THEME_IDS}
-          // globals.css sets color-scheme per theme family. next-themes only
-          // knows the names light and dark, and left a stale inline value
-          // behind when switching to any other.
+          // maham-one-themes.css sets color-scheme per theme. next-themes
+          // only knows the names light and dark, and left a stale inline
+          // value behind when switching to any other.
           enableColorScheme={false}
           disableTransitionOnChange
         >

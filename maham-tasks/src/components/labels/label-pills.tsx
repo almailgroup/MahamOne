@@ -28,14 +28,14 @@ export function LabelPills({
       {shown.map((label) => (
         <span
           key={label.id}
-          className="inline-flex max-w-[9rem] items-center gap-1.5 rounded-full bg-foreground/[0.06] px-2.5 py-0.5 text-[0.6875rem] font-medium text-foreground/80"
+          className="inline-flex max-w-[9rem] items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-0.5 text-[0.6875rem] font-medium text-slate-700 ring-1 ring-inset ring-slate-500/10"
         >
           <span aria-hidden className={cn("size-1.5 shrink-0 rounded-full", LABEL_DOT[label.colour])} />
           <span className="truncate">{label.name}</span>
         </span>
       ))}
       {rest > 0 && (
-        <span className="rounded-full bg-foreground/[0.06] px-2 py-0.5 text-[0.6875rem] font-medium tabular-nums text-muted-foreground">
+        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[0.6875rem] font-medium tabular-nums text-slate-500 ring-1 ring-inset ring-slate-500/10">
           +{rest}
         </span>
       )}

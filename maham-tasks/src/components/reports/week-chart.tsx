@@ -8,7 +8,8 @@ import { useI18n } from "@/lib/i18n/client";
 /** Finished: the theme's accent. Added: a grey for context. Validated together. */
 export const FINISHED_FILL = "var(--primary)";
 export const ADDED_FILL = "color-mix(in srgb, var(--foreground) 28%, var(--card))";
-const GRID = "color-mix(in srgb, var(--foreground) 10%, var(--card))";
+// Maham One's chart grid line, set per theme.
+const GRID = "var(--color-chart-grid)";
 
 const PLOT = 200;
 const TOP = 18;
@@ -94,8 +95,8 @@ export function WeekChart({
                   y={TOP - 6}
                   width={Math.max(0, band - 2)}
                   height={PLOT + 6}
-                  rx={8}
-                  className="fill-foreground/[0.04]"
+                  rx={6}
+                  className="fill-[var(--color-chart-hover)]"
                 />
               )}
               {b.finished > 0 && (
@@ -154,21 +155,21 @@ export function WeekChart({
       {shown && active !== null && (
         <div
           role="presentation"
-          className="pointer-events-none absolute top-0 z-10 min-w-36 -translate-x-1/2 rounded-2xl bg-popover px-3 py-2 text-xs shadow-[var(--shadow-md)]"
+          className="pointer-events-none absolute top-0 z-10 min-w-36 -translate-x-1/2 rounded-lg border border-slate-200 bg-surface px-3 py-2 text-xs shadow-lg"
           style={{
             left: Math.min(Math.max(LEFT + band * active + band / 2, 80), width - 80),
           }}
         >
-          <p className="mb-1 text-muted-foreground">{describe(shown)}</p>
+          <p className="mb-1 text-slate-500">{describe(shown)}</p>
           <p className="flex items-center gap-2">
             <span aria-hidden className="h-0.5 w-3 rounded-full" style={{ background: FINISHED_FILL }} />
-            <span className="font-semibold tabular-nums">{shown.finished}</span>
-            <span className="text-muted-foreground">{t("reports.finished")}</span>
+            <span className="font-semibold tabular-nums text-slate-900">{shown.finished}</span>
+            <span className="text-slate-500">{t("reports.finished")}</span>
           </p>
           <p className="flex items-center gap-2">
             <span aria-hidden className="h-0.5 w-3 rounded-full" style={{ background: ADDED_FILL }} />
-            <span className="font-semibold tabular-nums">{shown.added}</span>
-            <span className="text-muted-foreground">{t("reports.added")}</span>
+            <span className="font-semibold tabular-nums text-slate-900">{shown.added}</span>
+            <span className="text-slate-500">{t("reports.added")}</span>
           </p>
         </div>
       )}

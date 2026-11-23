@@ -25,10 +25,10 @@ import { cn } from "@/lib/utils";
  * from its own colours so the choice is made by eye rather than by name.
  *
  * Each theme is a tile, five to a row: the swatch with its name beneath.
- * Thirty themes as rows of a list, even in two columns, are taller than a
- * phone's screen once each row is a full finger's height; as tiles, fifteen
- * light and fifteen dark are three rows each, and the whole menu fits on the
- * smallest iPhone. It still scrolls if a screen is shorter than that.
+ * Twenty themes as rows of a list are taller than a phone's screen once each
+ * row is a full finger's height; as tiles, ten light and ten dark are two rows
+ * each, and the whole menu fits on the smallest iPhone. It still scrolls if a
+ * screen is shorter than that.
  *
  * Choosing does not close it. A theme is something you try on: pick one, see
  * the page in it, pick another. The menu used to shut on every choice, so
@@ -64,19 +64,19 @@ export function ThemeToggle() {
       <DropdownMenuContent
         align="end"
         collisionPadding={8}
-        className="max-h-[var(--radix-dropdown-menu-content-available-height)] w-[21rem] overflow-y-auto"
+        className="max-h-[var(--radix-dropdown-menu-content-available-height)] w-[21rem] overflow-y-auto p-2"
       >
         <DropdownMenuItem onSelect={keepOpen(() => setTheme("system"))} className="gap-2.5">
-          <span className="flex size-6 items-center justify-center rounded-full bg-muted [&_svg]:size-3.5">
+          <span className="flex size-6 items-center justify-center rounded-full bg-slate-100 text-slate-500 [&_svg]:size-3.5">
             <MonitorSmartphone />
           </span>
-          <span className="flex-1">{t("theme.system")}</span>
+          <span className="flex-1 font-medium">{t("theme.system")}</span>
           {active === "system" && <Check className="size-4" />}
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />
         <DropdownMenuLabel>{t("theme.groupLight")}</DropdownMenuLabel>
-        <div className="grid grid-cols-5 gap-0.5">
+        <div className="grid grid-cols-5 gap-1">
           {light.map((option) => (
             <ThemeItem
               key={option.id}
@@ -89,7 +89,7 @@ export function ThemeToggle() {
 
         <DropdownMenuSeparator />
         <DropdownMenuLabel>{t("theme.groupDark")}</DropdownMenuLabel>
-        <div className="grid grid-cols-5 gap-0.5">
+        <div className="grid grid-cols-5 gap-1">
           {dark.map((option) => (
             <ThemeItem
               key={option.id}
@@ -132,7 +132,7 @@ function ThemeItem({
       className="flex-col gap-1 px-0.5 pt-1.5 pb-1 text-[11px]"
     >
       <Swatch option={option} active={active} />
-      <span className={cn("w-full truncate text-center", active && "font-semibold")}>
+      <span className={cn("w-full truncate text-center", active && "font-semibold text-slate-900")}>
         {t(option.label)}
       </span>
       {active && <span className="sr-only">({t("theme.current")})</span>}
@@ -141,30 +141,27 @@ function ThemeItem({
 }
 
 /**
- * The theme in miniature: its page, a card on it, and its main colour.
- * Drawn from fixed values rather than the live tokens, since every swatch has
- * to show its own theme while the page is wearing a different one. The one
- * in use is ringed in the current theme's own focus colour.
+ * The theme in miniature, as Maham One's own swatch draws it: its backdrop
+ * with its main colour in the middle. Drawn from fixed values rather than the
+ * live tokens, since every swatch has to show its own theme while the page is
+ * wearing a different one. The one in use is ringed in the current theme's
+ * main colour.
  */
 function Swatch({ option, active }: { option: ThemeOption; active: boolean }) {
-  const { ground, card, accent } = option.swatch;
+  const { ground, accent } = option.swatch;
   return (
     <span
       aria-hidden
-      className={cn("rounded-full p-0.5 ring-2 ring-transparent", active && "ring-ring")}
+      className={cn(
+        "flex size-9 items-center justify-center rounded-full transition-shadow",
+        active && "ring-2 ring-primary-600",
+      )}
     >
       <span
-        className={cn(
-          "relative flex size-8 shrink-0 items-end justify-end overflow-hidden rounded-full p-1",
-          "ring-1 ring-foreground/15 ring-inset",
-        )}
-        style={{ background: ground }}
+        className="flex size-7 shrink-0 items-center justify-center rounded-full ring-1 ring-slate-900/15"
+        style={{ backgroundColor: ground }}
       >
-        <span
-          className="absolute start-1 top-1 size-4 rounded-full"
-          style={{ background: card }}
-        />
-        <span className="relative size-3 rounded-full" style={{ background: accent }} />
+        <span className="size-4 rounded-full" style={{ backgroundColor: accent }} />
       </span>
     </span>
   );

@@ -66,7 +66,7 @@ export function PasswordInput({
           title={visible ? t("auth.hidePassword") : t("auth.showPassword")}
           className={cn(
             "absolute end-1 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-lg",
-            "text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
+            "text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             "pointer-coarse:size-9",
           )}

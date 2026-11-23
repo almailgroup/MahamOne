@@ -293,7 +293,7 @@ export function AttachmentPanel({
       {showLinkForm && (
         <form
           onSubmit={onAddLink}
-          className="flex flex-col gap-2 rounded-xl bg-foreground/[0.05] p-3"
+          className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3"
         >
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="attachment-name">{t("attach.label")}</Label>
@@ -348,9 +348,9 @@ export function AttachmentPanel({
         onPaste={onPaste}
         onClick={(event) => event.currentTarget.focus()}
         className={cn(
-          "flex items-center justify-center gap-2 rounded-[1.25rem] px-4 py-3.5 text-center text-xs text-muted-foreground transition-colors max-sm:hidden",
-          "bg-foreground/[0.035] focus-visible:bg-primary/[0.07] focus-visible:text-foreground focus-visible:outline-none",
-          dragging && "bg-primary/[0.1] text-foreground",
+          "flex items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 px-4 py-3.5 text-center text-xs text-slate-500 transition-colors max-sm:hidden",
+          "bg-slate-50 focus-visible:border-primary-400 focus-visible:bg-primary-50 focus-visible:text-primary-700 focus-visible:outline-none",
+          dragging && "border-primary-400 bg-primary-50 text-primary-700",
         )}
       >
         <ImagePlus className="size-4 shrink-0" aria-hidden />
@@ -372,14 +372,14 @@ export function AttachmentPanel({
           {items.map((attachment) => (
             <li
               key={attachment.id}
-              className="flex items-center gap-2 rounded-xl bg-foreground/[0.05] px-2.5 py-2"
+              className="flex items-center gap-2 rounded-lg border border-slate-200 bg-surface px-2.5 py-2"
             >
               {previews[attachment.id] ? (
                 // eslint-disable-next-line @next/next/no-img-element -- a signed, short-lived storage address
                 <img
                   src={previews[attachment.id]}
                   alt=""
-                  className="size-10 shrink-0 rounded-xl bg-muted object-cover"
+                  className="size-10 shrink-0 rounded-md bg-slate-100 object-cover"
                   loading="lazy"
                 />
               ) : attachment.kind === "link" ? (
@@ -393,7 +393,7 @@ export function AttachmentPanel({
                 onClick={() => open(attachment)}
                 className="min-w-0 flex-1 text-start focus-visible:outline-none"
               >
-                <span className="block truncate text-sm font-medium">
+                <span className="block truncate text-sm font-medium text-slate-900">
                   {attachment.name}
                 </span>
                 <span className="block truncate text-xs text-muted-foreground">
@@ -436,7 +436,7 @@ export function AttachmentPanel({
               <img
                 src={previews[viewing.id]}
                 alt={t("attach.preview", { name: viewing.name })}
-                className="max-h-[70svh] w-full rounded-2xl bg-muted object-contain"
+                className="max-h-[70svh] w-full rounded-lg bg-slate-100 object-contain"
               />
               <div className="flex justify-end">
                 <Button asChild variant="outline" size="sm">

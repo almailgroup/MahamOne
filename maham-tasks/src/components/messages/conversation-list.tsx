@@ -41,7 +41,7 @@ export function ConversationList({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <header className="flex items-center justify-between gap-3 px-4 py-3">
-        <h1 className="text-lg font-semibold tracking-tight">{t("dm.title")}</h1>
+        <h1 className="text-lg font-semibold tracking-tight text-slate-900">{t("dm.title")}</h1>
         <Button size="sm" onClick={onNew}>
           <Plus />
           {t("dm.new")}
@@ -75,9 +75,10 @@ export function ConversationList({
                 <Link
                   href={`/messages/${conversation.id}`}
                   className={cn(
-                    "chrome-touch flex items-center gap-3 rounded-2xl px-3 py-3 transition-colors",
-                    "hover:bg-foreground/[0.05]",
-                    conversation.id === active && "bg-primary/[0.09] shadow-[var(--shadow-xs)]",
+                    "chrome-touch flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors",
+                    conversation.id === active
+                      ? "bg-primary-50"
+                      : "hover:bg-slate-100",
                   )}
                 >
                   <Avatar className="size-9 shrink-0">
@@ -95,10 +96,10 @@ export function ConversationList({
 
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline gap-2">
-                      <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-900">
                         {name}
                       </span>
-                      <span className="shrink-0 text-[0.6875rem] tabular-nums text-muted-foreground">
+                      <span className="shrink-0 text-xs tabular-nums text-slate-500">
                         {now === null
                           ? ""
                           : compactAge(conversation.lastMessageAt, now, i18n)}
@@ -108,8 +109,8 @@ export function ConversationList({
                       className={cn(
                         "mt-0.5 block truncate text-xs",
                         conversation.unread > 0
-                          ? "font-medium text-foreground"
-                          : "text-muted-foreground",
+                          ? "font-medium text-slate-900"
+                          : "text-slate-500",
                       )}
                     >
                       {conversation.lastMessage
@@ -120,7 +121,7 @@ export function ConversationList({
 
                   {conversation.unread > 0 && (
                     <span
-                      className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[0.625rem] font-semibold tabular-nums text-primary-foreground"
+                      className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary-solid text-[0.625rem] font-semibold tabular-nums text-on-primary"
                       aria-label={tn("dm.unread", conversation.unread)}
                     >
                       {conversation.unread > 9 ? "9+" : conversation.unread}

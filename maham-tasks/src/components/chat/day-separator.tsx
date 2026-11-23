@@ -34,7 +34,7 @@ export function DaySeparator({ iso }: { iso: string }) {
 
   return (
     <div className="sticky top-0 z-10 my-2 flex items-center justify-center py-1">
-      <span className="rounded-full bg-card px-2.5 py-0.5 text-[0.6875rem] font-medium text-muted-foreground shadow-[var(--shadow-xs)]">
+      <span className="rounded-full bg-surface px-2.5 py-0.5 text-xs font-medium text-slate-500 shadow-xs ring-1 ring-slate-200">
         {label}
       </span>
     </div>

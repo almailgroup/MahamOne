@@ -57,7 +57,7 @@ export function PersonProfileDialog({
             </AvatarFallback>
           </Avatar>
           <div>
-            <p className="text-base font-semibold leading-tight">{name}</p>
+            <p className="text-base font-semibold leading-tight text-slate-900">{name}</p>
             <p className="mt-0.5 text-xs text-muted-foreground">
               {person.job_title ?? t("person.noPosition")}
             </p>
@@ -65,7 +65,7 @@ export function PersonProfileDialog({
           <Badge variant="outline">{t(roleMeta(person.role).label)}</Badge>
         </div>
 
-        <dl className="flex flex-col gap-2 rounded-2xl bg-card shadow-[var(--shadow-xs)] p-3 text-sm">
+        <dl className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
           <div className="flex items-baseline justify-between gap-3">
             <dt className="shrink-0 text-xs text-muted-foreground">
               {t("person.email")}
@@ -73,7 +73,7 @@ export function PersonProfileDialog({
             <dd className="min-w-0 truncate text-end">
               <a
                 href={`mailto:${person.email}`}
-                className="underline-offset-4 hover:underline"
+                className="text-primary-700 underline-offset-4 hover:underline"
               >
                 {person.email}
               </a>

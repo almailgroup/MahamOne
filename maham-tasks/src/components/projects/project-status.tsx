@@ -28,9 +28,9 @@ const STATUSES: ProjectStatus[] = ["on_track", "at_risk", "off_track"];
  * responsible says — and the two disagreeing is itself worth seeing, which
  * is why they sit next to each other.
  *
- * Monochrome on track, amber otherwise. Amber in this app means "late or
- * urgent work" and nothing else, and a project its owner calls at risk is
- * exactly that; one that is on track is not news.
+ * Grey on track, amber otherwise. Amber in this app means "late or urgent
+ * work" and nothing else, and a project its owner calls at risk is exactly
+ * that; one that is on track is not news.
  */
 export function ProjectStatus({
   projectId,
@@ -59,7 +59,7 @@ export function ProjectStatus({
 
   if (updates === null) {
     return (
-      <p className="rounded-3xl bg-card shadow-[var(--shadow-xs)] px-4 py-3 text-xs text-muted-foreground">
+      <p className="rounded-xl border border-slate-200 bg-surface px-4 py-3 text-xs text-slate-500 shadow-xs">
         {t("health.unavailable")}
       </p>
     );
@@ -105,10 +105,10 @@ export function ProjectStatus({
   return (
     <section
       aria-label={t("health.title")}
-      className="flex flex-col gap-3 rounded-[1.75rem] bg-card px-5 py-4 shadow-[var(--shadow-xs)]"
+      className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-surface p-4 shadow-xs sm:px-5"
     >
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span className="text-xs font-medium text-muted-foreground">
+        <span className="text-xs font-medium text-slate-500">
           {t("health.title")}
         </span>
         {latest && <StatusPill status={latest.status} />}
@@ -166,15 +166,15 @@ export function ProjectStatus({
                 aria-checked={status === option}
                 onClick={() => setStatus(option)}
                 className={cn(
-                  "rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                  "rounded-lg px-3 py-1.5 text-xs font-medium ring-1 ring-inset transition-colors",
                   "pointer-coarse:min-h-10",
                   status === option
                     ? option === "on_track"
-                      ? "bg-foreground text-background"
+                      ? "bg-primary-50 text-primary-700 ring-primary-600/20"
                       : option === "at_risk"
-                        ? "bg-warning-surface text-warning"
-                        : "bg-warning text-background"
-                    : "bg-foreground/[0.06] text-muted-foreground hover:bg-accent hover:text-foreground",
+                        ? "bg-warning-surface text-warning ring-warning-border"
+                        : "bg-warning text-background ring-warning"
+                    : "bg-surface text-slate-600 ring-slate-200 hover:bg-slate-50 hover:text-slate-900",
                 )}
               >
                 {t(`health.${option}`)}
@@ -216,7 +216,7 @@ export function ProjectStatus({
             type="button"
             onClick={() => setShowEarlier((open) => !open)}
             aria-expanded={showEarlier}
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+            className="flex items-center gap-1 rounded-md text-xs font-medium text-slate-500 hover:text-slate-900"
           >
             <ChevronDown
               className={cn("size-3.5 transition-transform", showEarlier && "rotate-180")}
@@ -282,8 +282,8 @@ function UpdateBody({
 }
 
 /**
- * On track is grey on purpose. The one colour in this palette is for late
- * and urgent work; at risk is that, and off track is more of it.
+ * A badge in Maham One's shape. On track is grey on purpose: amber is kept
+ * for late and urgent work; at risk is that, and off track is more of it.
  */
 export function StatusPill({
   status,
@@ -296,10 +296,10 @@ export function StatusPill({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
-        status === "on_track" && "bg-muted text-foreground",
-        status === "at_risk" &&" bg-warning-surface text-warning",
-        status === "off_track" && "bg-warning text-background",
+        "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset",
+        status === "on_track" && "bg-slate-100 text-slate-700 ring-slate-500/10",
+        status === "at_risk" && "bg-warning-surface text-warning ring-warning-border",
+        status === "off_track" && "bg-warning text-background ring-warning",
         className,
       )}
     >
@@ -307,7 +307,7 @@ export function StatusPill({
         aria-hidden
         className={cn(
           "size-1.5 rounded-full",
-          status === "on_track" && "bg-foreground/50",
+          status === "on_track" && "bg-slate-400",
           status === "at_risk" && "bg-warning",
           status === "off_track" && "bg-background",
         )}

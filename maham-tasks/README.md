@@ -1,8 +1,8 @@
 # Maham Tasks
 
 Projects, tasks and real-time collaboration for your teams, part of Maham One. Built with
-Next.js (App Router), TypeScript, Tailwind CSS, Supabase and a deliberately
-monochrome interface.
+Next.js (App Router), TypeScript, Tailwind CSS and Supabase, in Maham One's
+design.
 
 **All five phases are complete.** The app is ready to deploy — see
 [Deploying to Vercel](#deploying-to-vercel).
@@ -14,7 +14,7 @@ monochrome interface.
 | Framework  | Next.js 15.5 (App Router, React 19, TypeScript)             |
 | Styling    | Tailwind CSS v4 (CSS-first `@theme` configuration)          |
 | Components | shadcn-style primitives on Radix UI, `lucide-react` icons   |
-| Typography | Geist Sans / Geist Mono via `next/font`                     |
+| Typography | Inter and IBM Plex Sans Arabic, as in Maham One (`next/font/local`) |
 | Backend    | Supabase — Postgres, Auth, Row Level Security, Realtime     |
 | Drag/drop  | `@dnd-kit` (pointer + keyboard sensors)                     |
 | Deployment | Vercel                                                      |
@@ -293,26 +293,30 @@ Notes on how this is enforced:
 
 ## Design system
 
-The palette is a near-neutral cool grey, anchored on `#f3f3f4` in light mode
-and `#2c2d32` in dark. Softer than pure black and white, which is easier to
-read against for a full working day, and it buys the thing a white page cannot:
-**panels can lift off the background**.
+Maham Tasks looks like Maham One, because it is part of it:
 
-
-- **Surfaces** — three tones, always in the same order: chrome (sidebar and
-  header) sits behind the page, the page behind its cards. In dark mode the
-  page is the darkest tone and panels step *up* towards the light, so depth
-  reads from the ramp with almost no shadow at all.
-- **Separation** — 1px micro-borders, plus the tonal step between surfaces.
-- **Status** — differentiated by badge fill weight, not colour.
-- **Priority** — a four-bar greyscale severity ramp.
-- **Overdue** — weight plus a dotted underline rather than red.
-- **Themes** — light/dark via `next-themes`; all tokens redefined under `.dark`.
-- **Elevation** — four restrained shadows, tinted with the palette's own ink
-  rather than pure black, and all but removed in dark mode where tone already
-  does the work.
-- **Contrast** — every text/surface pair is checked against WCAG AA. The
-  tightest is muted text on a card in dark mode at 4.92:1.
+- **Maham One's frame** — the Maham One logo at the top of the sidebar, the
+  pages as rows on a tinted backdrop with the current one a white pill, and
+  the page in a rounded white panel with the search box at its top. On a
+  computer the panel scrolls inside itself, as Maham One's does.
+- **Maham One's colours and themes** — its twenty themes (ten light, ten
+  dark), generated from Maham One's own theme recipes into
+  `src/app/maham-one-themes.css` and `src/lib/maham-one-themes.ts` by
+  `scripts/maham-tasks-themes.ts` at the repository root. Change a theme in
+  Maham One (`src/lib/themes.ts` there) and run that script; Maham One's test
+  `src/lib/maham-tasks-themes.test.ts` fails until the two agree. The colour
+  names the components use (`bg-primary`, `text-muted-foreground`, `border`…)
+  point at Maham One's roles in `globals.css`.
+- **Maham One's type** — Inter, with IBM Plex Sans Arabic for Arabic, kept as
+  files in `src/app/fonts`.
+- **Maham One's shapes** — buttons and fields `rounded-lg`, cards
+  `rounded-xl` with a slate-200 edge, the components in `components/ui`
+  restyled to match Maham One's own.
+- **Status** — Maham One's badge colours: grey to do, blue in progress,
+  violet in review, green done.
+- **Late or urgent work** — amber, in every theme.
+- **Maham Tasks among the apps** — its own colour, blue, on its tile in the
+  sidebar, as each Maham One app has one.
 - **Motion** — one easing curve for the whole interface, and everything is
   disabled under `prefers-reduced-motion`.
 
@@ -341,9 +345,9 @@ words: `<html dir="rtl">`, the sidebar on the right, the drawer sliding in
 from the right, chevrons and arrows flipped, tables and forms reading
 right-to-left. Every layout utility names its logical side (`ps-`, `me-`,
 `text-start`, `border-e`) rather than a physical one, which is what lets one
-set of components serve both directions. Arabic text is set in Noto Sans
-Arabic, with Latin words inside a sentence — a container number, an email
-address — still falling through to Geist. Dates are formatted for `ar-AE`
+set of components serve both directions. Arabic text is set in IBM Plex Sans
+Arabic, as in Maham One, with Latin words inside a sentence — a container
+number, an email address — still in Inter. Dates are formatted for `ar-AE`
 with Western digits, since that is how the company's own documents read.
 
 Both languages name their locale — `en-AE` and `ar-AE-u-nu-latn` — and every
@@ -390,7 +394,7 @@ src/
 │   ├── (auth)/                 # login, password reset (no sign-up)
 │   ├── auth/callback/          # email confirmation exchange
 │   ├── error.tsx, not-found.tsx
-│   ├── globals.css             # monochrome design tokens
+│   ├── globals.css             # Maham One's design tokens
 │   └── layout.tsx              # fonts, theme provider, toaster
 ├── components/
 │   ├── auth/  dashboard/  layout/  profile/  projects/
@@ -606,8 +610,8 @@ the left in Arabic, which is the same side of the reading order rather than the
 same side of the screen. Online first, then alphabetical, because the point of
 the column is to answer "who could see this now". Below `lg` there is no room
 for two columns, so the same list opens over the conversation instead of
-squeezing it. The presence dot is greyscale like everything else here — in this
-palette the one colour means late work, and being online is not an alarm.
+squeezing it. The presence dot is a quiet grey: amber here means late work,
+and being online is not an alarm.
 
 The room is exactly as tall as the screen leaves it, so the composer stays put
 and the messages are the only thing that scrolls. What is subtracted is what
@@ -1568,8 +1572,8 @@ assets — and nothing else.
 
 The second half is a line across the top of the app whenever the browser says
 it is offline, because an interface that looks fine and silently stops saving
-is worse than one that says so. It is monochrome: amber in this app means
-late work, not "something is wrong".
+is worse than one that says so. It is grey: amber in this app means late
+work, not "something is wrong".
 
 ### Work done with no signal is kept
 

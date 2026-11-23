@@ -51,7 +51,7 @@ export function ChangePassword() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           {result?.ok ? (
-            <span className="inline-flex items-center gap-1.5 text-foreground">
+            <span className="inline-flex items-center gap-1.5 text-emerald-700">
               <CheckCircle2 className="size-4" />
               {t("password.wasChanged")}
             </span>

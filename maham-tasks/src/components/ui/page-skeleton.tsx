@@ -36,13 +36,13 @@ export function DashboardSkeleton() {
       <HeaderSkeleton />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {Array.from({ length: 6 }).map((_, index) => (
-          <Skeleton key={index} className="h-[6.5rem] rounded-lg" />
+          <Skeleton key={index} className="h-[6.5rem] rounded-xl" />
         ))}
       </div>
-      <Skeleton className="h-24 rounded-lg" />
+      <Skeleton className="h-24 rounded-xl" />
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <Skeleton className="h-64 rounded-lg" />
-        <Skeleton className="h-64 rounded-lg" />
+        <Skeleton className="h-64 rounded-xl" />
+        <Skeleton className="h-64 rounded-xl" />
       </div>
     </Shell>
   );
@@ -54,16 +54,16 @@ export function BoardSkeleton() {
     <Shell>
       <HeaderSkeleton />
       <div className="flex flex-wrap gap-2">
-        <Skeleton className="h-9 w-40" />
-        <Skeleton className="h-9 w-48" />
-        <Skeleton className="h-9 w-32" />
+        <Skeleton className="h-9 w-40 rounded-lg" />
+        <Skeleton className="h-9 w-48 rounded-lg" />
+        <Skeleton className="h-9 w-32 rounded-lg" />
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }).map((_, column) => (
-          <div key={column} className="flex flex-col gap-2 rounded-3xl bg-foreground/[0.04] p-2">
+          <div key={column} className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2">
             <Skeleton className="h-4 w-24" />
             {Array.from({ length: column === 0 ? 3 : 2 }).map((_, card) => (
-              <Skeleton key={card} className="h-[4.5rem] rounded-md" />
+              <Skeleton key={card} className="h-[4.5rem] rounded-lg" />
             ))}
           </div>
         ))}
@@ -91,8 +91,8 @@ export function FormSkeleton() {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 py-6 sm:px-6 lg:py-8">
       <HeaderSkeleton />
-      <Skeleton className="h-72 rounded-lg" />
-      <Skeleton className="h-48 rounded-lg" />
+      <Skeleton className="h-72 rounded-xl" />
+      <Skeleton className="h-48 rounded-xl" />
     </div>
   );
 }
@@ -106,7 +106,7 @@ export function FormSkeleton() {
  */
 export function MessagesSkeleton() {
   return (
-    <div className="flex h-[calc(100svh-3.5rem-var(--nav-space)-var(--safe-top)-var(--safe-bottom))] flex-col lg:h-[calc(100svh-3.5rem-var(--panel-gap))] lg:flex-row">
+    <div className="flex h-[calc(100svh-3.5rem-var(--nav-space)-var(--safe-top)-var(--safe-bottom))] flex-col lg:h-[calc(100svh-4rem-2*var(--panel-gap))] lg:flex-row">
       <div className="flex min-h-0 flex-col gap-2 p-3 lg:w-80 lg:shrink-0 xl:w-96">
         <Skeleton className="h-9 rounded-lg" />
         {Array.from({ length: 7 }).map((_, index) => (

@@ -51,12 +51,12 @@ export function MessagesShell({
         // What the shell leaves: the header, and on a phone the navigation
         // bar and the home indicator under it.
         "h-[calc(100svh-3.5rem-var(--nav-space)-var(--safe-top)-var(--safe-bottom))]",
-        "lg:h-[calc(100svh-3.5rem-var(--panel-gap))]",
+        "lg:h-[calc(100svh-4rem-2*var(--panel-gap))]",
       )}
     >
       <section
         className={cn(
-          "flex min-h-0 flex-col lg:w-80 lg:shrink-0 xl:w-96",
+          "flex min-h-0 flex-col lg:w-80 lg:shrink-0 lg:border-e lg:border-slate-100 xl:w-96",
           openThread ? "hidden lg:flex" : "flex",
         )}
       >
@@ -150,7 +150,7 @@ function PeoplePicker({
         </DialogHeader>
 
         <div className="relative">
-          <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -161,7 +161,7 @@ function PeoplePicker({
         </div>
 
         {people.length === 0 ? (
-          <p className="px-1 py-3 text-sm text-muted-foreground">
+          <p className="px-1 py-3 text-sm text-slate-500">
             {t("dm.noPeople")}
           </p>
         ) : (
@@ -174,7 +174,7 @@ function PeoplePicker({
                   disabled={opening !== null}
                   className={cn(
                     "flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-start transition-colors",
-                    "hover:bg-accent disabled:opacity-50",
+                    "hover:bg-slate-100 disabled:opacity-50",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     "pointer-coarse:min-h-11",
                   )}
@@ -186,10 +186,10 @@ function PeoplePicker({
                     </AvatarFallback>
                   </Avatar>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium leading-tight">
+                    <span className="block truncate text-sm font-medium leading-tight text-slate-900">
                       {person.full_name ?? person.email}
                     </span>
-                    <span className="block truncate text-xs leading-tight text-muted-foreground">
+                    <span className="block truncate text-xs leading-tight text-slate-500">
                       {person.job_title ?? person.email}
                     </span>
                   </span>

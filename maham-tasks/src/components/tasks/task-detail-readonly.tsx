@@ -92,7 +92,7 @@ export function TaskDetailReadonly({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h2 className="text-base font-semibold leading-snug tracking-tight">
+        <h2 className="text-base font-semibold leading-snug tracking-tight text-slate-900">
           {task.title}
         </h2>
         {task.description ? (
@@ -138,14 +138,14 @@ export function TaskDetailReadonly({
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium leading-none">{t("sort.priority")}</span>
+          <span className="text-sm font-medium leading-none text-slate-700">{t("sort.priority")}</span>
           <div className="flex h-9 items-center">
             <PriorityIndicator priority={task.priority} showLabel />
           </div>
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium leading-none">{t("meta.dueDate")}</span>
+          <span className="text-sm font-medium leading-none text-slate-700">{t("meta.dueDate")}</span>
           <div className="flex h-9 items-center">
             {task.due_at ? (
               <span className="flex items-center gap-2">
@@ -160,7 +160,7 @@ export function TaskDetailReadonly({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium leading-none">{t("table.assignees")}</span>
+        <span className="text-sm font-medium leading-none text-slate-700">{t("table.assignees")}</span>
         {task.assignees.length === 0 ? (
           <span className="text-sm text-muted-foreground">{t("filter.unassigned")}</span>
         ) : (
@@ -168,7 +168,7 @@ export function TaskDetailReadonly({
             {task.assignees.map((person) => (
               <span
                 key={person.id}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-foreground/[0.05] px-1.5 py-0.5 text-xs"
+                className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 py-0.5 ps-0.5 pe-2 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-500/10"
               >
                 <Avatar className="size-4">
                   {person.avatar_url && (
@@ -191,7 +191,7 @@ export function TaskDetailReadonly({
           view somebody doing the work is given. */}
       <ChecklistPanel taskId={task.id} canEdit={false} />
 
-      <p className="flex items-start gap-1.5 rounded-xl bg-muted px-2.5 py-2 text-xs leading-relaxed text-muted-foreground">
+      <p className="flex items-start gap-1.5 rounded-lg bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-500 ring-1 ring-inset ring-slate-200">
         <Eye className="mt-0.5 size-3.5 shrink-0" />
         <span>
           {t("readonly.hint")}

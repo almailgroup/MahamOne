@@ -70,7 +70,7 @@ export function VoiceMeter({ level }: { level: React.RefObject<number> }) {
             bars.current[i] = node;
           }}
           data-bar
-          className="h-full w-[2px] shrink-0 origin-center rounded-full bg-foreground/80"
+          className="h-full w-[2px] shrink-0 origin-center rounded-full bg-slate-600"
           style={{ transform: `scaleY(${FLOOR})` }}
         />
       ))}

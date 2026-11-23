@@ -126,7 +126,7 @@ export function HolidaySettings({
 
       <CardContent className="flex flex-col gap-5">
         {upcoming.length === 0 ? (
-          <p className="rounded-[1.25rem] bg-foreground/[0.04] px-4 py-3 text-sm text-muted-foreground">
+          <p className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-muted-foreground">
             {t("holiday.none")}
           </p>
         ) : (
@@ -134,10 +134,10 @@ export function HolidaySettings({
             {upcoming.map((run) => (
               <li
                 key={run.from}
-                className="flex items-center justify-between gap-3 rounded-[1.25rem] bg-foreground/[0.04] px-4 py-2.5"
+                className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5"
               >
                 <span className="min-w-0">
-                  <span className="block truncate text-sm font-medium">{run.name}</span>
+                  <span className="block truncate text-sm font-medium text-slate-900">{run.name}</span>
                   <span className="block text-xs text-muted-foreground">
                     {run.days === 1 ? format(run.from) : `${format(run.from)} – ${format(run.to)}`}
                     {" · "}
@@ -205,7 +205,7 @@ export function HolidaySettings({
               </div>
             </form>
 
-            <div className="flex flex-col gap-2 rounded-[1.25rem] bg-foreground/[0.04] px-4 py-3">
+            <div className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
               <p className="text-xs leading-relaxed text-muted-foreground">
                 {t("holiday.islamicNote")}
               </p>

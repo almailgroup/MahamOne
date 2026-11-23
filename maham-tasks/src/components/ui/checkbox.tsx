@@ -18,7 +18,7 @@ function Checkbox({
         // the interface uses, and the one control that keeps an edge — an
         // unticked box has nothing else to show it is there, so the ring
         // stays at the 3:1 the theme tests hold `input` to.
-        "peer size-[1.25rem] shrink-0 rounded-full border-[1.5px] border-input transition-all duration-150 hover:bg-foreground/[0.06]",
+        "peer size-4 shrink-0 rounded border border-slate-300 bg-surface shadow-xs transition-colors hover:border-slate-400 pointer-coarse:size-5",
         // The circle is 20px, and the target around it grows to 44 on touch.
         // What a thumb has to hit and what the eye has to read are not the
         // same shape, and only one of them belongs at Apple's minimum.

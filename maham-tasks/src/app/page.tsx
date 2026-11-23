@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { LanguageSelector } from "@/components/layout/language-selector";
+import { MahamOneLogo, MahamOneMark } from "@/components/layout/maham-one-logo";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { TASK_PRIORITIES, TASK_STATUSES } from "@/lib/constants";
@@ -32,21 +33,22 @@ export default async function Home() {
   }
 
   return (
-    <div className="min-h-svh bg-background">
-      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur">
-        <div className="mx-auto flex h-14 w-full max-w-5xl items-center justify-between px-4 sm:px-6">
-          <div className="flex items-center gap-2.5">
-            <div className="flex size-6 items-center justify-center rounded bg-primary text-[10px] font-bold text-primary-foreground">
-              M
-            </div>
-            <span className="text-sm font-medium tracking-tight">
+    <div className="min-h-svh bg-page">
+      <header className="sticky top-0 z-40 border-b border-slate-200 bg-surface/80 backdrop-blur">
+        <div className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between gap-2 px-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-2.5">
+            {/* As Maham One's own header: the mark alone on a phone, where the
+                whole logo and three controls do not fit on one line. */}
+            <MahamOneMark className="size-8 sm:hidden" />
+            <MahamOneLogo className="hidden h-8 sm:inline-flex" />
+            <span className="truncate border-s border-slate-200 ps-2.5 text-sm font-semibold text-slate-900">
               {t("shell.brand")}
             </span>
             <Badge variant="muted" className="hidden sm:inline-flex">
               {t("shell.tagline")}
             </Badge>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex shrink-0 items-center gap-1">
             <LanguageSelector />
             <ThemeToggle />
             <Button size="sm" variant="outline" asChild>
@@ -61,10 +63,10 @@ export default async function Home() {
 
       <main className="mx-auto w-full max-w-5xl px-4 py-12 sm:px-6 sm:py-16">
         <div className="max-w-2xl">
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+          <h1 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
             {t("landing.title")}
           </h1>
-          <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+          <p className="mt-3 text-base leading-relaxed text-slate-600">
             {t("landing.blurb")}
           </p>
           <div className="mt-6 flex flex-wrap gap-2">
@@ -110,8 +112,8 @@ export default async function Home() {
                         key={bar}
                         className={
                           bar <= priority.weight
-                            ? "h-3 w-1 rounded-[1px] bg-foreground"
-                            : "h-3 w-1 rounded-[1px] bg-border"
+                            ? "h-3 w-1 rounded-full bg-primary-solid"
+                            : "h-3 w-1 rounded-full bg-slate-200"
                         }
                       />
                     ))}
@@ -146,11 +148,11 @@ function SetupRow({ done, label }: { done?: boolean; label: string }) {
   return (
     <div className="flex items-center gap-2">
       {done ? (
-        <CircleCheck className="size-4 shrink-0 text-foreground" />
+        <CircleCheck className="size-4 shrink-0 text-emerald-600" />
       ) : (
-        <CircleDashed className="size-4 shrink-0 text-muted-foreground" />
+        <CircleDashed className="size-4 shrink-0 text-slate-400" />
       )}
-      <span className={done ? "text-foreground" : "text-muted-foreground"}>
+      <span className={done ? "text-slate-900" : "text-slate-500"}>
         {label}
       </span>
     </div>

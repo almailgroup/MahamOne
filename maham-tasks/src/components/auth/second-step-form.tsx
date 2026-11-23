@@ -103,17 +103,17 @@ export function SecondStepForm() {
         />
       </div>
 
-      <Button type="submit" disabled={!factorId || pending || code.length !== 6}>
+      <Button type="submit" size="lg" disabled={!factorId || pending || code.length !== 6}>
         {pending && <Loader2 className="animate-spin" />}
         {t("auth.twoStep.confirm")}
       </Button>
 
-      <p className="text-center text-sm text-muted-foreground">
+      <p className="text-center text-sm text-slate-600">
         {t("auth.twoStep.lostPhone")}{" "}
         <Link
           href="/auth/signout"
           prefetch={false}
-          className="font-medium text-foreground underline-offset-4 hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center pointer-coarse:px-2"
+          className="font-medium text-primary-700 underline-offset-4 hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center pointer-coarse:px-2"
         >
           {t("auth.twoStep.signOut")}
         </Link>

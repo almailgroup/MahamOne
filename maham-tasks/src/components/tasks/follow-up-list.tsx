@@ -90,9 +90,9 @@ function Group({
   const { t, tag, timeZone } = i18n;
   return (
     <section className="flex flex-col gap-2">
-      <h2 className="flex items-center gap-1.5 text-sm">
+      <h2 className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
         {title}
-        <span className="text-muted-foreground">{tasks.length}</span>
+        <span className="rounded-full bg-slate-100 px-1.5 text-xs font-medium text-slate-600 tabular-nums">{tasks.length}</span>
       </h2>
 
       <ul className="flex flex-col gap-2">
@@ -100,9 +100,9 @@ function Group({
           <li
             key={task.id}
             className={cn(
-              "flex flex-wrap items-center gap-x-2.5 gap-y-2 rounded-xl bg-card p-4 shadow-[var(--shadow-sm)]",
+              "flex flex-wrap items-center gap-x-2.5 gap-y-2 rounded-xl border border-slate-200 bg-surface p-4 shadow-xs",
               // Overdue is late work, which is what amber means everywhere.
-              overdue && "bg-warning-surface",
+              overdue && "border-warning-border bg-warning-surface",
             )}
           >
             <button
@@ -110,7 +110,7 @@ function Group({
               onClick={() => onOpenTask(task)}
               className="w-full min-w-0 text-start focus-visible:outline-none sm:w-auto sm:flex-1"
             >
-              <span className="block truncate text-[0.9375rem] font-medium">
+              <span className="block truncate text-sm font-medium text-slate-900">
                 {task.title}
               </span>
               <span className="block truncate text-xs text-muted-foreground">

@@ -46,7 +46,7 @@ function DialogContent({
         data-slot="dialog-content"
         className={cn(
           "fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4",
-          "bg-popover p-5 shadow-[var(--shadow-lg)] sm:rounded-[2rem]",
+          "bg-popover p-5 shadow-xl sm:rounded-xl",
           "max-h-[92svh] overflow-y-auto scrollbar-thin",
           "data-[state=open]:animate-in data-[state=closed]:animate-out",
           "data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0",
@@ -62,7 +62,7 @@ function DialogContent({
         {showCloseButton && (
           <DialogPrimitive.Close
             className={cn(
-              "absolute end-2.5 top-2.5 flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors",
+              "absolute end-2.5 top-2.5 flex size-9 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700",
               "hover:bg-accent hover:text-foreground focus-visible:outline-none",
               "disabled:pointer-events-none",
             )}
@@ -106,7 +106,7 @@ function DialogTitle({
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn("text-base font-semibold leading-tight tracking-tight", className)}
+      className={cn("text-lg font-semibold leading-tight text-slate-900", className)}
       {...props}
     />
   );
@@ -119,7 +119,7 @@ function DialogDescription({
   return (
     <DialogPrimitive.Description
       data-slot="dialog-description"
-      className={cn("text-sm text-muted-foreground", className)}
+      className={cn("text-sm text-slate-500", className)}
       {...props}
     />
   );

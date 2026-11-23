@@ -64,21 +64,21 @@ export function ShortcutsDialog({
         <div className="flex flex-col gap-4">
           {GROUPS.map((group) => (
             <section key={group.title}>
-              <h3 className="mb-1.5 text-xs font-medium text-muted-foreground">
+              <h3 className="mb-1.5 text-xs font-medium text-slate-500">
                 {t(group.title)}
               </h3>
               <dl className="flex flex-col gap-1">
                 {group.rows.map((row) => (
                   <div
                     key={row.does}
-                    className="flex items-center justify-between gap-3 rounded-2xl bg-foreground/[0.04] px-3 py-2"
+                    className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
                   >
-                    <dt className="text-sm">{t(row.does)}</dt>
+                    <dt className="text-sm text-slate-700">{t(row.does)}</dt>
                     <dd className="flex shrink-0 gap-1">
                       {row.keys.map((key) => (
                         <kbd
                           key={key}
-                          className="min-w-6 rounded-md bg-card px-1.5 shadow-[var(--shadow-xs)] py-0.5 text-center font-mono text-[11px] leading-4"
+                          className="min-w-6 rounded border border-slate-200 bg-surface px-1.5 py-0.5 text-center font-sans text-xs leading-4 text-slate-600"
                         >
                           {key}
                         </kbd>

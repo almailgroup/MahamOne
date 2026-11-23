@@ -67,14 +67,14 @@ export default async function TeamPage() {
         {team.map((member) => (
           <div
             key={member.id}
-            className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2.5 rounded-[1.25rem] px-2.5 py-3 transition-colors hover:bg-foreground/[0.04] sm:gap-y-3 sm:p-3.5"
+            className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2.5 rounded-lg px-2.5 py-3 transition-colors hover:bg-slate-50 sm:gap-y-3 sm:p-3.5"
           >
             {/* The name and the face are the target. A person in a list
                 reads as something you can act on, and this one was text. */}
             <PersonMenu person={member} me={profile}>
               <button
                 type="button"
-                className="flex min-w-0 flex-1 items-center gap-3 rounded-lg p-1 text-start transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex min-w-0 flex-1 items-center gap-3 rounded-lg p-1 text-start transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <Avatar>
                   {member.avatar_url && (
@@ -85,7 +85,7 @@ export default async function TeamPage() {
                   </AvatarFallback>
                 </Avatar>
                 <div className="min-w-0">
-                  <p className="truncate text-[0.9375rem] font-medium">
+                  <p className="truncate text-[0.9375rem] font-medium text-slate-900">
                     {member.full_name ?? member.email}
                     {member.id === profile.id && (
                       <span className="ms-1.5 text-xs font-normal text-muted-foreground">

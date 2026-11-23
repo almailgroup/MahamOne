@@ -76,8 +76,8 @@ export function QuickAddTask({
           requestAnimationFrame(() => inputRef.current?.focus());
         }}
         className={cn(
-          "flex w-full items-center gap-2 rounded-[1.25rem] bg-foreground/[0.05] px-4 py-2.5 text-sm text-muted-foreground transition-colors",
-          "hover:border-foreground/30 hover:bg-accent hover:text-foreground",
+          "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-500 transition-colors",
+          "hover:bg-slate-100 hover:text-slate-900",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
           "pointer-coarse:min-h-11",
           className,
@@ -92,11 +92,11 @@ export function QuickAddTask({
   return (
     <div
       className={cn(
-        "flex items-center gap-2 rounded-[1.25rem] bg-card px-4 py-1.5 shadow-[var(--shadow-xs)]",
+        "flex items-center gap-2 rounded-lg border border-slate-300 bg-surface px-3 py-0.5 shadow-xs transition-colors",
         // The ring belongs to the box, not to the bare input inside it —
         // otherwise focus draws two outlines, one inside the other. The same
         // soft ring as every other field, not a hard one with a gap.
-        "focus-within:ring-2 focus-within:ring-ring/60",
+        "focus-within:border-primary-500 focus-within:ring-3 focus-within:ring-primary-500/15",
         className,
       )}
     >
@@ -122,12 +122,12 @@ export function QuickAddTask({
         maxLength={200}
         placeholder={t("quick.placeholder")}
         aria-label={text}
-        className="h-8 w-full min-w-0 bg-transparent text-sm outline-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground"
+        className="h-8 w-full min-w-0 bg-transparent text-sm outline-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-slate-400"
       />
       {saving ? (
         <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" aria-hidden />
       ) : (
-        <kbd className="hidden shrink-0 rounded-md bg-muted px-1 font-mono text-[10px] leading-4 text-muted-foreground sm:inline">
+        <kbd className="hidden shrink-0 rounded border border-slate-200 bg-slate-50 px-1 font-sans text-[10px] leading-4 text-slate-500 sm:inline">
           ↵
         </kbd>
       )}

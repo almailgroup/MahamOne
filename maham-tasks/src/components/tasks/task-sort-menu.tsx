@@ -17,7 +17,6 @@ import {
   type TaskSort,
   type TaskSortKey,
 } from "@/lib/task-filters";
-import { cn } from "@/lib/utils";
 
 /**
  * Sorting a list on a phone, where there are no column headings to tap.
@@ -53,11 +52,11 @@ export function TaskSortMenu({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          variant={sort ? "secondary" : "ghost"}
+          variant={sort ? "subtle" : "ghost"}
           size="icon-sm"
           aria-label={label}
           title={label}
-          className={cn(sort && "text-foreground", className)}
+          className={className}
         >
           <Icon />
         </Button>

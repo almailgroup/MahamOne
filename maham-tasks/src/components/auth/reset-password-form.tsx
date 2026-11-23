@@ -45,11 +45,11 @@ export function ResetPasswordForm() {
   if (done) {
     return (
       <div className="flex flex-col items-center gap-3 py-4 text-center">
-        <span className="flex size-11 items-center justify-center rounded-full bg-muted">
+        <span className="flex size-11 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
           <CheckCircle2 className="size-5" />
         </span>
-        <p className="font-medium">{t("auth.passwordChanged")}</p>
-        <p className="text-sm text-muted-foreground">{t("auth.takingYou")}</p>
+        <p className="font-semibold text-slate-900">{t("auth.passwordChanged")}</p>
+        <p className="text-sm text-slate-500">{t("auth.takingYou")}</p>
       </div>
     );
   }
@@ -88,7 +88,7 @@ export function ResetPasswordForm() {
         <FieldError message={errors?.confirm} />
       </div>
 
-      <Button type="submit" disabled={pending} className="mt-1">
+      <Button type="submit" size="lg" disabled={pending} className="mt-1">
         {pending && <Loader2 className="animate-spin" />}
         {pending ? t("auth.saving") : t("auth.setNewPassword")}
       </Button>

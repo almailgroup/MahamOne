@@ -149,21 +149,21 @@ export function MyList({
         // navigation bar past the bottom of the screen and the last lines of
         // a long note sat underneath it.
         "h-[calc(100svh-3.5rem-var(--nav-space)-var(--safe-top)-var(--safe-bottom))]",
-        "lg:h-[calc(100svh-3.5rem-var(--panel-gap))]",
+        "lg:h-[calc(100svh-4rem-2*var(--panel-gap))]",
       )}
     >
       {/* ---- List ---------------------------------------------------- */}
       <section
         aria-label={t("notes.yours")}
         className={cn(
-          "flex min-h-0 flex-col lg:w-80 lg:shrink-0 xl:w-96",
+          "flex min-h-0 flex-col lg:w-80 lg:shrink-0 lg:border-e lg:border-slate-100 xl:w-96",
           // One screen at a time on a phone.
           active ? "hidden lg:flex" : "flex",
         )}
       >
         <header className="flex flex-col gap-3 px-4 py-3.5">
           <div className="flex items-center justify-between gap-3">
-            <h1 className="text-lg font-semibold tracking-tight">{t("nav.myList")}</h1>
+            <h1 className="text-lg font-semibold tracking-tight text-slate-900">{t("nav.myList")}</h1>
             <Button size="sm" onClick={onCreate} disabled={creating}>
               <Plus />
               {t("notes.new")}
@@ -171,7 +171,7 @@ export function MyList({
           </div>
 
           <div className="relative">
-            <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
             <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
@@ -213,22 +213,22 @@ export function MyList({
                     onClick={() => setActiveId(note.id)}
                     aria-current={note.id === activeId ? "true" : undefined}
                     className={cn(
-                      "flex w-full flex-col gap-1 rounded-2xl px-3 py-3 text-start transition-colors",
+                      "flex w-full flex-col gap-1 rounded-lg px-3 py-2.5 text-start transition-colors",
                       note.id === activeId
-                        ? "bg-primary/[0.09] shadow-[var(--shadow-xs)]"
-                        : "hover:bg-foreground/[0.05]",
+                        ? "bg-primary-50"
+                        : "hover:bg-slate-100",
                     )}
                   >
                     <span className="flex items-center gap-1.5">
                       {note.pinned && (
-                        <Pin className="size-3 shrink-0 text-muted-foreground" />
+                        <Pin className="size-3 shrink-0 text-slate-400" />
                       )}
-                      <span className="min-w-0 flex-1 truncate text-[0.9375rem] font-medium">
+                      <span className="min-w-0 flex-1 truncate text-[0.9375rem] font-medium text-slate-900">
                         {note.title.trim() || t("notes.new")}
                       </span>
                       {(!note.mine || note.collaborators.length > 0) && (
                         <Users
-                          className="size-3 shrink-0 text-muted-foreground"
+                          className="size-3 shrink-0 text-slate-400"
                           aria-label={
                             note.mine
                               ? t("notes.sharedWith", { n: note.collaborators.length })
@@ -237,7 +237,7 @@ export function MyList({
                         />
                       )}
                     </span>
-                    <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-2 text-xs text-slate-500">
                       <span className="shrink-0">{dayLabel(note.updated_at, t, tag, timeZone)}</span>
                       <span className="min-w-0 flex-1 truncate">
                         {note.mine
@@ -280,8 +280,8 @@ export function MyList({
           />
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
-            <ListChecks className="size-6 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
+            <ListChecks className="size-6 text-slate-400" />
+            <p className="text-sm text-slate-500">
               {t("notes.pickOne")}
             </p>
           </div>

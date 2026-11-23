@@ -43,17 +43,17 @@ export async function NeedsAttention({
           <Flag className="size-4 text-warning" />
           {t("attention.title")}
         </CardTitle>
-        <p className="text-xs text-muted-foreground">{t("attention.subtitle")}</p>
+        <p className="text-sm text-slate-500">{t("attention.subtitle")}</p>
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
         {items.map((item) => (
           <Link
             key={item.projectId}
             href={`/projects/${item.projectId}`}
-            className="group flex flex-col gap-1.5 rounded-[1.25rem] bg-foreground/[0.05] px-3.5 py-2.5 transition-colors"
+            className="group flex flex-col gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 transition-colors hover:border-slate-300 hover:bg-slate-100"
           >
             <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <span className="text-sm font-medium">{item.name}</span>
+              <span className="text-sm font-medium text-slate-900">{item.name}</span>
               {item.reasons.map((reason) => {
                 switch (reason.kind) {
                   case "status":
@@ -78,7 +78,7 @@ export async function NeedsAttention({
                   }
                 }
               })}
-              <ArrowRight className="ms-auto size-3.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 rtl:-scale-x-100" />
+              <ArrowRight className="ms-auto size-3.5 text-slate-400 opacity-0 transition-opacity group-hover:opacity-100 rtl:-scale-x-100" />
             </span>
             {item.latestBody && (
               <span className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">

@@ -42,14 +42,14 @@ export function UserMenu({ profile }: { profile: Profile }) {
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel className="flex flex-col gap-0.5 py-2">
-          <span className="text-sm font-medium text-foreground">
+        <DropdownMenuLabel className="flex flex-col gap-0.5 px-2.5 py-2">
+          <span className="text-sm font-medium text-slate-900">
             {profile.full_name ?? profile.email}
           </span>
-          <span className="truncate text-xs font-normal text-muted-foreground">
+          <span className="truncate text-xs font-normal text-slate-500">
             {profile.email}
           </span>
-          <span className="mt-1 text-xs font-normal text-muted-foreground">
+          <span className="mt-1 text-xs font-normal text-slate-500">
             {t(roleMeta(profile.role).label)}
           </span>
         </DropdownMenuLabel>
@@ -69,9 +69,9 @@ export function UserMenu({ profile }: { profile: Profile }) {
         <form action={signOut}>
           <button
             type="submit"
-            className="relative flex w-full cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground"
+            className="relative flex w-full cursor-default select-none items-center gap-2 rounded-md px-2.5 py-2 text-sm text-slate-700 outline-none transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:bg-slate-100 pointer-coarse:min-h-11"
           >
-            <LogOut className="size-4 rtl:-scale-x-100" />
+            <LogOut className="size-4 text-slate-400 rtl:-scale-x-100" />
             {t("shell.signOut")}
           </button>
         </form>

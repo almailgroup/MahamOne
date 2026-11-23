@@ -61,8 +61,8 @@ type Props = {
 };
 
 /**
- * Monochrome. The emoji carry their own colour; the chip around them is the
- * same grey as everything else, and darker when it is yours.
+ * The emoji carry their own colour; the chip around them is white with a
+ * slate edge, and a tint of the theme's colour when it is yours.
  */
 export function ReactionChips({
   commentId,
@@ -96,8 +96,8 @@ export function ReactionChips({
             "inline-flex h-6 items-center gap-1 rounded-full px-1.5 text-xs tabular-nums transition-colors",
             "pointer-coarse:h-8 pointer-coarse:px-2",
             chip.mine
-              ? "bg-primary/15 text-foreground"
-              : "bg-foreground/[0.06] text-muted-foreground hover:bg-accent hover:text-foreground",
+              ? "bg-primary-50 text-primary-700 ring-1 ring-inset ring-primary-600/20"
+              : "bg-surface text-slate-600 ring-1 ring-inset ring-slate-200 hover:bg-slate-50 hover:text-slate-900",
           )}
         >
           <span aria-hidden>{chip.emoji}</span>
@@ -143,7 +143,7 @@ export function ReactionPicker({
               void toggle(emoji);
             }}
             aria-label={emoji}
-            className="flex size-9 items-center justify-center rounded-md text-lg transition-colors hover:bg-accent"
+            className="flex size-9 items-center justify-center rounded-md text-lg transition-colors hover:bg-slate-100"
           >
             {emoji}
           </button>

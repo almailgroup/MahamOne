@@ -4,9 +4,9 @@ import type { TaskPriority, TaskStatus, UserRole } from "@/lib/supabase/database
 /**
  * Single source of truth for task vocabulary.
  *
- * Every visual treatment here is greyscale. Status and priority are separated
- * by fill weight, border and iconography instead of hue, which is what keeps
- * the board readable while staying strictly monochrome.
+ * Statuses wear Maham One's badge colours, as its documents' statuses do:
+ * grey to do, blue in progress, violet in review, green done. Priority is a
+ * ramp of filled bars; amber stays for work that is late or urgent.
  */
 
 export type StatusMeta = {
@@ -14,14 +14,14 @@ export type StatusMeta = {
   /** Dictionary key — render with `t(meta.label)`. */
   label: TranslationKey;
   /** Badge variant from `@/components/ui/badge`. */
-  variant: "default" | "secondary" | "outline" | "muted" | "subtle";
+  variant: "outline" | "blue" | "violet" | "green";
 };
 
 export const TASK_STATUSES: readonly StatusMeta[] = [
-  { value: "todo", label: "status.todo", variant: "subtle" },
-  { value: "in_progress", label: "status.in_progress", variant: "secondary" },
-  { value: "in_review", label: "status.in_review", variant: "outline" },
-  { value: "done", label: "status.done", variant: "default" },
+  { value: "todo", label: "status.todo", variant: "outline" },
+  { value: "in_progress", label: "status.in_progress", variant: "blue" },
+  { value: "in_review", label: "status.in_review", variant: "violet" },
+  { value: "done", label: "status.done", variant: "green" },
 ] as const;
 
 export type PriorityMeta = {

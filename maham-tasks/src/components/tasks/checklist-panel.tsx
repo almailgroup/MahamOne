@@ -124,7 +124,7 @@ export function ChecklistPanel({
         <span className="text-muted-foreground [&_svg]:size-4">
           <ListChecks />
         </span>
-        <span className="text-sm font-medium">{t("checklist.title")}</span>
+        <span className="text-sm font-semibold text-slate-900">{t("checklist.title")}</span>
         {items.length > 0 && (
           <span className="text-xs tabular-nums text-muted-foreground">
             {t("checklist.progress", { done, total: items.length })}
@@ -135,7 +135,7 @@ export function ChecklistPanel({
       {items.length > 0 && (
         <ul className="flex flex-col gap-0.5">
           {items.map((item) => (
-            <li key={item.id} className="group flex items-center gap-2 rounded-md px-1 py-0.5">
+            <li key={item.id} className="group flex items-center gap-2 rounded-lg px-1.5 py-0.5 transition-colors hover:bg-slate-50">
               <Checkbox
                 id={`step-${item.id}`}
                 checked={item.done}
@@ -145,8 +145,8 @@ export function ChecklistPanel({
               <label
                 htmlFor={`step-${item.id}`}
                 className={cn(
-                  "min-w-0 flex-1 cursor-pointer text-sm leading-snug",
-                  item.done && "text-muted-foreground line-through",
+                  "min-w-0 flex-1 cursor-pointer text-sm leading-snug text-slate-800",
+                  item.done && "text-slate-500 line-through",
                 )}
               >
                 {item.content}

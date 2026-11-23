@@ -75,7 +75,7 @@ export function TaskFilterBar({
       {children && <div className="basis-full sm:basis-auto">{children}</div>}
 
       <div className="relative order-1 min-w-[55%] flex-1 sm:order-none sm:min-w-[10rem] sm:max-w-xs">
-        <Search className="pointer-events-none absolute start-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+        <Search className="pointer-events-none absolute start-2.5 top-1/2 size-3.5 -translate-y-1/2 text-slate-400" />
         <Input
           value={filters.query}
           onChange={(event) => onChange({ query: event.target.value })}

@@ -53,17 +53,17 @@ export function PendingInvites({ invites }: { invites: PendingInvite[] }) {
 
   return (
     <Card className="flex flex-col gap-1 p-1 sm:p-1.5">
-      <h2 className="flex items-center gap-2 px-2.5 pt-2.5 text-sm font-semibold sm:px-3.5">
-        <MailPlus className="size-4" aria-hidden />
+      <h2 className="flex items-center gap-2 px-2.5 pt-2.5 text-sm font-semibold text-slate-900 sm:px-3.5">
+        <MailPlus className="size-4 text-slate-500" aria-hidden />
         {t("team.invitedList")}
       </h2>
       {invites.map((invite) => (
         <div
           key={invite.email}
-          className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-[1.25rem] px-2.5 py-3 sm:p-3.5"
+          className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-lg px-2.5 py-3 sm:p-3.5"
         >
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium">{invite.full_name ?? invite.email}</p>
+            <p className="truncate text-sm font-medium text-slate-900">{invite.full_name ?? invite.email}</p>
             <p className="truncate text-xs text-muted-foreground">
               {invite.email} · {t(roleMeta(invite.role).label)} ·{" "}
               {t("team.inviteOpenUntil", { date: day(invite.expires_at) })}

@@ -17,6 +17,11 @@ It is part of the Maham One platform:
 - **No master key.** Maham Tasks' server (reminders, Telegram, push) holds
   only its own secret, `TASKS_SERVER_SECRET`, which opens its own functions
   and none of Maham One's data. Maham One's secret key is never used.
+- **Maham One's design.** The same frame, fonts, shapes and twenty themes.
+  The themes are generated from Maham One's own (`src/lib/themes.ts`) by
+  `scripts/maham-tasks-themes.ts`; after changing a theme, run
+  `npx tsx --tsconfig tsconfig.scripts.json scripts/maham-tasks-themes.ts`.
+  Maham One's tests fail until Maham Tasks' copy matches.
 - **Its own Vercel project**, built from this repository's `maham-tasks`
   folder. A Vercel project runs one app, so Maham One and Maham Tasks are two
   projects in the same team, from the same code.

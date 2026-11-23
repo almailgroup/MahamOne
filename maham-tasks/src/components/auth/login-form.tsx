@@ -74,7 +74,7 @@ export function LoginForm() {
             href="/forgot-password"
             // Negative margins keep the row the same height while the link
             // itself is a full-size tap target on a phone.
-            className="-my-2.5 -me-1 inline-flex min-h-9 items-center px-1 text-xs font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+            className="-my-2.5 -me-1 inline-flex min-h-9 items-center px-1 text-xs font-medium text-primary-700 underline-offset-4 hover:underline"
           >
             {t("auth.forgotPassword")}
           </Link>
@@ -89,7 +89,7 @@ export function LoginForm() {
         <FieldError message={errors?.password} />
       </div>
 
-      <Button type="submit" disabled={pending} className="mt-1">
+      <Button type="submit" size="lg" disabled={pending} className="mt-1">
         {pending && <Loader2 className="animate-spin" />}
         {pending ? t("auth.signingIn") : t("auth.signIn")}
       </Button>

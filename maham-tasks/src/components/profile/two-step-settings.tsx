@@ -149,10 +149,10 @@ export function TwoStepSettings({ isAdmin }: { isAdmin: boolean }) {
   if (state.kind === "on") {
     return (
       <div className="flex flex-col gap-4">
-        <div className="flex items-start gap-3 rounded-[1.25rem] bg-foreground/[0.04] px-4 py-3">
-          <ShieldCheck className="mt-0.5 size-5 shrink-0" aria-hidden />
+        <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+          <ShieldCheck className="mt-0.5 size-5 shrink-0 text-emerald-600" aria-hidden />
           <div className="flex flex-col gap-0.5">
-            <p className="text-sm font-semibold">{t("twoStep.isOn")}</p>
+            <p className="text-sm font-semibold text-slate-900">{t("twoStep.isOn")}</p>
             <p className="text-xs leading-relaxed text-muted-foreground">{t("twoStep.isOnHint")}</p>
           </div>
         </div>
@@ -205,12 +205,12 @@ export function TwoStepSettings({ isAdmin }: { isAdmin: boolean }) {
         <li>{t("twoStep.step3")}</li>
       </ol>
 
-      <div className="flex flex-col items-center gap-3 rounded-[1.75rem] bg-foreground/[0.04] p-5 sm:flex-row sm:items-center sm:gap-5">
+      <div className="flex flex-col items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-5 sm:flex-row sm:items-center sm:gap-5">
         {/* eslint-disable-next-line @next/next/no-img-element -- a data URL from Supabase, nothing to optimise */}
         <img
           src={qrSource(state.qr)}
           alt={t("twoStep.qrAlt")}
-          className="size-40 shrink-0 rounded-2xl bg-white p-2.5 shadow-[var(--shadow-xs)]"
+          className="size-40 shrink-0 rounded-lg bg-white p-2.5 shadow-xs ring-1 ring-slate-200"
         />
         <div className="flex min-w-0 flex-col items-center gap-2 sm:items-start">
           {/* On a phone the QR code is on the very screen that would have to
@@ -231,7 +231,7 @@ export function TwoStepSettings({ isAdmin }: { isAdmin: boolean }) {
           <button
             type="button"
             onClick={() => copySecret(state.secret)}
-            className="flex max-w-full items-center gap-2 rounded-full bg-background px-3.5 py-1.5 font-mono text-xs font-semibold tracking-wider shadow-[var(--shadow-xs)] transition-colors hover:bg-accent"
+            className="flex max-w-full items-center gap-2 rounded-lg border border-slate-300 bg-surface px-3 py-1.5 font-mono text-xs font-semibold tracking-wider text-slate-900 shadow-xs transition-colors hover:bg-slate-50"
             aria-label={t("twoStep.copyKey")}
             dir="ltr"
           >

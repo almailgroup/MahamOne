@@ -12,13 +12,13 @@ import { getI18n } from "@/lib/i18n/server";
 export async function TwoStepNeeded() {
   const { t } = await getI18n();
   return (
-    <div className="flex flex-col gap-3 rounded-[1.75rem] bg-card p-5 shadow-[var(--shadow-sm)] sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-surface p-4 shadow-xs sm:flex-row sm:items-center sm:justify-between sm:p-5">
       <div className="flex items-start gap-3">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-600">
           <ShieldCheck className="size-4.5" aria-hidden />
         </span>
         <div className="flex flex-col gap-0.5">
-          <p className="text-sm font-semibold">{t("twoStep.neededTitle")}</p>
+          <p className="text-sm font-semibold text-slate-900">{t("twoStep.neededTitle")}</p>
           <p className="text-sm leading-relaxed text-muted-foreground">{t("twoStep.neededBody")}</p>
         </div>
       </div>

@@ -231,7 +231,7 @@ function TaskListCard({
               somewhere else on the page. */}
           <Link
             href={href}
-            className="flex items-center gap-1 text-xs font-normal text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex items-center gap-1 rounded-md text-xs font-medium text-primary-700 transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {seeAll}
             <ArrowRight className="size-3 rtl:-scale-x-100" />
@@ -250,11 +250,11 @@ function TaskListCard({
               // phone there is not: the meta cluster used to be `shrink-0`,
               // which pushed the card 175px past the edge of the screen and
               // left Safari shrinking the whole page to fit.
-              className="flex flex-col gap-1.5 rounded-[1.25rem] bg-foreground/[0.05] px-3.5 py-2.5 transition-colors sm:flex-row sm:items-center sm:justify-between sm:gap-3"
+              className="flex flex-col gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 transition-colors hover:bg-slate-100 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
             >
               <span className="flex min-w-0 items-center gap-2">
                 <PriorityIndicator priority={task.priority} />
-                <span className="truncate text-sm">{task.title}</span>
+                <span className="truncate text-sm text-slate-900">{task.title}</span>
               </span>
               <span className="flex flex-wrap items-center gap-x-2 gap-y-1 ps-5 sm:shrink-0 sm:ps-0">
                 <DueDate dueAt={task.due_at} status={task.status} />

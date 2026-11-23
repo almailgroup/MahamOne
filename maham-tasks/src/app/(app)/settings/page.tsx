@@ -38,7 +38,7 @@ export default async function SettingsPage() {
         icon={<Settings />}
         description={t("settings.description")}
       />
-      <div className="stagger flex flex-col gap-4">
+      <div className="stagger flex flex-col gap-6">
         <HolidaySettings holidays={holidays} canEdit={profile.role === "admin"} />
         <LabelSettings labels={labels} />
         <TemplateSettings templates={templates} />

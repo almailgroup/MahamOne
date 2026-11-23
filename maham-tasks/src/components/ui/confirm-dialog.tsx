@@ -17,9 +17,9 @@ import { useI18n } from "@/lib/i18n/client";
 /**
  * Confirmation step for irreversible actions.
  *
- * Stays in the monochrome scheme — the weight of the filled button and the
- * warning glyph carry the emphasis rather than a red fill. The confirm button
- * takes focus so Enter confirms and Escape cancels.
+ * As in Maham One, the confirm button is red and the warning glyph beside the
+ * title too. The confirm button takes focus so Enter confirms and Escape
+ * cancels.
  */
 export function ConfirmDialog({
   open,
@@ -55,7 +55,7 @@ export function ConfirmDialog({
       <DialogContent className="max-w-sm" showCloseButton={false}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <TriangleAlert className="size-4" />
+            <TriangleAlert className="size-4 text-red-600" />
             {title}
           </DialogTitle>
           <DialogDescription className="leading-relaxed">
@@ -72,7 +72,13 @@ export function ConfirmDialog({
           >
             {cancelLabel ?? t("common.cancel")}
           </Button>
-          <Button type="button" onClick={confirm} disabled={pending} autoFocus>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={confirm}
+            disabled={pending}
+            autoFocus
+          >
             {pending && <Loader2 className="animate-spin" />}
             {confirmLabel ?? t("common.delete")}
           </Button>

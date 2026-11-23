@@ -65,7 +65,7 @@ export function WorkloadCard({
             <PersonMenu key={profile.id} person={profile} me={me}>
               <button
                 type="button"
-                className="flex w-full items-center gap-3 rounded-lg p-1 text-start transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex w-full items-center gap-3 rounded-lg p-1 text-start transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
               <Avatar className="size-7">
                 {profile.avatar_url && (
@@ -78,13 +78,13 @@ export function WorkloadCard({
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between gap-2">
-                  <span className="truncate text-sm font-medium">
+                  <span className="truncate text-sm font-medium text-slate-900">
                     {profile.full_name ?? profile.email}
                   </span>
-                  <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                  <span className="shrink-0 text-xs tabular-nums text-slate-500">
                     {t("dash.open", { n: open })}
                     {overdue > 0 && (
-                      <span className="ms-1.5 font-medium text-foreground">
+                      <span className="ms-1.5 font-medium text-slate-900">
                         {t("dash.overdueCount", { n: overdue })}
                       </span>
                     )}

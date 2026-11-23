@@ -279,7 +279,7 @@ export function KanbanBoard({
               </SortableContext>
 
               {columnTasks.length === 0 && !canCreate && (
-                <p className="rounded-xl bg-foreground/[0.05] px-2 py-6 text-center text-xs text-muted-foreground">
+                <p className="rounded-lg border border-dashed border-slate-300 px-2 py-6 text-center text-xs text-slate-500">
                   {t("kanban.nothingHere")}
                 </p>
               )}
@@ -311,7 +311,7 @@ function DragPreview({ task }: { task: TaskWithAssignees | null }) {
       {task && (
         <TaskCard
           task={task}
-          className="rotate-1 shadow-[var(--shadow-lg)]"
+          className="rotate-1 shadow-lg"
         />
       )}
     </DragOverlay>
@@ -348,16 +348,16 @@ function Column({
       ref={setNodeRef}
       aria-label={label}
       className={cn(
-        "flex min-h-[10rem] flex-col gap-2 rounded-3xl bg-chrome/60 p-2.5 transition-colors duration-200",
-        // The column a card is over glows in the theme's colour and swells a
-        // little, so the drop target is plain without drawing a line round it.
-        isOver && "bg-primary/[0.08] scale-[1.01]",
+        "flex min-h-[10rem] flex-col gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2.5 transition-colors duration-200",
+        // The column a card is over takes a tint of the theme's colour, so the
+        // drop target is plain.
+        isOver && "border-primary-200 bg-primary-50",
       )}
     >
       <header className="flex items-center justify-between gap-2 px-1">
         <div className="flex items-center gap-1.5">
-          <h3 className="text-xs font-medium">{label}</h3>
-          <span className="text-xs text-muted-foreground">{count}</span>
+          <h3 className="text-sm font-semibold text-slate-900">{label}</h3>
+          <span className="rounded-full bg-slate-200/70 px-1.5 text-xs font-medium text-slate-600 tabular-nums">{count}</span>
         </div>
         {canCreate && (
           <Button
