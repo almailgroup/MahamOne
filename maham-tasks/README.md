@@ -1884,7 +1884,7 @@ repository:
    [Getting started](#getting-started)) — do this first, or the deployed app
    will have nothing to talk to.
 2. **Create the project** at [vercel.com/new](https://vercel.com/new): import
-   `almailgroup/MahamOne` and set **Root Directory** to `Maham Tasks`. Next.js
+   `almailgroup/MahamOne` and set **Root Directory** to `maham-tasks`. Next.js
    is detected automatically; `vercel.json` pins the framework, build and
    install commands, and the daily reminder run.
 3. **Add environment variables** under **Settings → Environment Variables**, for

@@ -1,9 +1,9 @@
 # Maham Tasks
 
 Maham Tasks is the task management portal, kept in this repository in the
-folder [`Maham Tasks`](../Maham%20Tasks). It is its own app, with its own
+folder [`maham-tasks`](../maham-tasks). It is its own app, with its own
 design and features (a Next.js app; its
-[README](../Maham%20Tasks/README.md) describes it in full), and it lives at
+[README](../maham-tasks/README.md) describes it in full), and it lives at
 its own address, **tasks.mahamone.com**.
 
 It is part of the Maham One platform:
@@ -17,7 +17,7 @@ It is part of the Maham One platform:
 - **No master key.** Maham Tasks' server (reminders, Telegram, push) holds
   only its own secret, `TASKS_SERVER_SECRET`, which opens its own functions
   and none of Maham One's data. Maham One's secret key is never used.
-- **Its own Vercel project**, built from this repository's `Maham Tasks`
+- **Its own Vercel project**, built from this repository's `maham-tasks`
   folder. A Vercel project runs one app, so Maham One and Maham Tasks are two
   projects in the same team, from the same code.
 - **Its own AI Worker** in Cloudflare, which keeps running as it is.
@@ -27,7 +27,7 @@ It is part of the Maham One platform:
 - **Checks** (`.github/workflows/maham-tasks.yml`): types, lint, unit tests,
   the build, the database rules against a real PostgreSQL (built from the
   script above), and the end-to-end tests. They run when a push to `main`
-  changes the `Maham Tasks` folder or the script. Maham One's own tests
+  changes the `maham-tasks` folder or the script. Maham One's own tests
   (`src/cloud/maham-tasks-sql.test.ts`) run the script after all of Maham
   One's and check that nothing of Maham One changes.
 - **Weekly backup** (`.github/workflows/maham-tasks-backup.yml`): optional, a
@@ -93,7 +93,7 @@ One's, and every Maham One email uses it.
 ### 5. Vercel: a project for Maham Tasks
 
 In the **Almail Group** team: **Add New → Project**, import
-`almailgroup/MahamOne`, and set **Root Directory** to `Maham Tasks`. Before
+`almailgroup/MahamOne`, and set **Root Directory** to `maham-tasks`. Before
 **Deploy**, open **Environment Variables** and add:
 
 | Name                            | Value                                                                                          |

@@ -16,7 +16,7 @@ export default tseslint.config(
       'workers/*/.wrangler',
       'workers/*/dist-check',
       // Maham Tasks is its own app, with its own tools and settings.
-      'Maham Tasks',
+      'maham-tasks',
     ],
   },
   {

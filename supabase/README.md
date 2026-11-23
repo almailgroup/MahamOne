@@ -971,7 +971,7 @@ any items issued back until the server takes them.
 ## Maham Tasks
 
 `20261212000000_maham_tasks.sql` puts Maham Tasks (the Next.js app in the
-`Maham Tasks` folder, at tasks.mahamone.com) in this database, in its own
+`maham-tasks` folder, at tasks.mahamone.com) in this database, in its own
 schema, `tasks`. It is not one of the numbered scripts above: it needs none of
 them, replaces none of their functions, and the health check neither asks for
 it nor changes because of it (it only knows Maham Tasks' own Storage rules as
@@ -1001,4 +1001,4 @@ its own). The owner's steps are in [`docs/maham-tasks.md`](../docs/maham-tasks.m
   each twice: Maham One's functions, rules and triggers unchanged, the health
   check the same, no profile from signing up, invites and joining, two-step
   for admins, the first admin, members only, the server's secret) and Maham Tasks' own policy suites
-  (`Maham Tasks/supabase/tests/`, run by `.github/workflows/maham-tasks.yml`).
+  (`maham-tasks/supabase/tests/`, run by `.github/workflows/maham-tasks.yml`).

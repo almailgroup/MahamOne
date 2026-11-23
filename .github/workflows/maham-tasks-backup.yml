@@ -15,7 +15,7 @@ name: Maham Tasks weekly backup
 #                             password manager; without it a backup cannot be
 #                             opened
 #
-# Maham Tasks/README.md, "Backups", has the steps, how to open a backup, and
+# maham-tasks/README.md, "Backups", has the steps, how to open a backup, and
 # how to try a restore. Files attached to tasks live in Storage, not the database,
 # and are not in this copy.
 
@@ -45,7 +45,7 @@ jobs:
           BACKUP_PASSPHRASE: ${{ secrets.TASKS_BACKUP_PASSPHRASE }}
         run: |
           if [ -z "$SUPABASE_DB_URL" ] || [ -z "$BACKUP_PASSPHRASE" ]; then
-            echo "::notice::Backups are not set up yet: add TASKS_SUPABASE_DB_URL and TASKS_BACKUP_PASSPHRASE as repository secrets (Maham Tasks/README.md, Backups)."
+            echo "::notice::Backups are not set up yet: add TASKS_SUPABASE_DB_URL and TASKS_BACKUP_PASSPHRASE as repository secrets (maham-tasks/README.md, Backups)."
             echo "ready=false" >> "$GITHUB_OUTPUT"
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"

@@ -6,7 +6,7 @@ on:
     # Maham Tasks is its own app, with its own checks (maham-tasks.yml) and
     # its own Vercel site: a push that changes only it leaves Maham One alone.
     paths-ignore:
-      - 'Maham Tasks/**'
+      - 'maham-tasks/**'
       - '.github/workflows/maham-tasks.yml'
       - '.github/workflows/maham-tasks-backup.yml'
   workflow_dispatch:
