@@ -47,10 +47,19 @@ starts again empty, on Maham One's database. Do these in order.
 In Maham One's project (the one at `gagdyhintrxdkiqhahzh.supabase.co`):
 **SQL Editor → New query**, paste the whole of
 [`supabase/migrations/20261212000000_maham_tasks.sql`](../supabase/migrations/20261212000000_maham_tasks.sql)
-(on GitHub: **Copy raw file**), and **Run**. It should finish with "Success.
-No rows returned". It is safe to run again, and it needs none of Maham One's
-other scripts. Run `supabase/health-check.sql` after it if you like: it reads
-the same as before.
+(on GitHub: **Copy raw file**), and **Run**. It worked when Results shows a
+small table with one column, `assert_enum`, and an empty row (an error shows in
+red instead). To be sure, run this in a new query: it should say 33 and 19.
+
+```sql
+select
+  (select count(*) from pg_tables where schemaname = 'tasks') as tables,
+  (select count(*) from pg_proc
+    where pronamespace = 'tasks'::regnamespace and proname like 'srv\_%') as server_functions;
+```
+
+It is safe to run again, and it needs none of Maham One's other scripts. Run
+`supabase/health-check.sql` after it if you like: it reads the same as before.
 
 ### 2. Supabase: let the API serve it
 
