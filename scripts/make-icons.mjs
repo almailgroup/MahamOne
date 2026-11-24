@@ -6,11 +6,13 @@
 //   public/brand/maham-one-logo-email.png the logo on a white plate, for emails
 //   public/icons/favicon-64.png           the browser tab's icon
 //   public/icons/icon-192.png, icon-512.png, maskable-512.png, apple-touch-icon.png
+//   ios/App/Assets.xcassets/AppIcon.appiconset/icon-1024.png  the iPhone app's icon
 // Usage: node scripts/make-icons.mjs
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createCanvas, loadImage } from '@napi-rs/canvas';
+import { PNG } from 'pngjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const source = await loadImage(join(root, 'brand/maham-one-logo-source.png'));
@@ -140,6 +142,18 @@ save(
   square(light.canvas, 180, 0.62, { background: '#ffffff' }),
   'public/icons/apple-touch-icon.png',
 );
+
+// The iPhone app: iOS rounds the corners and adds its own glass, and the App
+// Store refuses an icon with an alpha channel, so the tile is square, white
+// and saved without one.
+const ios = square(light.canvas, 1024, 0.62, { background: '#ffffff' });
+const rgba = ios.getContext('2d').getImageData(0, 0, 1024, 1024).data;
+const opaque = new PNG({ width: 1024, height: 1024, colorType: 2, inputHasAlpha: true });
+opaque.data = Buffer.from(rgba);
+const iosIcon = 'ios/App/Assets.xcassets/AppIcon.appiconset/icon-1024.png';
+mkdirSync(join(root, dirname(iosIcon)), { recursive: true });
+writeFileSync(join(root, iosIcon), PNG.sync.write(opaque, { colorType: 2 }));
+console.log(`${iosIcon} (1024×1024, no alpha)`);
 
 const dark = cutOut();
 dark.ctx.putImageData(whiteName(dark.image), 0, 0);

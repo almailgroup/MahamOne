@@ -1,0 +1,9 @@
+// Copy this file to Local.xcconfig (same folder) and fill it in. Local.xcconfig
+// is not kept in git.
+
+// Your Apple Developer team id (developer.apple.com → Membership details).
+DEVELOPMENT_TEAM =
+
+// Maham One's publishable key: Supabase → Project Settings → API Keys →
+// "Publishable key" (starts with sb_publishable_). Never the secret key.
+SUPABASE_PUBLISHABLE_KEY =

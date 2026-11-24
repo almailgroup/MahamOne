@@ -27,3 +27,16 @@ playwright/.cache/
 .vscode/*
 !.vscode/extensions.json
 .idea/
+
+# iOS: Swift Package Manager, Xcode and the generated project (ios/project.yml
+# is the source; `xcodegen` makes the project from it)
+ios/**/.build/
+ios/**/.swiftpm/
+ios/*.xcodeproj/
+ios/DerivedData/
+ios/Config/Local.xcconfig
+# written by xcodegen from project.yml
+ios/App/Info.plist
+ios/App/MahamOne.entitlements
+ios/Widgets/Info.plist
+ios/Widgets/MahamWidgets.entitlements

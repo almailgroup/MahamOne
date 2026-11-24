@@ -1,0 +1,21 @@
+// Settings shared by the app and its widgets. Values that differ per Mac or
+// per Apple account go in Local.xcconfig next to this file (not in git):
+//
+//   DEVELOPMENT_TEAM = ABCDE12345
+//   SUPABASE_PUBLISHABLE_KEY = sb_publishable_...
+//
+// See ios/README.md.
+
+APP_BUNDLE_ID = com.almailgroup.mahamone
+APP_GROUP = group.com.almailgroup.mahamone
+KEYCHAIN_GROUP = com.almailgroup.mahamone.shared
+
+// Maham One's Supabase project. Only the host: in an xcconfig "//" starts a
+// comment, so Info.plist adds the https:// itself.
+SUPABASE_HOST = gagdyhintrxdkiqhahzh.supabase.co
+
+// The project's publishable key (public by design; never the secret key).
+// Empty here: the app then says it isn't set up yet.
+SUPABASE_PUBLISHABLE_KEY =
+
+#include? "Local.xcconfig"

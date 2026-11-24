@@ -1,0 +1,81 @@
+name: iOS
+
+# The Maham One iPhone app (ios/). Its core package is tested on Linux and
+# on macOS; the app and its widgets are built for the iOS simulator with
+# Xcode 26, so every push proves the Swift compiles. Nothing here signs or
+# uploads: TestFlight is ios/README.md's steps (and later, a job of its own).
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ios/**'
+      - '.github/workflows/ios.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core:
+    name: Core package (Linux)
+    runs-on: ubuntu-24.04
+    container: swift:6.2-noble
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test MahamKit
+        working-directory: ios/MahamKit
+        run: swift test
+
+  app:
+    name: App and widgets (Xcode, iOS simulator)
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Xcode 26
+        run: |
+          latest=$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)
+          sudo xcode-select -s "$latest"
+          xcodebuild -version
+
+      - name: Generate the Xcode project
+        working-directory: ios
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      - name: Test MahamKit on macOS
+        working-directory: ios/MahamKit
+        run: swift test
+
+      - name: Build for the simulator
+        working-directory: ios
+        run: |
+          set +e
+          xcodebuild build \
+            -project MahamOne.xcodeproj \
+            -scheme MahamOne \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            > build.log 2>&1
+          status=$?
+          # The errors (and the code around them), not 10,000 lines of log.
+          grep -E -A3 "(error|warning: .*(deprecated|unavailable|concurrency|Sendable))" build.log | head -300
+          tail -5 build.log
+          exit $status
+
+      - name: Keep the build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-log
+          path: ios/build.log
+          retention-days: 7
