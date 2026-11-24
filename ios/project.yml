@@ -85,6 +85,7 @@ targets:
         BGTaskSchedulerPermittedIdentifiers:
           - com.almailgroup.mahamone.refresh
         UIBackgroundModes: [fetch]
+        NSSupportsLiveActivities: true
         NSFaceIDUsageDescription: Maham One uses Face ID to keep your company's data locked when you're away.
         NSCalendarsWriteOnlyAccessUsageDescription: Maham One adds a task's due date to your calendar when you ask it to.
         NSContactsUsageDescription: Maham One saves a client's phone and email to your contacts when you ask it to.

@@ -1,0 +1,4858 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    " (×%lld)": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " (×%lld)"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "%@": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@"
+          }
+        }
+      }
+    },
+    "%@ %@ × %@": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@ × %3$@"
+          }
+        }
+      }
+    },
+    "%@ (you)": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (أنت)"
+          }
+        }
+      }
+    },
+    "%@ added %@": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "قام %@ بإضافة %@"
+          }
+        }
+      }
+    },
+    "%@ changed %@": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "قام %@ بتعديل %@"
+          }
+        }
+      }
+    },
+    "%@ removed %@": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "قام %@ بحذف %@"
+          }
+        }
+      }
+    },
+    "%@ × %@": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ × %2$@"
+          }
+        }
+      }
+    },
+    "%lld": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld"
+          }
+        }
+      }
+    },
+    "%lld changes to %@": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تغييرات على %2$@: %1$lld"
+          }
+        }
+      }
+    },
+    "%lld days": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أيام: %lld"
+          }
+        }
+      }
+    },
+    "%lld days left": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أيام متبقية: %lld"
+          }
+        }
+      }
+    },
+    "%lld documents expire within 30 days": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مستندات تنتهي خلال 30 يومًا: %lld"
+          }
+        }
+      }
+    },
+    "%lld done today": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مكتملة اليوم: %lld"
+          }
+        }
+      }
+    },
+    "%lld due today": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مستحقة اليوم: %lld"
+          }
+        }
+      }
+    },
+    "%lld due today, %lld done": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مستحقة اليوم: %lld، مكتملة: %lld"
+          }
+        }
+      }
+    },
+    "%lld invoices": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الفواتير: %lld"
+          }
+        }
+      }
+    },
+    "%lld members": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الأعضاء: %lld"
+          }
+        }
+      }
+    },
+    "%lld more": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld أخرى"
+          }
+        }
+      }
+    },
+    "%lld more for today": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld أخرى لليوم"
+          }
+        }
+      }
+    },
+    "%lld more in Maham Tasks": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld أخرى في Maham Tasks"
+          }
+        }
+      }
+    },
+    "%lld of %lld": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld من %lld"
+          }
+        }
+      }
+    },
+    "%lld open": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مفتوحة: %lld"
+          }
+        }
+      }
+    },
+    "%lld overdue": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "متأخرة: %lld"
+          }
+        }
+      }
+    },
+    "%lld people": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "عدد الأشخاص: %lld"
+          }
+        }
+      }
+    },
+    "%lld today": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اليوم: %lld"
+          }
+        }
+      }
+    },
+    "+%lld": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+%lld"
+          }
+        }
+      }
+    },
+    "123456": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "123456"
+          }
+        }
+      }
+    },
+    "a cheque": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "شيك"
+          }
+        }
+      }
+    },
+    "a client": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "عميل"
+          }
+        }
+      }
+    },
+    "a compliance record": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "سجل امتثال"
+          }
+        }
+      }
+    },
+    "a customer or vendor": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "عميل أو مورّد"
+          }
+        }
+      }
+    },
+    "a document": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مستند"
+          }
+        }
+      }
+    },
+    "A few sentences on what's late, what's due and how the company stands.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بضع جمل عن المتأخر والمستحق ووضع الشركة."
+          }
+        }
+      }
+    },
+    "a file": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ملف"
+          }
+        }
+      }
+    },
+    "A manager marks this done.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المدير هو من يعلّم هذه المهمة كمكتملة."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "A paper expires soon": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تنتهي صلاحية أحد المستندات قريبًا"
+          }
+        }
+      }
+    },
+    "A paper has expired": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "انتهت صلاحية أحد المستندات"
+          }
+        }
+      }
+    },
+    "a payment": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "دفعة"
+          }
+        }
+      }
+    },
+    "a record": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "سجل"
+          }
+        }
+      }
+    },
+    "A reminder when one of your tasks is due, with Mark Done on it. Made on this iPhone.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تذكير عند حلول موعد إحدى مهامك، مع خيار تعليمها كمكتملة. يُنشأ على هذا الـ iPhone."
+          }
+        }
+      }
+    },
+    "A step can be at most 500 characters.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يمكن أن تصل الخطوة إلى 500 حرف كحد أقصى."
+          }
+        }
+      }
+    },
+    "A step is 1 to 500 characters.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يجب أن تكون الخطوة من 1 إلى 500 حرف."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "A task's project is changed on the website.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يُغيَّر مشروع المهمة من الموقع."
+          }
+        }
+      }
+    },
+    "Accepted": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مقبولة"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Accountant": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "محاسب"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Active · %lld": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "على رأس العمل · %lld"
+          }
+        }
+      }
+    },
+    "Add ${taskTitle} to Maham Tasks": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إضافة ${taskTitle} إلى Maham Tasks"
+          }
+        }
+      }
+    },
+    "Add a due date": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إضافة تاريخ استحقاق"
+          }
+        }
+      }
+    },
+    "Add a step…": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إضافة خطوة…"
+          }
+        }
+      }
+    },
+    "Add a task": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إضافة مهمة"
+          }
+        }
+      }
+    },
+    "Add step": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إضافة خطوة"
+          }
+        }
+      }
+    },
+    "Add to Calendar": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إضافة إلى التقويم"
+          }
+        }
+      }
+    },
+    "Add to Contacts": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إضافة إلى جهات الاتصال"
+          }
+        }
+      }
+    },
+    "Added %@": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إضافة %@"
+          }
+        }
+      }
+    },
+    "Added to your calendar.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تمت الإضافة إلى تقويمك."
+          }
+        }
+      }
+    },
+    "Added “%@” to Maham Tasks.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تمت إضافة “%@” إلى Maham Tasks."
+          }
+        }
+      }
+    },
+    "Adds a task for you in Maham Tasks, with a due date if you give one.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يضيف مهمة لك في Maham Tasks، مع موعد استحقاق إن حددته."
+          }
+        }
+      }
+    },
+    "Admin": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مسؤول"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "All": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الكل"
+          }
+        }
+      }
+    },
+    "All clear": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا شيء معلّق"
+          }
+        }
+      }
+    },
+    "All clear for today": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا شيء معلّق اليوم"
+          }
+        }
+      }
+    },
+    "All departments": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "كل الأقسام"
+          }
+        }
+      }
+    },
+    "Allow notifications in Settings": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "السماح بالإشعارات في الإعدادات"
+          }
+        }
+      }
+    },
+    "Almost ready": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "على وشك الجاهزية"
+          }
+        }
+      }
+    },
+    "Amounts": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المبالغ"
+          }
+        }
+      }
+    },
+    "an approval request": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "طلب موافقة"
+          }
+        }
+      }
+    },
+    "an employee": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "موظف"
+          }
+        }
+      }
+    },
+    "an expense": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مصروف"
+          }
+        }
+      }
+    },
+    "an expiry reminder": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تذكير انتهاء صلاحية"
+          }
+        }
+      }
+    },
+    "an item": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "صنف"
+          }
+        }
+      }
+    },
+    "Apple Intelligence": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence"
+          }
+        }
+      }
+    },
+    "Apple Intelligence couldn't write a briefing just now.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تعذّر على Apple Intelligence كتابة الملخص الآن."
+          }
+        }
+      }
+    },
+    "Apple Intelligence is getting ready on this device. Your day briefing will be here soon.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يجري تجهيز Apple Intelligence على هذا الجهاز. سيظهر ملخص يومك هنا قريبًا."
+          }
+        }
+      }
+    },
+    "Applied": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مطبّقة"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "approval requests": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "طلبات الموافقة"
+          }
+        }
+      }
+    },
+    "Archived": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مؤرشف"
+          }
+        }
+      }
+    },
+    "Asks again when you come back after five minutes away.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يطلب التحقق مجددًا عند عودتك بعد غياب خمس دقائق."
+          }
+        }
+      }
+    },
+    "Assigned to": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المسند إليهم"
+          }
+        }
+      }
+    },
+    "Balance": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الرصيد"
+          }
+        }
+      }
+    },
+    "Balance %@": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الرصيد: %@"
+          }
+        }
+      }
+    },
+    "Call": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اتصال"
+          }
+        }
+      }
+    },
+    "Call %@": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اتصال بـ %@"
+          }
+        }
+      }
+    },
+    "Call the new client": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الاتصال بالعميل الجديد"
+          }
+        }
+      }
+    },
+    "Cancel": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إلغاء"
+          }
+        }
+      }
+    },
+    "Cancelled": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ملغاة"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Change due date": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تغيير تاريخ الاستحقاق"
+          }
+        }
+      }
+    },
+    "Changed %@": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تعديل %@"
+          }
+        }
+      }
+    },
+    "Changes the due date": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تغيير تاريخ الاستحقاق"
+          }
+        }
+      }
+    },
+    "Changes the priority": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تغيير الأولوية"
+          }
+        }
+      }
+    },
+    "Changes the status": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تغيير الحالة"
+          }
+        }
+      }
+    },
+    "Changes your team makes on mahamone.com show here.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تظهر هنا التغييرات التي يجريها فريقك على mahamone.com."
+          }
+        }
+      }
+    },
+    "Check again": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "التحقق مرة أخرى"
+          }
+        }
+      }
+    },
+    "Check your email for the link.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تحقق من بريدك الإلكتروني للعثور على الرابط."
+          }
+        }
+      }
+    },
+    "cheques": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الشيكات"
+          }
+        }
+      }
+    },
+    "Civil ID": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "البطاقة المدنية"
+          }
+        }
+      }
+    },
+    "Clear due date": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إزالة تاريخ الاستحقاق"
+          }
+        }
+      }
+    },
+    "Client": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "العميل"
+          }
+        }
+      }
+    },
+    "Clients": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "العملاء"
+          }
+        }
+      }
+    },
+    "Clients added on mahamone.com show here.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يظهر هنا العملاء المضافون على mahamone.com."
+          }
+        }
+      }
+    },
+    "Close": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إغلاق"
+          }
+        }
+      }
+    },
+    "Closing it opens the next one, dated from this one.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "عند إغلاقها تُفتح المهمة التالية بموعد يُحسب منها."
+          }
+        }
+      }
+    },
+    "Comments": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "التعليقات"
+          }
+        }
+      }
+    },
+    "Company": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الشركة"
+          }
+        }
+      }
+    },
+    "Complete": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إكمال"
+          }
+        }
+      }
+    },
+    "Complete ${task}": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إكمال ${task}"
+          }
+        }
+      }
+    },
+    "Complete a task": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إكمال مهمة"
+          }
+        }
+      }
+    },
+    "Complete task": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إكمال المهمة"
+          }
+        }
+      }
+    },
+    "compliance records": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "سجلات الامتثال"
+          }
+        }
+      }
+    },
+    "Confirm your email first, from the link Maham One sent you.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أكّد بريدك الإلكتروني أولًا من الرابط الذي أرسله Maham One إليك."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Contact": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جهة اتصال"
+          }
+        }
+      }
+    },
+    "Contacts": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جهات الاتصال"
+          }
+        }
+      }
+    },
+    "Converted": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "محوّلة"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Copy link": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "نسخ الرابط"
+          }
+        }
+      }
+    },
+    "Customer and vendor": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "عميل ومورّد"
+          }
+        }
+      }
+    },
+    "customers and vendors": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "العملاء والموردين"
+          }
+        }
+      }
+    },
+    "Daily": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يوميًا"
+          }
+        }
+      }
+    },
+    "Dates": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "التواريخ"
+          }
+        }
+      }
+    },
+    "Day briefing": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ملخص اليوم"
+          }
+        }
+      }
+    },
+    "Day briefings aren't available on this device.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ملخص اليوم غير متاح على هذا الجهاز."
+          }
+        }
+      }
+    },
+    "Day briefings need a device that supports Apple Intelligence.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يتطلب ملخص اليوم جهازًا يدعم Apple Intelligence."
+          }
+        }
+      }
+    },
+    "Declined": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مرفوضة"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Delete": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حذف"
+          }
+        }
+      }
+    },
+    "Delete this task?": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حذف هذه المهمة؟"
+          }
+        }
+      }
+    },
+    "Deleted %@": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حذف %@"
+          }
+        }
+      }
+    },
+    "Delivered": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مُسلَّمة"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Department": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "القسم"
+          }
+        }
+      }
+    },
+    "Departments": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الأقسام"
+          }
+        }
+      }
+    },
+    "Description": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الوصف"
+          }
+        }
+      }
+    },
+    "Details": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "التفاصيل"
+          }
+        }
+      }
+    },
+    "Discard changes": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تجاهل التغييرات"
+          }
+        }
+      }
+    },
+    "Discard your changes?": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تجاهل التغييرات؟"
+          }
+        }
+      }
+    },
+    "Document expiry dates": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تواريخ انتهاء المستندات"
+          }
+        }
+      }
+    },
+    "Does not repeat": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بدون تكرار"
+          }
+        }
+      }
+    },
+    "Done": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مكتملة"
+          }
+        }
+      }
+    },
+    "Done today": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المكتملة اليوم"
+          }
+        }
+      }
+    },
+    "Draft": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مسودة"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Due": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الاستحقاق"
+          }
+        }
+      }
+    },
+    "Due %@": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الاستحقاق: %@"
+          }
+        }
+      }
+    },
+    "Due date": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تاريخ الاستحقاق"
+          }
+        }
+      }
+    },
+    "Due date cleared.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تمت إزالة تاريخ الاستحقاق."
+          }
+        }
+      }
+    },
+    "Due today": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مستحقة اليوم"
+          }
+        }
+      }
+    },
+    "Due-date reminders": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تذكيرات تاريخ الاستحقاق"
+          }
+        }
+      }
+    },
+    "Edit": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تعديل"
+          }
+        }
+      }
+    },
+    "Edit task": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تعديل المهمة"
+          }
+        }
+      }
+    },
+    "Email": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "البريد الإلكتروني"
+          }
+        }
+      }
+    },
+    "Email %@": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إرسال بريد إلى %@"
+          }
+        }
+      }
+    },
+    "Employee number": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الرقم الوظيفي"
+          }
+        }
+      }
+    },
+    "Employees added on mahamone.com show here.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يظهر هنا الموظفون المضافون على mahamone.com."
+          }
+        }
+      }
+    },
+    "Enter the 6-digit code from your authenticator app.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أدخل الرمز المكوّن من 6 أرقام من تطبيق المصادقة."
+          }
+        }
+      }
+    },
+    "Enter the code from your authenticator app.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أدخل الرمز من تطبيق المصادقة."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Everything the app kept on this iPhone is removed.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ستُزال كل البيانات التي حفظها التطبيق على هذا الـ iPhone."
+          }
+        }
+      }
+    },
+    "expenses": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المصروفات"
+          }
+        }
+      }
+    },
+    "Expired": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "منتهية"
+          }
+        }
+      }
+    },
+    "Expired %lld days ago": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أيام منذ انتهاء الصلاحية: %lld"
+          }
+        }
+      }
+    },
+    "Expires today": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تنتهي اليوم"
+          }
+        }
+      }
+    },
+    "Expiries": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تواريخ الانتهاء"
+          }
+        }
+      }
+    },
+    "Expiring soon": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تنتهي قريبًا"
+          }
+        }
+      }
+    },
+    "expiry reminders": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تذكيرات انتهاء الصلاحية"
+          }
+        }
+      }
+    },
+    "FaceTime": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FaceTime"
+          }
+        }
+      }
+    },
+    "files": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الملفات"
+          }
+        }
+      }
+    },
+    "Filter by title": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تصفية حسب العنوان"
+          }
+        }
+      }
+    },
+    "Focus": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "التركيز"
+          }
+        }
+      }
+    },
+    "Focusing on": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "التركيز على"
+          }
+        }
+      }
+    },
+    "Focusing since %@": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "التركيز منذ %@"
+          }
+        }
+      }
+    },
+    "Forgot your password?": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "هل نسيت كلمة السر؟"
+          }
+        }
+      }
+    },
+    "General": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "عام"
+          }
+        }
+      }
+    },
+    "Give the task a title.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أعطِ المهمة عنوانًا."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Good afternoon": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مساء الخير"
+          }
+        }
+      }
+    },
+    "Good afternoon, %@": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مساء الخير، %@"
+          }
+        }
+      }
+    },
+    "Good evening": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مساء الخير"
+          }
+        }
+      }
+    },
+    "Good evening, %@": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مساء الخير، %@"
+          }
+        }
+      }
+    },
+    "Good morning": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "صباح الخير"
+          }
+        }
+      }
+    },
+    "Good morning, %@": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "صباح الخير، %@"
+          }
+        }
+      }
+    },
+    "Hidden": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مخفية"
+          }
+        }
+      }
+    },
+    "High": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "عالية"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Home": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الرئيسية"
+          }
+        }
+      }
+    },
+    "Important": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مهم"
+          }
+        }
+      }
+    },
+    "In Progress": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "قيد التنفيذ"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "In Review": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "قيد المراجعة"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Inbox": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الوارد"
+          }
+        }
+      }
+    },
+    "Invoice": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فاتورة"
+          }
+        }
+      }
+    },
+    "Invoice %@": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الفاتورة %@"
+          }
+        }
+      }
+    },
+    "Invoiced": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مفوترة"
+          }
+        }
+      }
+    },
+    "Invoiced by month": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الفواتير حسب الشهر"
+          }
+        }
+      }
+    },
+    "Invoiced this month": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فواتير هذا الشهر"
+          }
+        }
+      }
+    },
+    "Invoices": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الفواتير"
+          }
+        }
+      }
+    },
+    "invoices and documents": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الفواتير والمستندات"
+          }
+        }
+      }
+    },
+    "Invoices made on mahamone.com show here.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تظهر هنا الفواتير المنشأة على mahamone.com."
+          }
+        }
+      }
+    },
+    "Invoices paid in full show here.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تظهر هنا الفواتير المدفوعة بالكامل."
+          }
+        }
+      }
+    },
+    "Invoices past their due date show here.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تظهر هنا الفواتير التي تجاوزت تاريخ استحقاقها."
+          }
+        }
+      }
+    },
+    "Invoices that are sent and not yet paid show here.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تظهر هنا الفواتير المُرسلة التي لم تُدفع بعد."
+          }
+        }
+      }
+    },
+    "Issued": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "صادرة"
+          }
+        }
+      }
+    },
+    "Issued %@": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الإصدار: %@"
+          }
+        }
+      }
+    },
+    "It goes to the bin for 30 days. You can restore it on the website.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ستنتقل إلى سلة المحذوفات لمدة 30 يومًا. يمكنك استعادتها من الموقع."
+          }
+        }
+      }
+    },
+    "items and stock": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الأصناف والمخزون"
+          }
+        }
+      }
+    },
+    "Job title": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المسمى الوظيفي"
+          }
+        }
+      }
+    },
+    "Keep a comment to 5000 characters.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يجب ألا يتجاوز التعليق 5000 حرف."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Keep editing": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "متابعة التعديل"
+          }
+        }
+      }
+    },
+    "Keep the description to 20,000 characters.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يجب ألا يتجاوز الوصف 20,000 حرف."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Keep the title to 200 characters.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يجب ألا يتجاوز العنوان 200 حرف."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Last 6 months": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "آخر 6 أشهر"
+          }
+        }
+      }
+    },
+    "Later": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لاحقًا"
+          }
+        }
+      }
+    },
+    "Left the company": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "موظف سابق"
+          }
+        }
+      }
+    },
+    "Left the company · %lld": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "موظفون سابقون · %lld"
+          }
+        }
+      }
+    },
+    "Licences, permits and papers with an expiry date show here.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تظهر هنا التراخيص والتصاريح والمستندات التي لها تاريخ انتهاء."
+          }
+        }
+      }
+    },
+    "Lines": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "البنود"
+          }
+        }
+      }
+    },
+    "Link copied.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تم نسخ الرابط."
+          }
+        }
+      }
+    },
+    "Loading": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جارٍ التحميل"
+          }
+        }
+      }
+    },
+    "Lock with Face ID": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "القفل باستخدام Face ID"
+          }
+        }
+      }
+    },
+    "Lock with Optic ID": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "القفل باستخدام Optic ID"
+          }
+        }
+      }
+    },
+    "Lock with Touch ID": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "القفل باستخدام Touch ID"
+          }
+        }
+      }
+    },
+    "Low": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "منخفضة"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Maham One": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maham One"
+          }
+        }
+      }
+    },
+    "Maham One is locked": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maham One مقفل"
+          }
+        }
+      }
+    },
+    "Maham One isn't set up on this iPhone yet.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لم يتم إعداد Maham One على هذا الـiPhone بعد."
+          }
+        }
+      }
+    },
+    "Maham Tasks": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maham Tasks"
+          }
+        }
+      }
+    },
+    "Maham Tasks can't be reached right now. Try again in a moment.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يتعذر الوصول إلى Maham Tasks الآن. حاول مرة أخرى بعد قليل."
+          }
+        }
+      }
+    },
+    "Main": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "رئيسي"
+          }
+        }
+      }
+    },
+    "Maps": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الخرائط"
+          }
+        }
+      }
+    },
+    "Mark %@ done": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تعليم %@ كمكتملة"
+          }
+        }
+      }
+    },
+    "Mark all read": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تعليم الكل كمقروء"
+          }
+        }
+      }
+    },
+    "Mark as not done": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تعليم كغير مكتملة"
+          }
+        }
+      }
+    },
+    "Mark Done": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تحديد كمكتملة"
+          }
+        }
+      }
+    },
+    "Mark done": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تحديد كمكتملة"
+          }
+        }
+      }
+    },
+    "Marked done.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تم التعليم كمكتملة."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Marked “%@” done.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تم تعليم “%@” كمكتملة."
+          }
+        }
+      }
+    },
+    "Marks one of your tasks done in Maham Tasks, or sends it for review when a manager marks it done.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يحدد إحدى مهامك كمكتملة في Maham Tasks، أو يرسلها للمراجعة عندما يكون الإكمال من صلاحية المدير."
+          }
+        }
+      }
+    },
+    "Marks one of your tasks done in Maham Tasks, or sends it for review.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يحدد إحدى مهامك كمكتملة في Maham Tasks، أو يرسلها للمراجعة."
+          }
+        }
+      }
+    },
+    "Marks the step as not done": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تعليم الخطوة كغير مكتملة"
+          }
+        }
+      }
+    },
+    "Marks the step done": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تعليم الخطوة كمكتملة"
+          }
+        }
+      }
+    },
+    "Medium": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "متوسطة"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Message": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "رسالة"
+          }
+        }
+      }
+    },
+    "Month": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الشهر"
+          }
+        }
+      }
+    },
+    "Monthly": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "شهريًا"
+          }
+        }
+      }
+    },
+    "More": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المزيد"
+          }
+        }
+      }
+    },
+    "Move to %@": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "نقل إلى %@"
+          }
+        }
+      }
+    },
+    "Moved to %@.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تم النقل إلى %@."
+          }
+        }
+      }
+    },
+    "My tasks": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مهامي"
+          }
+        }
+      }
+    },
+    "Name, job or number": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الاسم أو الوظيفة أو الرقم"
+          }
+        }
+      }
+    },
+    "Name, number or city": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الاسم أو الرقم أو المدينة"
+          }
+        }
+      }
+    },
+    "Nationality": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الجنسية"
+          }
+        }
+      }
+    },
+    "New task": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مهمة جديدة"
+          }
+        }
+      }
+    },
+    "New to the team? Ask your company's owner for an invite.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جديد في الفريق؟ اطلب دعوة من مالك شركتك."
+          }
+        }
+      }
+    },
+    "Next": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "التالية"
+          }
+        }
+      }
+    },
+    "Next week": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الأسبوع القادم"
+          }
+        }
+      }
+    },
+    "No answer from the server.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا يوجد رد من الخادم."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "No changes yet": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا توجد تغييرات بعد"
+          }
+        }
+      }
+    },
+    "No clients yet": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا يوجد عملاء بعد"
+          }
+        }
+      }
+    },
+    "No comments yet. Start the discussion.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا توجد تعليقات بعد. ابدأ النقاش."
+          }
+        }
+      }
+    },
+    "No company yet": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا توجد شركة بعد"
+          }
+        }
+      }
+    },
+    "No date": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بلا تاريخ"
+          }
+        }
+      }
+    },
+    "No employees yet": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا يوجد موظفون بعد"
+          }
+        }
+      }
+    },
+    "No expiry dates recorded.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا توجد تواريخ انتهاء مسجلة."
+          }
+        }
+      }
+    },
+    "No invoices yet": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا توجد فواتير بعد"
+          }
+        }
+      }
+    },
+    "No invoices yet.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا توجد فواتير بعد."
+          }
+        }
+      }
+    },
+    "No notifications": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا توجد إشعارات"
+          }
+        }
+      }
+    },
+    "No one in this department": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا أحد في هذا القسم"
+          }
+        }
+      }
+    },
+    "No one is assigned yet.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لم تُسند إلى أحد بعد."
+          }
+        }
+      }
+    },
+    "No one yet.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا أحد بعد."
+          }
+        }
+      }
+    },
+    "No paid invoices": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا توجد فواتير مدفوعة"
+          }
+        }
+      }
+    },
+    "No tasks yet": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا توجد مهام بعد"
+          }
+        }
+      }
+    },
+    "No updates yet": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا توجد تحديثات بعد"
+          }
+        }
+      }
+    },
+    "None": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بلا"
+          }
+        }
+      }
+    },
+    "Not available for your role": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "غير متاح لدورك"
+          }
+        }
+      }
+    },
+    "Notes": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ملاحظات"
+          }
+        }
+      }
+    },
+    "Nothing due today.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا شيء مستحق اليوم."
+          }
+        }
+      }
+    },
+    "Nothing expires": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا شيء ينتهي"
+          }
+        }
+      }
+    },
+    "Nothing finished yet today.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لم يكتمل شيء اليوم بعد."
+          }
+        }
+      }
+    },
+    "Nothing here": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا شيء هنا"
+          }
+        }
+      }
+    },
+    "Nothing invoiced in the last 6 months.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا توجد فواتير خلال آخر 6 أشهر."
+          }
+        }
+      }
+    },
+    "Nothing is due today. You're all clear.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا شيء مستحق اليوم. يومك خالٍ."
+          }
+        }
+      }
+    },
+    "Nothing is late.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا شيء متأخر."
+          }
+        }
+      }
+    },
+    "Nothing overdue": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا شيء متأخر"
+          }
+        }
+      }
+    },
+    "Nothing owed": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا مبالغ مستحقة"
+          }
+        }
+      }
+    },
+    "Notifications": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الإشعارات"
+          }
+        }
+      }
+    },
+    "Number or client": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الرقم أو العميل"
+          }
+        }
+      }
+    },
+    "On the web": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "على الويب"
+          }
+        }
+      }
+    },
+    "Only a manager or admin can mark a task done. Move it to In Review instead.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا يمكن إلا للمدير أو المسؤول تحديد المهمة كمكتملة. انقلها إلى قيد المراجعة بدلًا من ذلك."
+          }
+        }
+      }
+    },
+    "Only a manager or admin can reopen a completed task.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يمكن للمدير أو المسؤول فقط إعادة فتح مهمة مكتملة."
+          }
+        }
+      }
+    },
+    "Open": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مفتوحة"
+          }
+        }
+      }
+    },
+    "Open balance": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الرصيد المستحق"
+          }
+        }
+      }
+    },
+    "Open in Maham One": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فتح في Maham One"
+          }
+        }
+      }
+    },
+    "Open Maham One and enter the code from your authenticator app first.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "افتح Maham One وأدخل الرمز من تطبيق المصادقة أولًا."
+          }
+        }
+      }
+    },
+    "Open Maham Tasks on the web": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فتح Maham Tasks على الويب"
+          }
+        }
+      }
+    },
+    "Open task": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فتح المهمة"
+          }
+        }
+      }
+    },
+    "Open the website": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فتح الموقع"
+          }
+        }
+      }
+    },
+    "Open today": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فتح مهام اليوم"
+          }
+        }
+      }
+    },
+    "Opens Maham One on a new task.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يفتح Maham One على مهمة جديدة."
+          }
+        }
+      }
+    },
+    "Opens Maham One on your tasks for today.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يفتح Maham One على مهامك لليوم."
+          }
+        }
+      }
+    },
+    "Opens one of your tasks in Maham One.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يفتح إحدى مهامك في Maham One."
+          }
+        }
+      }
+    },
+    "Opens your tasks for today in Maham Tasks.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يفتح مهامك لليوم في Maham Tasks."
+          }
+        }
+      }
+    },
+    "Other": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أخرى"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Overdue": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "متأخرة"
+          }
+        }
+      }
+    },
+    "Overdue by": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مدة التأخير"
+          }
+        }
+      }
+    },
+    "Overdue, %@": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "متأخرة، %@"
+          }
+        }
+      }
+    },
+    "Owner": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المالك"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Paid": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مدفوعة"
+          }
+        }
+      }
+    },
+    "Partly paid": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مدفوعة جزئيًا"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Passport": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جواز السفر"
+          }
+        }
+      }
+    },
+    "Password": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "كلمة السر"
+          }
+        }
+      }
+    },
+    "payments": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المدفوعات"
+          }
+        }
+      }
+    },
+    "payroll and people data": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بيانات الرواتب والموظفين"
+          }
+        }
+      }
+    },
+    "payroll or people data": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بيانات الرواتب أو الموظفين"
+          }
+        }
+      }
+    },
+    "People": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الموظفون"
+          }
+        }
+      }
+    },
+    "People and payroll are for the owner, admins and accountants.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بيانات الموظفين والرواتب متاحة للمالك والمسؤولين والمحاسبين فقط."
+          }
+        }
+      }
+    },
+    "Phone": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الهاتف"
+          }
+        }
+      }
+    },
+    "Pick a date and time": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اختيار تاريخ ووقت"
+          }
+        }
+      }
+    },
+    "PO number": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "رقم PO"
+          }
+        }
+      }
+    },
+    "Priority": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الأولوية"
+          }
+        }
+      }
+    },
+    "Priority: %@": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الأولوية: %@"
+          }
+        }
+      }
+    },
+    "Project": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المشروع"
+          }
+        }
+      }
+    },
+    "Projects": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المشاريع"
+          }
+        }
+      }
+    },
+    "Quick picks": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اختيارات سريعة"
+          }
+        }
+      }
+    },
+    "Read": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مقروءة"
+          }
+        }
+      }
+    },
+    "Receivable": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المستحق"
+          }
+        }
+      }
+    },
+    "Records": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "السجلات"
+          }
+        }
+      }
+    },
+    "records": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "السجلات"
+          }
+        }
+      }
+    },
+    "Remind Me in an Hour": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ذكّرني بعد ساعة"
+          }
+        }
+      }
+    },
+    "Reopen": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إعادة فتح"
+          }
+        }
+      }
+    },
+    "Repeat": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "التكرار"
+          }
+        }
+      }
+    },
+    "Repeat every 1 to 365.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يجب أن تكون فترة التكرار من 1 إلى 365."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Repeats": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "متكررة"
+          }
+        }
+      }
+    },
+    "Repeats daily": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تتكرر يوميًا"
+          }
+        }
+      }
+    },
+    "Repeats every %lld days": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "التكرار بالأيام: كل %lld"
+          }
+        }
+      }
+    },
+    "Repeats every %lld months": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "التكرار بالأشهر: كل %lld"
+          }
+        }
+      }
+    },
+    "Repeats every %lld weeks": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "التكرار بالأسابيع: كل %lld"
+          }
+        }
+      }
+    },
+    "Repeats every %lld years": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "التكرار بالسنوات: كل %lld"
+          }
+        }
+      }
+    },
+    "Repeats monthly": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تتكرر شهريًا"
+          }
+        }
+      }
+    },
+    "Repeats weekly": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تتكرر أسبوعيًا"
+          }
+        }
+      }
+    },
+    "Repeats yearly": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تتكرر سنويًا"
+          }
+        }
+      }
+    },
+    "Reschedule": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إعادة الجدولة"
+          }
+        }
+      }
+    },
+    "Reset Password": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إعادة تعيين كلمة السر"
+          }
+        }
+      }
+    },
+    "Residency": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الإقامة"
+          }
+        }
+      }
+    },
+    "Review the supplier contract": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مراجعة عقد المورّد"
+          }
+        }
+      }
+    },
+    "Save": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حفظ"
+          }
+        }
+      }
+    },
+    "Saved.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تم الحفظ."
+          }
+        }
+      }
+    },
+    "Search": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "البحث"
+          }
+        }
+      }
+    },
+    "Search and Siri": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "البحث وSiri"
+          }
+        }
+      }
+    },
+    "Search tasks, clients and invoices.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ابحث في المهام والعملاء والفواتير."
+          }
+        }
+      }
+    },
+    "Security": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الأمان"
+          }
+        }
+      }
+    },
+    "See all": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "عرض الكل"
+          }
+        }
+      }
+    },
+    "Send": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إرسال"
+          }
+        }
+      }
+    },
+    "Send comment": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إرسال التعليق"
+          }
+        }
+      }
+    },
+    "Send the monthly report": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إرسال التقرير الشهري"
+          }
+        }
+      }
+    },
+    "Sent": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مُرسلة"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Sent for review.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أُرسلت للمراجعة."
+          }
+        }
+      }
+    },
+    "Sent “%@” for review. A manager marks it done.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أُرسلت “%@” للمراجعة. سيعلّمها المدير كمكتملة."
+          }
+        }
+      }
+    },
+    "Settings": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الإعدادات"
+          }
+        }
+      }
+    },
+    "Share": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مشاركة"
+          }
+        }
+      }
+    },
+    "Share link": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مشاركة الرابط"
+          }
+        }
+      }
+    },
+    "Show": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "عرض"
+          }
+        }
+      }
+    },
+    "Show all": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "عرض الكل"
+          }
+        }
+      }
+    },
+    "Show archived": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إظهار المؤرشف"
+          }
+        }
+      }
+    },
+    "Show as board": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "العرض كلوحة"
+          }
+        }
+      }
+    },
+    "Show as list": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "العرض كقائمة"
+          }
+        }
+      }
+    },
+    "Show in Spotlight": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الإظهار في Spotlight"
+          }
+        }
+      }
+    },
+    "Shown": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "معروضة"
+          }
+        }
+      }
+    },
+    "Shows only these tasks": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "عرض هذه المهام فقط"
+          }
+        }
+      }
+    },
+    "Sign In": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تسجيل الدخول"
+          }
+        }
+      }
+    },
+    "Sign in to continue.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "سجّل الدخول للمتابعة."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Sign in to Maham One": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تسجيل الدخول إلى Maham One"
+          }
+        }
+      }
+    },
+    "Sign in to Maham One first.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "سجّل الدخول إلى Maham One أولًا."
+          }
+        }
+      }
+    },
+    "Sign Out": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تسجيل الخروج"
+          }
+        }
+      }
+    },
+    "Sign out of Maham One?": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تسجيل الخروج من Maham One؟"
+          }
+        }
+      }
+    },
+    "Someday": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يومًا ما"
+          }
+        }
+      }
+    },
+    "Someone": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "شخص ما"
+          }
+        }
+      }
+    },
+    "Something came back in a form the app didn't expect.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "وصلت بيانات بصيغة لم يتوقعها التطبيق."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Staff": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "موظف"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Start focus": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بدء التركيز"
+          }
+        }
+      }
+    },
+    "Starts a new task in Maham Tasks.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يبدأ مهمة جديدة في Maham Tasks."
+          }
+        }
+      }
+    },
+    "Status": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الحالة"
+          }
+        }
+      }
+    },
+    "Status: %@": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الحالة: %@"
+          }
+        }
+      }
+    },
+    "Step": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "خطوة"
+          }
+        }
+      }
+    },
+    "Steps": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الخطوات"
+          }
+        }
+      }
+    },
+    "Stop focus": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إيقاف التركيز"
+          }
+        }
+      }
+    },
+    "Subtotal": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المجموع الفرعي"
+          }
+        }
+      }
+    },
+    "Summarize my day": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تلخيص يومي"
+          }
+        }
+      }
+    },
+    "Summarizes your day with Apple Intelligence on this iPhone. Nothing is sent anywhere.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يلخّص يومك باستخدام Apple Intelligence على هذا الـ iPhone. لا يُرسَل أي شيء إلى أي مكان."
+          }
+        }
+      }
+    },
+    "Switch company": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تبديل الشركة"
+          }
+        }
+      }
+    },
+    "Task": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المهمة"
+          }
+        }
+      }
+    },
+    "Task added.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تمت إضافة المهمة."
+          }
+        }
+      }
+    },
+    "Task deleted.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تم حذف المهمة."
+          }
+        }
+      }
+    },
+    "Task due": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حان موعد مهمة"
+          }
+        }
+      }
+    },
+    "Task ID": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "معرّف المهمة"
+          }
+        }
+      }
+    },
+    "Tasks": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المهام"
+          }
+        }
+      }
+    },
+    "Tasks assigned to you show here.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تظهر هنا المهام المسندة إليك."
+          }
+        }
+      }
+    },
+    "Tasks that aren't in a project": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المهام غير المرتبطة بمشروع"
+          }
+        }
+      }
+    },
+    "Tasks, clients, invoices": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المهام، العملاء، الفواتير"
+          }
+        }
+      }
+    },
+    "Tax": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الضريبة"
+          }
+        }
+      }
+    },
+    "Team updates": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تحديثات الفريق"
+          }
+        }
+      }
+    },
+    "Tells you which of your tasks are overdue or due today.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يخبرك بمهامك المتأخرة أو المستحقة اليوم."
+          }
+        }
+      }
+    },
+    "That code didn't work. Try the newest one.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لم يعمل هذا الرمز. جرّب أحدث رمز."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "That email and password don't match.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "البريد الإلكتروني وكلمة السر غير متطابقين."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "That isn't in the company on screen, or you can't see it.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "هذا العنصر ليس ضمن الشركة المعروضة، أو لا يمكنك رؤيته."
+          }
+        }
+      }
+    },
+    "That project was archived, or you're not in it.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أُرشف هذا المشروع، أو أنك لست عضوًا فيه."
+          }
+        }
+      }
+    },
+    "That task isn't in Maham Tasks anymore.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لم تعد هذه المهمة موجودة في Maham Tasks."
+          }
+        }
+      }
+    },
+    "That task was deleted, or it isn't shared with you.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حُذفت هذه المهمة، أو أنها غير مشتركة معك."
+          }
+        }
+      }
+    },
+    "the accounts": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الحسابات"
+          }
+        }
+      }
+    },
+    "the company settings": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إعدادات الشركة"
+          }
+        }
+      }
+    },
+    "The focus couldn't start. Try again in a moment.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تعذّر بدء التركيز. حاول مرة أخرى بعد قليل."
+          }
+        }
+      }
+    },
+    "The server answered %@.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ردّ الخادم: %@."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "The sign-in service answered %@.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ردّت خدمة تسجيل الدخول: %@."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "the team": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الفريق"
+          }
+        }
+      }
+    },
+    "The team's changes in Maham One show here for owners and approvers.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تظهر هنا تغييرات الفريق في Maham One للمالكين والمعتمِدين."
+          }
+        }
+      }
+    },
+    "This build of Maham One doesn't have the database's publishable key yet. Add it to ios/Config/Local.xcconfig and build again (see ios/README.md).": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا يحتوي هذا الإصدار من Maham One على المفتاح القابل للنشر لقاعدة البيانات بعد. أضِفه إلى ios/Config/Local.xcconfig وأعد البناء (راجع ios/README.md)."
+          }
+        }
+      }
+    },
+    "This evening": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "هذا المساء"
+          }
+        }
+      }
+    },
+    "This task can't be restored.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا يمكن استعادة هذه المهمة."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "This task is no longer there.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "هذه المهمة لم تعد موجودة."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "This task was deleted, or it isn't shared with you any more.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حُذفت هذه المهمة، أو لم تعد مشتركة معك."
+          }
+        }
+      }
+    },
+    "Title": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "العنوان"
+          }
+        }
+      }
+    },
+    "To Do": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "قيد الانتظار"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Today": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اليوم"
+          }
+        }
+      }
+    },
+    "Today %@": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اليوم %@"
+          }
+        }
+      }
+    },
+    "Tomorrow": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "غدًا"
+          }
+        }
+      }
+    },
+    "Tomorrow %@": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "غدًا %@"
+          }
+        }
+      }
+    },
+    "Total": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الإجمالي"
+          }
+        }
+      }
+    },
+    "Try again": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إعادة المحاولة"
+          }
+        }
+      }
+    },
+    "Turn on Apple Intelligence in Settings to get a short briefing of your day here.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "شغّل Apple Intelligence من الإعدادات لتحصل هنا على ملخص قصير ليومك."
+          }
+        }
+      }
+    },
+    "Turn on Live Activities for Maham One in Settings to focus on a task.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "شغّل الأنشطة المباشرة لـ Maham One في الإعدادات للتركيز على مهمة."
+          }
+        }
+      }
+    },
+    "Two-Step Sign-In": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تسجيل الدخول بخطوتين"
+          }
+        }
+      }
+    },
+    "Unknown client": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "عميل غير معروف"
+          }
+        }
+      }
+    },
+    "Unknown user": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مستخدم غير معروف"
+          }
+        }
+      }
+    },
+    "Unlock": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فتح القفل"
+          }
+        }
+      }
+    },
+    "Unlock Maham One": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فتح قفل Maham One"
+          }
+        }
+      }
+    },
+    "Unlock with Face ID": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فتح القفل باستخدام Face ID"
+          }
+        }
+      }
+    },
+    "Unlock with Optic ID": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فتح القفل باستخدام Optic ID"
+          }
+        }
+      }
+    },
+    "Unlock with Touch ID": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فتح القفل باستخدام Touch ID"
+          }
+        }
+      }
+    },
+    "Unread": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "غير مقروءة"
+          }
+        }
+      }
+    },
+    "Upcoming": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "القادمة"
+          }
+        }
+      }
+    },
+    "Urgent": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "عاجلة"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Use a Different Account": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "استخدام حساب آخر"
+          }
+        }
+      }
+    },
+    "Use Passcode": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "استخدام رمز الدخول"
+          }
+        }
+      }
+    },
+    "Vendor": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مورّد"
+          }
+        }
+      }
+    },
+    "Verify": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تحقق"
+          }
+        }
+      }
+    },
+    "Version %@": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الإصدار %@"
+          }
+        }
+      }
+    },
+    "View only on iPhone for now — make changes on mahamone.com": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "للعرض فقط على iPhone حاليًا — أجرِ التغييرات على mahamone.com"
+          }
+        }
+      }
+    },
+    "Viewer": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مشاهد"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Void": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ملغاة"
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Waiting for a manager's review": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بانتظار مراجعة المدير"
+          }
+        }
+      }
+    },
+    "We'll email you a link to choose a new password.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "سنرسل إليك رابطًا عبر البريد الإلكتروني لاختيار كلمة سر جديدة."
+          }
+        }
+      }
+    },
+    "Website": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الموقع الإلكتروني"
+          }
+        }
+      }
+    },
+    "Weekly": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أسبوعيًا"
+          }
+        }
+      }
+    },
+    "What's due today": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ما المستحق اليوم"
+          }
+        }
+      }
+    },
+    "What's the task?": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ما المهمة؟"
+          }
+        }
+      }
+    },
+    "When someone assigns you a task or mentions you, it shows here.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "عندما يسند إليك أحدهم مهمة أو يشير إليك، يظهر ذلك هنا."
+          }
+        }
+      }
+    },
+    "When someone invites you to their company on mahamone.com, it shows here.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "عندما يدعوك أحدهم إلى شركته على mahamone.com، تظهر الدعوة هنا."
+          }
+        }
+      }
+    },
+    "Which task?": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أي مهمة؟"
+          }
+        }
+      }
+    },
+    "Within 30 days": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "خلال 30 يومًا"
+          }
+        }
+      }
+    },
+    "Work permit": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إذن العمل"
+          }
+        }
+      }
+    },
+    "Write a comment": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اكتب تعليقًا"
+          }
+        }
+      }
+    },
+    "Write again": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إعادة الكتابة"
+          }
+        }
+      }
+    },
+    "Write something first.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اكتب شيئًا أولًا."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Writing your briefing…": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جارٍ كتابة ملخصك…"
+          }
+        }
+      }
+    },
+    "Written on this iPhone by Apple Intelligence. Nothing leaves the device.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "كتبه Apple Intelligence على هذا الـ iPhone. لا يغادر أي شيء الجهاز."
+          }
+        }
+      }
+    },
+    "Yearly": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "سنويًا"
+          }
+        }
+      }
+    },
+    "Yesterday %@": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أمس %@"
+          }
+        }
+      }
+    },
+    "You can't delete this task.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا يمكنك حذف هذه المهمة."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "You can't edit this task.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا يمكنك تعديل هذه المهمة."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "You can't move this task.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا يمكنك نقل هذه المهمة."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "You can't reschedule this task.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا يمكنك إعادة جدولة هذه المهمة."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "You can't tick this step.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا يمكنك تعليم هذه الخطوة."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "You don't have permission for that.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ليس لديك إذن بذلك."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "You have %lld tasks for today, starting with %@.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مهامك لليوم (%lld)، أولها %@."
+          }
+        }
+      }
+    },
+    "You have %lld tasks for today: %@.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مهامك لليوم (%lld): %@."
+          }
+        }
+      }
+    },
+    "You have one task for today: %@.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لديك مهمة واحدة اليوم: %@."
+          }
+        }
+      }
+    },
+    "You were signed out. Sign in again.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تم تسجيل خروجك. سجّل الدخول مرة أخرى."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "You're all clear for today.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا شيء معلّق عليك اليوم."
+          }
+        }
+      }
+    },
+    "You're not in a company yet. The owner can invite you on mahamone.com.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لست ضمن أي شركة بعد. يمكن للمالك دعوتك عبر mahamone.com."
+          }
+        }
+      }
+    },
+    "You're not in Maham Tasks yet": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لست في Maham Tasks بعد"
+          }
+        }
+      }
+    },
+    "You're not in Maham Tasks yet. An admin can invite you on tasks.mahamone.com.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لست في Maham Tasks بعد. يمكن لأحد المسؤولين دعوتك عبر tasks.mahamone.com."
+          }
+        }
+      }
+    },
+    "You're offline. Try again when you're connected.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أنت غير متصل. حاول مرة أخرى عند الاتصال."
+          }
+        }
+      }
+    },
+    "You're offline. What's shown was saved on this iPhone.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أنت غير متصل. المعروض محفوظ على هذا الـ iPhone."
+          }
+        }
+      },
+      "extractionState": "manual"
+    },
+    "Your company and your team's tasks, in one place.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "شركتك ومهام فريقك، في مكان واحد."
+          }
+        }
+      }
+    },
+    "Your day": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يومك"
+          }
+        }
+      }
+    },
+    "Your Maham One account is not in Maham Tasks yet. Ask a Maham Tasks admin to invite you.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حسابك في Maham One غير مضاف إلى Maham Tasks بعد. اطلب من مسؤول Maham Tasks دعوتك."
+          }
+        }
+      }
+    },
+    "Your Maham One account isn't part of Maham Tasks. An admin can invite you on tasks.mahamone.com, and your tasks will show here.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حسابك في Maham One ليس جزءًا من Maham Tasks. يمكن لأحد المسؤولين دعوتك عبر tasks.mahamone.com، وستظهر مهامك هنا."
+          }
+        }
+      }
+    },
+    "Your open tasks and the company's clients appear in the iPhone's search. Ask Siri to add a task or what's due today.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تظهر مهامك المفتوحة وعملاء الشركة في بحث الـ iPhone. اطلب من Siri إضافة مهمة أو اسأله عمّا هو مستحق اليوم."
+          }
+        }
+      }
+    },
+    "Your overdue and due-today tasks from Maham Tasks.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مهامك المتأخرة والمستحقة اليوم من Maham Tasks."
+          }
+        }
+      }
+    },
+    "“%@” is already done.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” مكتملة بالفعل."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

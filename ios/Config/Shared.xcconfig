@@ -2,7 +2,6 @@
 // per Apple account go in Local.xcconfig next to this file (not in git):
 //
 //   DEVELOPMENT_TEAM = ABCDE12345
-//   SUPABASE_PUBLISHABLE_KEY = sb_publishable_...
 //
 // See ios/README.md.
 
@@ -14,8 +13,9 @@ KEYCHAIN_GROUP = com.almailgroup.mahamone.shared
 // comment, so Info.plist adds the https:// itself.
 SUPABASE_HOST = gagdyhintrxdkiqhahzh.supabase.co
 
-// The project's publishable key (public by design; never the secret key).
-// Empty here: the app then says it isn't set up yet.
-SUPABASE_PUBLISHABLE_KEY =
+// The project's publishable key: public by design, the same one the web app
+// ships (src/cloud/config.ts). Never the secret key (sb_secret_…), which the
+// app refuses anyway.
+SUPABASE_PUBLISHABLE_KEY = sb_publishable_KyVAkWtemw_XDnNK8ZKRpA_-5x4pk8d
 
 #include? "Local.xcconfig"

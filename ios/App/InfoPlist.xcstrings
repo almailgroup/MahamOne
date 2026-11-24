@@ -1,0 +1,96 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "NSFaceIDUsageDescription": {
+      "comment": "Info.plist: shown when iOS asks for permission",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maham One uses Face ID to keep your company's data locked when you're away."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يستخدم Maham One بصمة الوجه لإبقاء بيانات شركتك مقفلة عندما تكون بعيدًا."
+          }
+        }
+      }
+    },
+    "NSCalendarsWriteOnlyAccessUsageDescription": {
+      "comment": "Info.plist: shown when iOS asks for permission",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maham One adds a task's due date to your calendar when you ask it to."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يضيف Maham One موعد استحقاق المهمة إلى تقويمك عندما تطلب ذلك."
+          }
+        }
+      }
+    },
+    "NSContactsUsageDescription": {
+      "comment": "Info.plist: shown when iOS asks for permission",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maham One saves a client's phone and email to your contacts when you ask it to."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يحفظ Maham One هاتف العميل وبريده الإلكتروني في جهات اتصالك عندما تطلب ذلك."
+          }
+        }
+      }
+    },
+    "CFBundleDisplayName": {
+      "comment": "Info.plist",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maham One"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maham One"
+          }
+        }
+      }
+    },
+    "CFBundleName": {
+      "comment": "Info.plist",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MahamOne"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MahamOne"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

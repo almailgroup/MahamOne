@@ -58,6 +58,9 @@ jobs:
         working-directory: ios
         run: |
           set +e
+          # Keep compiling after the first file with an error, so one run
+          # reports them all.
+          defaults write com.apple.dt.Xcode IDEBuildingContinueBuildingAfterErrors -bool YES
           xcodebuild build \
             -project MahamOne.xcodeproj \
             -scheme MahamOne \
@@ -67,10 +70,31 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             > build.log 2>&1
           status=$?
-          # The errors (and the code around them), not 10,000 lines of log.
-          grep -E -A3 "(error|warning: .*(deprecated|unavailable|concurrency|Sendable))" build.log | head -300
-          tail -5 build.log
+          # The errors and the warnings worth reading, once each, not 10,000
+          # lines of log.
+          echo "::group::Errors"
+          grep -E ": error: " build.log | sed -E 's|^.*/ios/||' | sort -u | head -200
+          echo "::endgroup::"
+          echo "::group::Warnings"
+          grep -E ": warning: " build.log | grep -v "/DerivedData/" | sed -E 's|^.*/ios/||' | sort -u | head -80
+          echo "::endgroup::"
+          tail -3 build.log
           exit $status
+
+      # Every string the compiler finds in the code, against the Arabic in the
+      # String Catalogs: the list of what still needs translating. It reports
+      # and never fails the build.
+      - name: Strings without Arabic
+        working-directory: ios
+        continue-on-error: true
+        run: |
+          xcodebuild -exportLocalizations \
+            -project MahamOne.xcodeproj \
+            -localizationPath DerivedData/Localizations \
+            -exportLanguage ar \
+            -sdk iphonesimulator \
+            CODE_SIGNING_ALLOWED=NO > export.log 2>&1 || { tail -40 export.log; exit 1; }
+          python3 scripts/untranslated.py DerivedData/Localizations
 
       - name: Keep the build log
         if: always()
