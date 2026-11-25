@@ -40,6 +40,10 @@ targets:
     platform: iOS
     sources:
       - path: App
+        excludes:
+          - PrivacyInfo.xcprivacy
+      - path: App/PrivacyInfo.xcprivacy
+        buildPhase: resources
       - path: Shared
     dependencies:
       - package: MahamKit

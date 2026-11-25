@@ -73,34 +73,87 @@ That proves it compiles before anyone opens Xcode.
 
 ## Getting it to TestFlight
 
-You need these once:
+GitHub builds, signs and uploads the app for you: no Mac needed. You set
+it up once; after that a new TestFlight build is one button.
 
-1. **An Apple Developer Program membership** for the company
-   (developer.apple.com, 99 USD a year). Note the **Team ID** under
-   Membership details and put it in `Config/Local.xcconfig`.
-2. **The app's identifiers.** Xcode makes them the first time it signs the
-   app, with "Automatically manage signing":
-   - `com.almailgroup.mahamone` (the app)
-   - `com.almailgroup.mahamone.widgets` (the widgets)
-   - the App Group `group.com.almailgroup.mahamone`, which lets the widgets
-     read what the app saved
-3. **The app in App Store Connect** (appstoreconnect.apple.com → Apps → +
-   → New App). Choose iOS, name it Maham One, language English, the bundle
-   id `com.almailgroup.mahamone`, and any SKU (for example `mahamone-ios`).
+### Once
 
-Then for each build:
+1. **Apple Developer Program.** You need a membership for the company
+   (developer.apple.com). Note the **Team ID** under Membership details.
 
-1. In Xcode choose **Any iOS Device (arm64)**, then **Product → Archive**.
-2. In the Organizer: **Distribute App → App Store Connect → Upload**.
-3. In App Store Connect → TestFlight, wait for the build to finish
-   processing (about 10–30 minutes). Then add testers. Internal testers
-   (people in your App Store Connect team) can install it straight away
-   with the TestFlight app. External testers need Apple's quick beta review
-   first.
+2. **The app's bundle id.** Go to developer.apple.com → Certificates, IDs &
+   Profiles → Identifiers → **+** → App IDs → App. Fill it in like this:
+   - Description: `Maham One`
+   - Bundle ID: Explicit, `com.almailgroup.mahamone`
+   - Capability: tick **App Groups**
+   - Then Continue → Register.
 
-Raise `CURRENT_PROJECT_VERSION` in `project.yml` for each new upload.
-`MARKETING_VERSION` is the version people see.
+   The widgets' id and the App Group are made by the workflow itself.
 
-Uploading from GitHub instead of a Mac is possible with an App Store
-Connect API key stored as repository secrets. That can be added as its own
-workflow when you want it.
+3. **The app in App Store Connect.** Go to appstoreconnect.apple.com →
+   Apps → **+** → New App, and fill it in like this:
+   - Platform: iOS
+   - Name: Maham One
+   - Language: English
+   - Bundle ID: the one from step 2
+   - SKU: anything, for example `mahamone-ios`
+   - User Access: Full Access
+
+4. **An App Store Connect API key.** Go to App Store Connect → Users and
+   Access → Integrations → App Store Connect API → Team Keys → **+**.
+   - Name it `GitHub`.
+   - Set Access to **Admin**. Xcode needs that to make the signing
+     certificates.
+   - Note the **Key ID** of the new key, and the **Issuer ID** shown above
+     the list.
+   - Download the key: a file named `AuthKey_XXXXXXXXXX.p8`. Apple lets you
+     download it only once. Keep it safe, and never paste it into a chat or
+     an email.
+
+5. **Four secrets in GitHub.** Go to the repository → Settings → Secrets and
+   variables → Actions → **New repository secret**, once for each of these:
+
+   | Name | Value |
+   |---|---|
+   | `APPLE_TEAM_ID` | the Team ID from step 1 |
+   | `APP_STORE_CONNECT_KEY_ID` | the Key ID from step 4 |
+   | `APP_STORE_CONNECT_ISSUER_ID` | the Issuer ID from step 4 |
+   | `APP_STORE_CONNECT_KEY` | the whole text of the `.p8` file. Open it in TextEdit or Notepad and copy everything, from `-----BEGIN PRIVATE KEY-----` to `-----END PRIVATE KEY-----` |
+
+   GitHub keeps secrets encrypted. Nobody can read them back, not even in
+   the workflow's logs.
+
+6. **Testers.** In App Store Connect → Maham One → TestFlight → Internal
+   Testing → **+**, make a group (for example "Team"). Add yourself and
+   anyone in your App Store Connect team, and turn on automatic
+   distribution. Each new build then reaches them by itself.
+
+### Each new build
+
+1. In the repository: Actions → **TestFlight** → **Run workflow** → Run.
+2. Wait about 15 minutes for the run to turn green. Its summary says which
+   build it uploaded, for example `1.0.0 (12.1)`.
+3. Apple then processes the build. That usually takes 10–30 minutes, and
+   Apple emails you when it's ready. Testers install it with the
+   **TestFlight** app on their iPhone or iPad.
+
+The first build asks one question in App Store Connect. Under TestFlight,
+the build may show "Missing Compliance". The app only uses the iPhone's
+standard encryption, and `ITSAppUsesNonExemptEncryption` already says so,
+so it shouldn't ask. If it does, answer "None of the algorithms mentioned
+above".
+
+People outside your App Store Connect team are external testers. They need
+Apple's beta review once per version (about a day): TestFlight → External
+Testing → add a group, then add the build.
+
+The version people see is `MARKETING_VERSION` in `project.yml`
+(`1.0.0`). Raise it for a new release. Each run gets its own build number,
+so no other edit is needed.
+
+Running the workflow with **Upload** unticked only checks that the App
+Store build compiles. It signs nothing and needs no secrets.
+
+Uploading from a Mac instead still works. Put your Team ID in
+`Config/Local.xcconfig`, open the project in Xcode, then Product → Archive
+→ Distribute App → App Store Connect.

@@ -12,6 +12,7 @@ on:
       - '.github/workflows/maham-tasks-backup.yml'
       - 'ios/**'
       - '.github/workflows/ios.yml'
+      - '.github/workflows/testflight.yml'
   workflow_dispatch:
 
 permissions:

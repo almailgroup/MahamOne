@@ -1,0 +1,196 @@
+name: TestFlight
+
+# Builds Maham One for the App Store, signs it and uploads it to TestFlight.
+# Run it by hand: Actions → TestFlight → Run workflow. Each run is a new
+# build (1.0.0 (12.1), …); it shows in App Store Connect → TestFlight once
+# Apple has processed it.
+#
+# It needs four repository secrets, set once (ios/README.md, "Getting it to
+# TestFlight"):
+#   APPLE_TEAM_ID                 the Apple Developer team id
+#   APP_STORE_CONNECT_KEY_ID      the App Store Connect API key's id
+#   APP_STORE_CONNECT_ISSUER_ID   the issuer id shown above the keys
+#   APP_STORE_CONNECT_KEY         the whole text of the key's .p8 file
+#
+# Signing is Xcode's automatic signing through that key: Xcode registers
+# the app's identifiers and App Group, and makes the certificates and
+# profiles, itself. Nothing to manage by hand.
+#
+# With "Upload" off it only checks that the App Store build compiles,
+# without signing, and needs no secrets.
+on:
+  workflow_dispatch:
+    inputs:
+      upload:
+        description: Upload to TestFlight (off = only check the App Store build compiles)
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: testflight
+  cancel-in-progress: false
+
+jobs:
+  testflight:
+    name: Build, sign and upload
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      UPLOAD: ${{ inputs.upload }}
+      TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+      ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Xcode 26
+        run: |
+          latest=$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)
+          sudo xcode-select -s "$latest"
+          xcodebuild -version
+
+      - name: Check the secrets
+        if: inputs.upload
+        env:
+          KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
+        run: |
+          missing=""
+          [ -n "$TEAM_ID" ] || missing="$missing APPLE_TEAM_ID"
+          [ -n "$KEY_ID" ] || missing="$missing APP_STORE_CONNECT_KEY_ID"
+          [ -n "$ISSUER_ID" ] || missing="$missing APP_STORE_CONNECT_ISSUER_ID"
+          [ -n "$KEY" ] || missing="$missing APP_STORE_CONNECT_KEY"
+          if [ -n "$missing" ]; then
+            echo "::error::These repository secrets are missing:$missing. See ios/README.md, \"Getting it to TestFlight\"."
+            exit 1
+          fi
+          # The key goes to a file only this job can read, and is removed at
+          # the end. It is never printed.
+          key="$RUNNER_TEMP/AuthKey_$KEY_ID.p8"
+          printf '%s\n' "$KEY" > "$key"
+          chmod 600 "$key"
+          if ! grep -q "BEGIN PRIVATE KEY" "$key"; then
+            echo "::error::APP_STORE_CONNECT_KEY should be the whole text of the .p8 file, from -----BEGIN PRIVATE KEY----- to -----END PRIVATE KEY-----."
+            exit 1
+          fi
+          echo "AUTH_KEY_PATH=$key" >> "$GITHUB_ENV"
+
+      - name: Generate the Xcode project
+        working-directory: ios
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      - name: Choose the build number
+        run: |
+          # Grows with every run (and every re-run), as App Store Connect
+          # needs: 12.1, 12.2, 13.1, …
+          echo "BUILD_NUMBER=${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_ENV"
+
+      - name: Archive
+        working-directory: ios
+        run: |
+          set +e
+          if [ "$UPLOAD" = "true" ]; then
+            signing=(
+              -allowProvisioningUpdates
+              -authenticationKeyPath "$AUTH_KEY_PATH"
+              -authenticationKeyID "$KEY_ID"
+              -authenticationKeyIssuerID "$ISSUER_ID"
+              DEVELOPMENT_TEAM="$TEAM_ID"
+              CODE_SIGN_STYLE=Automatic
+            )
+          else
+            signing=(CODE_SIGNING_ALLOWED=NO)
+          fi
+          xcodebuild archive \
+            -project MahamOne.xcodeproj \
+            -scheme MahamOne \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/MahamOne.xcarchive" \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+            "${signing[@]}" \
+            > archive.log 2>&1
+          status=$?
+          echo "::group::Errors"
+          grep -E "error: " archive.log | sed -E 's|^.*/ios/||' | sort -u | head -100
+          echo "::endgroup::"
+          tail -3 archive.log
+          exit $status
+
+      - name: Upload to TestFlight
+        if: inputs.upload
+        working-directory: ios
+        run: |
+          set +e
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store-connect</string>
+            <key>destination</key>
+            <string>upload</string>
+            <key>teamID</key>
+            <string>$TEAM_ID</string>
+            <key>signingStyle</key>
+            <string>automatic</string>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>manageAppVersionAndBuildNumber</key>
+            <false/>
+          </dict>
+          </plist>
+          EOF
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/MahamOne.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$AUTH_KEY_PATH" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER_ID" \
+            > upload.log 2>&1
+          status=$?
+          grep -iE "error|warning|upload|succeeded|failed" upload.log | sort -u | head -80
+          tail -5 upload.log
+          exit $status
+
+      - name: Say what happened
+        if: always()
+        run: |
+          version=$(grep -E "MARKETING_VERSION" ios/project.yml | head -1 | sed -E 's/.*"(.*)".*/\1/')
+          {
+            if [ "${{ job.status }}" = "success" ] && [ "$UPLOAD" = "true" ]; then
+              echo "### Maham One $version ($BUILD_NUMBER) is uploaded"
+              echo
+              echo "It appears in App Store Connect → Apps → Maham One → TestFlight once Apple has processed it (usually 10–30 minutes). Testers in an internal group get it in the TestFlight app."
+            elif [ "${{ job.status }}" = "success" ]; then
+              echo "### The App Store build of Maham One $version compiles"
+              echo
+              echo "Nothing was signed or uploaded (Upload was off)."
+            else
+              echo "### The build didn't reach TestFlight"
+              echo
+              echo "The failing step above says why; its log is kept as the testflight-logs artifact."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: testflight-logs
+          path: |
+            ios/archive.log
+            ios/upload.log
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Remove the key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8 "$RUNNER_TEMP/ExportOptions.plist"
