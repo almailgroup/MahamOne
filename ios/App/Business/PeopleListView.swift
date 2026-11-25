@@ -95,8 +95,11 @@ struct PeopleListView: View {
         }
       }
     }
-    .sensoryFeedback(Haptics.pick, trigger: department)
-    .refreshable { await business.refreshCompany() }
+    .haptic(.selection, trigger: department)
+    .refreshable {
+      await Haptics.refresh()
+      await business.refreshCompany()
+    }
   }
 
   private static func departments(_ employees: [Employee]) -> [String] {

@@ -18,6 +18,7 @@ struct SegmentOption<Value: Hashable>: Identifiable {
 /// with an 8pt radius and 4pt padding; segments with a 6pt radius, at least
 /// 40pt tall, 14pt weight 500; the selected one surface, slate-900 and
 /// shadow-sm. It hugs its segments, and scrolls sideways when they don't fit.
+/// Changing segment plays the selection haptic.
 struct Segmented<Value: Hashable>: View {
   @Binding var selection: Value
   let options: [SegmentOption<Value>]
@@ -60,6 +61,8 @@ struct Segmented<Value: Hashable>: View {
     let selected = option.value == selection
     let shape = RoundedRectangle(cornerRadius: WebRadius.sm, style: .continuous)
     return Button {
+      guard option.value != selection else { return }
+      Haptics.play(.selection)
       withAnimation(WebMotion.standard) { selection = option.value }
     } label: {
       HStack(spacing: 6) {
@@ -83,7 +86,7 @@ struct Segmented<Value: Hashable>: View {
       }
       .contentShape(shape)
     }
-    .buttonStyle(.plain)
+    .buttonStyle(PressedFill(radius: WebRadius.sm, color: .slate(200)))
     .accessibilityAddTraits(selected ? .isSelected : [])
   }
 }

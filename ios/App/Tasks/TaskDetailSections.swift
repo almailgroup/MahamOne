@@ -48,7 +48,7 @@ struct TaskChecklistSection: View {
         addField
       }
     }
-    .sensoryFeedback(Haptics.done, trigger: doneTick)
+    .haptic(.success, trigger: doneTick)
   }
 
   private func stepRow(_ step: ChecklistItem) -> some View {
@@ -187,7 +187,7 @@ struct TaskCommentsSection: View {
         composer
       }
     }
-    .sensoryFeedback(Haptics.pick, trigger: sentTick)
+    .haptic(.selection, trigger: sentTick)
   }
 
   private var trimmed: String { draft.trimmingCharacters(in: .whitespacesAndNewlines) }

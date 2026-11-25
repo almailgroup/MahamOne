@@ -67,7 +67,10 @@ struct ClientDetailView: View {
     .mahamScreen()
     .navigationTitle(BusinessUI.name(shown))
     .navigationBarTitleDisplayMode(.inline)
-    .refreshable { await business.refreshCompany() }
+    .refreshable {
+      await Haptics.refresh()
+      await business.refreshCompany()
+    }
     .userActivity(ActivityType.client) { activity in
       activity.describe(client: shown, config: config)
     }

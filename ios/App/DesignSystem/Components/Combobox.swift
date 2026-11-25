@@ -53,6 +53,7 @@ struct Combobox: View {
 
   var body: some View {
     Button {
+      Haptics.play(.tap)
       open = true
     } label: {
       HStack(spacing: 8) {
@@ -107,6 +108,7 @@ private struct ComboPanel: View {
               .allowsHitTesting(false)
           }
           TextField("", text: $query)
+            .accessibilityLabel(Text(searchPlaceholder ?? t("Search…")))
             .focused($focused)
             .submitLabel(.done)
             .onSubmit(chooseFirst)
@@ -114,7 +116,7 @@ private struct ComboPanel: View {
         .font(.web(14))
       }
       .padding(.horizontal, 12)
-      .frame(height: 40)
+      .frame(minHeight: 44)
       .overlay(alignment: .bottom) { Rectangle().fill(palette.slate(100)).frame(height: 1) }
 
       ScrollView {
@@ -128,6 +130,7 @@ private struct ComboPanel: View {
           }
           ForEach(filtered) { option in
             Button {
+              Haptics.play(.selection)
               selection = option.value
               dismissPanel()
             } label: {
@@ -145,6 +148,7 @@ private struct ComboPanel: View {
               }
               .padding(.horizontal, 10)
               .padding(.vertical, 8)
+              .frame(minHeight: 44)
               .contentShape(Rectangle())
             }
             .buttonStyle(PressedFill(radius: WebRadius.sm))
@@ -152,6 +156,7 @@ private struct ComboPanel: View {
           }
           if let onCreate {
             Button {
+              Haptics.play(.tap)
               onCreate(query.trimmingCharacters(in: .whitespaces))
               dismissPanel()
             } label: {
@@ -163,6 +168,7 @@ private struct ComboPanel: View {
               .foregroundStyle(palette.primary(700))
               .padding(.horizontal, 10)
               .padding(.vertical, 8)
+              .frame(minHeight: 44)
               .contentShape(Rectangle())
             }
             .buttonStyle(PressedFill(radius: WebRadius.sm, color: .primary(50)))
@@ -188,9 +194,11 @@ private struct ComboPanel: View {
 
   private func chooseFirst() {
     if let first = filtered.first {
+      Haptics.play(.selection)
       selection = first.value
       dismissPanel()
     } else if let onCreate {
+      Haptics.play(.tap)
       onCreate(query.trimmingCharacters(in: .whitespaces))
       dismissPanel()
     }

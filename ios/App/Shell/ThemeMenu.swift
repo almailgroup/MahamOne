@@ -1,27 +1,18 @@
 import SwiftUI
 
 /// The palette button in the drawer's header (`src/features/theme/menu.tsx`):
-/// every theme as a swatch, light and dark, the one on screen checked;
-/// choosing applies at once. "Match my device" follows the iPhone.
+/// a 44pt round Liquid Glass button opening every theme as a swatch, light
+/// and dark, the one on screen checked; choosing applies at once. "Match my
+/// device" follows the iPhone.
 struct ThemeMenuButton: View {
   let onNavigate: () -> Void
   @State private var open = false
-  @Environment(\.palette) private var palette
 
   var body: some View {
-    Button {
-      open = true
-    } label: {
-      IconView(.palette, size: 16)
-        .foregroundStyle(palette.slate(500))
-        .frame(width: 44, height: 44)
-        .contentShape(Circle())
-    }
-    .buttonStyle(PressedFill(radius: 22))
-    .accessibilityLabel(Text(t("Theme")))
-    .anchoredPanel(isPresented: $open, alignment: .end) {
-      ThemeMenuPanel(onNavigate: onNavigate)
-    }
+    GlassIconButton(.palette, label: t("Theme"), iconSize: 16) { open = true }
+      .anchoredPanel(isPresented: $open, alignment: .end) {
+        ThemeMenuPanel(onNavigate: onNavigate)
+      }
   }
 }
 
@@ -53,6 +44,7 @@ private struct ThemeMenuPanel: View {
         .background(palette.slate(50), in: RoundedRectangle(cornerRadius: WebRadius.lg, style: .continuous))
         .padding(.top, 12)
       Button {
+        Haptics.play(.tap)
         dismissPanel()
         onNavigate()
         router.go(.settings(section: "appearance"))
@@ -84,6 +76,7 @@ private struct ThemeMenuPanel: View {
         ForEach(ids, id: \.self) { id in
           let checked = id == current
           Button {
+            if !checked { Haptics.play(.change) }
             store.choose(id)
           } label: {
             ThemeSwatch(theme: id, checked: checked)

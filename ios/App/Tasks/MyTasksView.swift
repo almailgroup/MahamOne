@@ -49,7 +49,10 @@ struct MyTasksView: View {
     .mahamScreen()
     .navigationTitle("My tasks")
     .searchable(text: $query, prompt: Text("Filter by title"))
-    .refreshable { await model.tasks.refresh() }
+    .refreshable {
+      await Haptics.refresh()
+      await model.tasks.refresh()
+    }
     .animation(.smooth, value: model.tasks.myTasks)
   }
 

@@ -67,7 +67,7 @@ struct TaskEditorView: View {
         Button("Discard changes", role: .destructive) { dismiss() }
         Button("Keep editing", role: .cancel) {}
       }
-      .sensoryFeedback(Haptics.failed, trigger: failTick)
+      .haptic(.error, trigger: failTick)
       .onAppear(perform: prepare)
     }
   }
@@ -186,7 +186,7 @@ struct TaskEditorView: View {
         Text("No one is assigned yet.")
       }
     }
-    .sensoryFeedback(Haptics.pick, trigger: pickTick)
+    .haptic(.selection, trigger: pickTick)
   }
 
   private var stepsSection: some View {

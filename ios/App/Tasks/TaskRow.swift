@@ -97,7 +97,7 @@ struct TaskStatusButton: View {
     }
     .buttonStyle(.borderless)
     .disabled(pendingDone != nil)
-    .sensoryFeedback(Haptics.done, trigger: doneTick)
+    .haptic(.success, trigger: doneTick)
     .accessibilityLabel(showsDone ? Text("Mark as not done") : Text("Mark done"))
     .accessibilityValue(Text(task.status.label))
   }
@@ -165,9 +165,9 @@ private struct TaskRowActions: ViewModifier {
       } message: {
         Text("It goes to the bin for 30 days. You can restore it on the website.")
       }
-      .sensoryFeedback(Haptics.done, trigger: doneTick)
-      .sensoryFeedback(Haptics.change, trigger: changeTick)
-      .sensoryFeedback(Haptics.warning, trigger: deleteTick)
+      .haptic(.success, trigger: doneTick)
+      .haptic(.change, trigger: changeTick)
+      .haptic(.warning, trigger: deleteTick)
   }
 
   @ViewBuilder

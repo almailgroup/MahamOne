@@ -64,8 +64,11 @@ struct ClientsListView: View {
         }
       }
     }
-    .sensoryFeedback(Haptics.pick, trigger: showArchived)
-    .refreshable { await business.refreshCompany() }
+    .haptic(.selection, trigger: showArchived)
+    .refreshable {
+      await Haptics.refresh()
+      await business.refreshCompany()
+    }
   }
 
   private static func matches(_ client: Client, _ text: String) -> Bool {

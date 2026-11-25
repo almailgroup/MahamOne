@@ -162,6 +162,7 @@ struct DateField: View {
       }
       .padding(.leading, 12)
       Button {
+        Haptics.play(.tap)
         open = true
       } label: {
         IconView(.calendarDays, size: 16)
@@ -298,19 +299,16 @@ private struct DateCalendar: View {
   }
 
   private func pick(_ day: CalendarDay) {
+    Haptics.play(.selection)
     onPick(day)
     dismissPanel()
   }
 
+  /// Previous and next month: 44pt round Liquid Glass buttons.
   private func monthButton(_ icon: Icon, label: String, action: @escaping () -> Void) -> some View {
-    Button(action: action) {
-      IconView(icon, size: 16)
-        .foregroundStyle(palette.slate(600))
-        .frame(width: 40, height: 40)
-        .contentShape(Rectangle())
+    GlassIconButton(icon, label: label, iconSize: 16, color: .slate(600), haptic: .selection) {
+      withAnimation(WebMotion.standard) { action() }
     }
-    .buttonStyle(PressedFill(radius: WebRadius.sm))
-    .accessibilityLabel(Text(label))
   }
 
   private func dayButton(_ day: CalendarDay, today: CalendarDay) -> some View {
@@ -346,6 +344,7 @@ private struct DateCalendar: View {
     .accessibilityAddTraits(isSelected ? .isSelected : [])
   }
 
+  /// Today, In 7 days…: small Liquid Glass buttons, 44pt tall.
   private func quickPick(_ label: String, _ day: CalendarDay) -> some View {
     Button {
       pick(day)
@@ -353,20 +352,20 @@ private struct DateCalendar: View {
       Text(label)
         .font(.web(12, .medium))
         .foregroundStyle(palette.slate(700))
-        .frame(maxWidth: .infinity)
+        .lineLimit(1)
+        .minimumScaleFactor(0.8)
+        .frame(maxWidth: .infinity, minHeight: 44)
         .padding(.horizontal, 8)
-        .padding(.vertical, 10)
-        .border(palette.slate(200), in: RoundedRectangle(cornerRadius: WebRadius.sm, style: .continuous))
-        .contentShape(Rectangle())
     }
-    .buttonStyle(PressedFill(radius: WebRadius.sm, color: .slate(50)))
+    .buttonStyle(.webGlass(.rounded(WebRadius.sm)))
     .disabled(isDisabled(day))
-    .opacity(isDisabled(day) ? 0.4 : 1)
+    .opacity(isDisabled(day) ? 0.8 : 1)
   }
 }
 
 /// A plain button that takes a slate fill while pressed (the web's hover and
-/// active backgrounds).
+/// active backgrounds): rows, tiles, menu items. The Taptic Engine wakes as
+/// it is pressed, so the action's haptic is felt at once.
 struct PressedFill: ButtonStyle {
   var radius: CGFloat = WebRadius.md
   var color: Token = .slate(100)
@@ -387,5 +386,32 @@ private struct PressedFillBody: View {
       .background(
         configuration.isPressed ? palette.color(color) : Color.clear,
         in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+      .onChange(of: configuration.isPressed) { _, now in
+        if now { Haptics.prepare() }
+      }
+  }
+}
+
+/// A card that is a button (the company switcher): pressed, it shrinks a
+/// little and dims.
+struct PressedScale: ButtonStyle {
+  func makeBody(configuration: Configuration) -> some View {
+    PressedScaleBody(configuration: configuration)
+  }
+}
+
+private struct PressedScaleBody: View {
+  let configuration: ButtonStyleConfiguration
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+  var body: some View {
+    let pressed = configuration.isPressed
+    configuration.label
+      .scaleEffect(pressed && !reduceMotion ? 0.98 : 1)
+      .opacity(pressed ? 0.85 : 1)
+      .animation(WebMotion.standard, value: pressed)
+      .onChange(of: pressed) { _, now in
+        if now { Haptics.prepare() }
+      }
   }
 }

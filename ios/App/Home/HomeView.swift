@@ -35,7 +35,10 @@ struct HomeView: View {
             .disabled(model.tasks.notInTasks)
         }
       }
-      .refreshable { await model.refreshAll() }
+      .refreshable {
+        await Haptics.refresh()
+        await model.refreshAll()
+      }
       .taskDestinations()
       .businessDestinations()
       .sheet(isPresented: $showingSettings) { SettingsView() }

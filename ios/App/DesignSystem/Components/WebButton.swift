@@ -58,7 +58,16 @@ extension EnvironmentValues {
   }
 }
 
-/// The web's button look for any `Button`: `.buttonStyle(.web(.outline, .sm))`.
+/// The web's button for any `Button`, in Liquid Glass:
+/// `.buttonStyle(.web(.outline, .sm))`. The sizes (at least 44pt on a
+/// phone), the 8pt radius and the labels are the web's; the colours keep
+/// their meaning: primary is glass tinted primary-solid with on-primary
+/// text, danger red-solid with white, secondary slate-900 with surface;
+/// outline, ghost and subtle are clear glass with the web's text colours
+/// (subtle tinted primary-50). Pressed, the tint takes the web's active
+/// shade and clear glass a light veil, and the glass itself responds.
+/// On a glass bar (`StickyActions`) the clear ones take a fill instead,
+/// since glass can't sit on glass.
 struct WebButtonStyle: ButtonStyle {
   var variant: ButtonVariant = .primary
   var size: ButtonSize = .md
@@ -75,6 +84,7 @@ private struct WebButtonBody: View {
   @Environment(\.palette) private var palette
   @Environment(\.isEnabled) private var isEnabled
   @Environment(\.webButtonFullWidth) private var fullWidth
+  @Environment(\.webButtonOnGlass) private var onGlass
 
   var body: some View {
     let pressed = configuration.isPressed
@@ -82,25 +92,51 @@ private struct WebButtonBody: View {
     configuration.label
       .font(.web(size.textSize, .medium))
       .lineLimit(1)
+      .minimumScaleFactor(0.8)
       .foregroundStyle(foreground(pressed))
       .padding(.horizontal, size.padding)
       .frame(
         minWidth: size.isIcon ? CGFloat(44) : nil, maxWidth: fullWidth ? CGFloat.infinity : nil,
         minHeight: 44)
-      .background(background(pressed), in: shape)
-      .border(variant == .outline ? palette.slate(300) : .clear, in: shape)
-      .boxShadow(shadow, in: shape)
+      .background(veil(pressed), in: shape)
       .contentShape(shape)
+      .modifier(OptionalGlass(glass: glass(pressed), shape: shape))
       .opacity(isEnabled ? 1 : 0.5)
       .animation(WebMotion.standard, value: pressed)
+      .onChange(of: pressed) { _, now in
+        if now { Haptics.prepare(variant.haptic) }
+      }
   }
 
-  private var shadow: [BoxShadow] {
+  private var isTinted: Bool {
     switch variant {
-    case .primary, .secondary, .danger: WebShadow.sm
-    case .outline: WebShadow.xs
-    case .ghost, .subtle: []
+    case .primary, .secondary, .danger, .subtle: true
+    case .outline, .ghost: false
     }
+  }
+
+  /// The glass, or none for a clear button on a glass bar.
+  private func glass(_ pressed: Bool) -> Glass? {
+    switch variant {
+    case .primary:
+      return Glass.regular.tint(WebGlass.primaryTint(palette, pressed: pressed)).interactive()
+    case .danger:
+      return Glass.regular.tint(WebGlass.dangerTint(palette, pressed: pressed)).interactive()
+    case .secondary:
+      return Glass.regular.tint(pressed ? palette.slate(800) : palette.slate(900)).interactive()
+    case .subtle:
+      return Glass.regular.tint(pressed ? palette.primary(100) : palette.primary(50)).interactive()
+    case .outline, .ghost:
+      return onGlass ? nil : Glass.regular.interactive()
+    }
+  }
+
+  /// Drawn over the glass, under the label: the pressed veil of clear
+  /// glass, or the fill of a clear button on a glass bar.
+  private func veil(_ pressed: Bool) -> Color {
+    if isTinted { return .clear }
+    if onGlass { return WebGlass.onGlassFill(palette, pressed: pressed) }
+    return pressed ? WebGlass.pressedVeil(palette) : .clear
   }
 
   private func foreground(_ pressed: Bool) -> Color {
@@ -113,15 +149,16 @@ private struct WebButtonBody: View {
     case .subtle: palette.primary(700)
     }
   }
+}
 
-  private func background(_ pressed: Bool) -> Color {
-    switch variant {
-    case .primary: pressed ? palette.color(.primarySolidActive) : palette.primarySolid
-    case .secondary: pressed ? palette.slate(800) : palette.slate(900)
-    case .outline: pressed ? palette.slate(50) : palette.surface
-    case .ghost: pressed ? palette.slate(100) : .clear
-    case .danger: pressed ? palette.color(.redSolidHover) : palette.redSolid
-    case .subtle: pressed ? palette.primary(100) : palette.primary(50)
+extension ButtonVariant {
+  /// The haptic a button of this kind plays: a firmer tap for the main
+  /// actions, the warning for a destructive one, a light tap for the rest.
+  var haptic: Haptic {
+    switch self {
+    case .primary, .secondary: .press
+    case .danger: .warning
+    case .outline, .ghost, .subtle: .tap
     }
   }
 }
@@ -133,7 +170,8 @@ extension ButtonStyle where Self == WebButtonStyle {
 }
 
 /// The web's `Button`: a label with an optional 16pt icon before it, or a
-/// spinning `Loader2` while `loading` (which also turns it off).
+/// spinning `Loader2` while `loading` (which also turns it off). A tap
+/// plays its variant's haptic (`haptic` to choose another).
 ///
 ///     WebButton(t("Save"), loading: saving) { save() }
 ///     WebButton(t("New invoice"), icon: .plus, variant: .outline, size: .sm) { … }
@@ -146,11 +184,12 @@ struct WebButton: View {
   private let size: ButtonSize
   private let loading: Bool
   private let role: ButtonRole?
+  private let haptic: Haptic
   private let action: () -> Void
 
   init(
     _ title: String, icon: Icon? = nil, variant: ButtonVariant = .primary, size: ButtonSize = .md,
-    loading: Bool = false, role: ButtonRole? = nil, action: @escaping () -> Void
+    loading: Bool = false, role: ButtonRole? = nil, haptic: Haptic? = nil, action: @escaping () -> Void
   ) {
     self.title = title
     self.icon = icon
@@ -159,13 +198,14 @@ struct WebButton: View {
     self.size = size
     self.loading = loading
     self.role = role
+    self.haptic = haptic ?? variant.haptic
     self.action = action
   }
 
   /// An icon-only button, named for VoiceOver.
   init(
     icon: Icon, label: String, variant: ButtonVariant = .ghost, size: ButtonSize = .icon,
-    loading: Bool = false, action: @escaping () -> Void
+    loading: Bool = false, haptic: Haptic? = nil, action: @escaping () -> Void
   ) {
     self.title = nil
     self.icon = icon
@@ -174,11 +214,15 @@ struct WebButton: View {
     self.size = size
     self.loading = loading
     self.role = nil
+    self.haptic = haptic ?? variant.haptic
     self.action = action
   }
 
   var body: some View {
-    Button(role: role, action: action) {
+    Button(role: role) {
+      Haptics.play(haptic)
+      action()
+    } label: {
       HStack(spacing: 8) {
         if loading {
           SpinningIcon(size: 16)

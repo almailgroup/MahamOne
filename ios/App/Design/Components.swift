@@ -327,9 +327,9 @@ private struct ToastModifier: ViewModifier {
         }
       }
       .animation(.spring(duration: 0.35), value: toast)
-      .sensoryFeedback(trigger: toast) { _, new in
+      .haptic(trigger: toast) { _, new in
         guard let new else { return nil }
-        return new.kind == .error ? Haptics.failed : Haptics.done
+        return new.kind == .error ? .error : .success
       }
   }
 }

@@ -84,8 +84,11 @@ struct InvoicesListView: View {
         }
       }
     }
-    .sensoryFeedback(Haptics.pick, trigger: filter)
-    .refreshable { await business.refreshCompany() }
+    .haptic(.selection, trigger: filter)
+    .refreshable {
+      await Haptics.refresh()
+      await business.refreshCompany()
+    }
   }
 
   private func invoices(_ business: BusinessStore) -> [SalesDocument] {

@@ -47,3 +47,6 @@ __pycache__/
 
 # Intermediate output of ios/scripts/web-fixtures (the Swift file is kept)
 ios/scripts/web-fixtures/fixtures.json
+
+# Screenshots from ios/scripts/screenshots.sh (CI uploads them as an artifact)
+ios/screenshots/

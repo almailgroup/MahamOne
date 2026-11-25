@@ -49,7 +49,10 @@ struct InvoiceDetailView: View {
     .mahamScreen()
     .navigationTitle(doc.number.isEmpty ? String(localized: "Invoice") : doc.number)
     .navigationBarTitleDisplayMode(.inline)
-    .refreshable { await business.refreshCompany() }
+    .refreshable {
+      await Haptics.refresh()
+      await business.refreshCompany()
+    }
     .userActivity(ActivityType.invoice) { activity in
       activity.describe(invoice: doc, config: config)
     }

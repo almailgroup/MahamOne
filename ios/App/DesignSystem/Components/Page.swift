@@ -20,18 +20,35 @@ final class ShellChrome {
   func unregisterStickyActions() { stickyActions = max(0, stickyActions - 1) }
 }
 
+/// The bars that float over every page of the shell, and the room a page
+/// keeps for them.
+enum ShellMetrics {
+  /// The top bar (`header.tsx`): 56pt.
+  static let topBar: CGFloat = 56
+  /// Below the content: the tab bar (64pt, 12pt off the edge) plus a gap,
+  /// 96pt with the page's own 20pt, as the web's main has.
+  static let bottomRoom: CGFloat = 76
+}
+
 /// A page of the shell (`src/app/layout.tsx`'s main): `page` behind, the
 /// window scrolls, 16pt at the sides and 20pt at the top; the tab bar's room
-/// is kept at the bottom. It starts at the top each time it opens.
+/// is kept at the bottom (the bars sit in the safe area, so the last row
+/// always scrolls clear of them and of the home indicator). It starts at
+/// the top each time it opens. With `refresh`, pulling down reloads it,
+/// with the refresh haptic.
 struct WebPage<Content: View>: View {
   private let spacing: CGFloat
+  private let refresh: (@Sendable () async -> Void)?
   private let content: Content
   @Environment(\.palette) private var palette
   @Environment(ShellChrome.self) private var chrome: ShellChrome?
 
   /// `spacing` between the page's sections (the home's are 20pt apart).
-  init(spacing: CGFloat = 0, @ViewBuilder content: () -> Content) {
+  init(
+    spacing: CGFloat = 0, refresh: (@Sendable () async -> Void)? = nil, @ViewBuilder content: () -> Content
+  ) {
     self.spacing = spacing
+    self.refresh = refresh
     self.content = content()
   }
 
@@ -44,6 +61,13 @@ struct WebPage<Content: View>: View {
         .padding(.bottom, 20)
     }
     .scrollDismissesKeyboard(.interactively)
+    // Room for the bars floating over the page: the top bar above, the tab
+    // bar below (the web's main: 96pt plus the safe area at the bottom).
+    .contentMargins(.top, ShellMetrics.topBar, for: .scrollContent)
+    .contentMargins(.top, ShellMetrics.topBar, for: .scrollIndicators)
+    .contentMargins(.bottom, ShellMetrics.bottomRoom, for: .scrollContent)
+    .contentMargins(.bottom, ShellMetrics.bottomRoom, for: .scrollIndicators)
+    .modifier(PullToRefresh(action: refresh))
     .background(palette.page.ignoresSafeArea())
     .onScrollGeometryChange(for: Bool.self) { geometry in
       geometry.contentOffset.y + geometry.contentInsets.top > 2
@@ -52,6 +76,22 @@ struct WebPage<Content: View>: View {
     }
     .onAppear { chrome?.scrolled = false }
     .toolbar(.hidden, for: .navigationBar)
+  }
+}
+
+/// Pull to refresh, when the page can reload: the refresh haptic as it starts.
+private struct PullToRefresh: ViewModifier {
+  let action: (@Sendable () async -> Void)?
+
+  func body(content: Content) -> some View {
+    if let action {
+      content.refreshable {
+        await Haptics.refresh()
+        await action()
+      }
+    } else {
+      content
+    }
   }
 }
 
@@ -81,16 +121,25 @@ struct PageHeader<Actions: View>: View {
     VStack(alignment: .leading, spacing: 16) {
       VStack(alignment: .leading, spacing: 0) {
         if let breadcrumb {
+          // A 44pt touch target around the line, without moving it.
           Button {
+            Haptics.play(.tap)
             onBreadcrumb?()
           } label: {
-            Text(breadcrumb).font(.web(14)).foregroundStyle(palette.slate(500))
+            Text(breadcrumb)
+              .font(.web(14))
+              .foregroundStyle(palette.slate(500))
+              .padding(.horizontal, 8)
+              .padding(.vertical, 13)
+              .contentShape(Rectangle())
           }
           .buttonStyle(.plain)
           .disabled(onBreadcrumb == nil)
+          .padding(.horizontal, -8)
+          .padding(.vertical, -13)
           .padding(.bottom, 4)
         }
-        Text(title).webText(.pageTitle).lineLimit(1)
+        Text(title).webText(.pageTitle).lineLimit(2).minimumScaleFactor(0.85).accessibilityAddTraits(.isHeader)
         if let description {
           Text(description).font(.web(14)).foregroundStyle(palette.slate(500)).padding(.top, 4)
         }

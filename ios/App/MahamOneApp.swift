@@ -10,6 +10,14 @@ struct MahamOneApp: App {
   @Environment(\.scenePhase) private var scenePhase
   private let model = AppModel.shared
 
+  #if DEBUG
+    init() {
+      // Preview mode (App/Preview): the theme, light or dark, and language the
+      // launch asks for, before the first screen.
+      PreviewMode.applyAppearance()
+    }
+  #endif
+
   var body: some Scene {
     WindowGroup {
       RootView()

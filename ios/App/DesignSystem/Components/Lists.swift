@@ -70,8 +70,13 @@ struct ListRow<Leading: View, Status: View>: View {
   var body: some View {
     Group {
       if let action {
-        Button(action: action) { content }
-          .buttonStyle(PressedFill(radius: 0, color: .slate(100)))
+        Button {
+          Haptics.play(.tap)
+          action()
+        } label: {
+          content
+        }
+        .buttonStyle(PressedFill(radius: 0, color: .slate(100)))
       } else {
         content
       }

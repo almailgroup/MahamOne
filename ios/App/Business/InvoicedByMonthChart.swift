@@ -81,7 +81,7 @@ struct InvoicedByMonthChart: View {
         }
         .chartXSelection(value: $selected)
         .frame(height: 190)
-        .sensoryFeedback(Haptics.pick, trigger: selected)
+        .haptic(.selection, trigger: selected)
       }
     }
   }

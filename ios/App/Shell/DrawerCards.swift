@@ -17,6 +17,7 @@ struct CompanySwitcher: View {
     let name = ShellCompany.name(business)
     let shape = RoundedRectangle(cornerRadius: WebRadius.xl, style: .continuous)
     Button {
+      Haptics.play(.tap)
       open = true
     } label: {
       HStack(spacing: 12) {
@@ -35,7 +36,7 @@ struct CompanySwitcher: View {
       .boxShadow(WebShadow.xs, in: shape)
       .contentShape(shape)
     }
-    .buttonStyle(.plain)
+    .buttonStyle(PressedScale())
     .accessibilityLabel(Text(t("Switch company")))
     .dropdownPanel(isPresented: $open, alignment: .start, width: 256) {
       DropdownLabel(t("Companies"))
@@ -94,6 +95,7 @@ struct AccountCard: View {
     let email = model.session?.user.email ?? ""
     let shape = RoundedRectangle(cornerRadius: WebRadius.xl, style: .continuous)
     Button {
+      Haptics.play(.tap)
       open = true
     } label: {
       HStack(spacing: 10) {

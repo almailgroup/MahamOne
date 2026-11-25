@@ -2,9 +2,10 @@ import SwiftUI
 
 /// An editor's main buttons (Cancel, Save…) in a bar floating at the bottom
 /// of the screen where the tab bar was (`src/components/ui/sticky-actions.tsx`):
-/// surface at 95% with a blur, a 16pt radius, a hairline ring and the tab
-/// bar's shadow, 10pt padding, the buttons at the end. The tab bar makes way
-/// while it is on screen.
+/// Liquid Glass like the tab bar, a 16pt radius, 10pt padding, the buttons
+/// at the end. Tinted buttons are glass that blends with the bar; the
+/// others take a fill, since glass can't sit on glass. The tab bar makes
+/// way while it is on screen.
 ///
 ///     EditorForm()
 ///       .stickyActions {
@@ -21,7 +22,6 @@ extension View {
 
 struct StickyActions<Content: View>: View {
   private let content: Content
-  @Environment(\.palette) private var palette
   @Environment(ShellChrome.self) private var chrome: ShellChrome?
 
   init(@ViewBuilder content: () -> Content) {
@@ -30,16 +30,15 @@ struct StickyActions<Content: View>: View {
 
   var body: some View {
     let shape = RoundedRectangle(cornerRadius: WebRadius.xl, style: .continuous)
-    HStack(spacing: 8) {
-      Spacer(minLength: 0)
-      content
+    GlassEffectContainer(spacing: 4) {
+      HStack(spacing: 8) {
+        Spacer(minLength: 0)
+        content
+      }
+      .padding(10)
+      .glassEffect(.regular, in: shape)
     }
-    .padding(10)
-    .background {
-      shape.fill(palette.surface.opacity(0.95)).background(.ultraThinMaterial, in: shape)
-    }
-    .ring(palette.hairline, in: shape)
-    .boxShadow(WebShadow.floatingBar, in: shape)
+    .environment(\.webButtonOnGlass, true)
     .padding(.horizontal, 12)
     .padding(.bottom, max(0, 12 - (chrome?.safeArea.bottom ?? 0)))
     .onAppear { chrome?.registerStickyActions() }

@@ -153,6 +153,7 @@ struct AppSwitcherPanel: View {
         ForEach(entries) { entry in
           let active = entry.id == current
           Button {
+            Haptics.play(.selection)
             dismissPanel()
             suite.open(entry, router: router)
           } label: {
@@ -187,6 +188,7 @@ struct AppSwitcherPanel: View {
       }
       Rectangle().fill(palette.slate(100)).frame(height: 1).padding(.vertical, 8)
       Button {
+        Haptics.play(.tap)
         dismissPanel()
         suite.department = .one
         router.go(.home)
@@ -244,6 +246,7 @@ struct AppTiles: View {
         let active = entry.id == current
         let shape = RoundedRectangle(cornerRadius: WebRadius.lg, style: .continuous)
         Button {
+          Haptics.play(.selection)
           onNavigate()
           suite.open(entry, router: router)
         } label: {

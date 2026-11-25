@@ -35,6 +35,6 @@ struct MainTabView: View {
     }
     .tabViewStyle(.sidebarAdaptable)
     .tabBarMinimizeBehavior(.onScrollDown)
-    .sensoryFeedback(Haptics.pick, trigger: model.selectedTab)
+    .haptic(.selection, trigger: model.selectedTab)
   }
 }

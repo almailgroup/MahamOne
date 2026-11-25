@@ -70,13 +70,16 @@ private struct TaskBoardScreen: View {
     .toolbarTitleDisplayMode(.inline)
     .toolbar { toolbar }
     .task { await load() }
-    .refreshable { await load() }
+    .refreshable {
+      await Haptics.refresh()
+      await load()
+    }
     .onChange(of: model.tasks.myTasks) { _, mine in merge(mine) }
     .sheet(isPresented: $showingNewTask) {
       TaskEditorView(projectId: scope.projectId, onSaved: { saved in apply(.updated(saved)) })
     }
-    .sensoryFeedback(Haptics.pick, trigger: dropTick)
-    .sensoryFeedback(Haptics.pick, trigger: layout)
+    .haptic(.selection, trigger: dropTick)
+    .haptic(.selection, trigger: layout)
   }
 
   private var title: Text {

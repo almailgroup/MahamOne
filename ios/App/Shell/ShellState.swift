@@ -16,6 +16,16 @@ final class ShellRouter {
   /// Its web address, for the tab bar and the drawer.
   var currentPath: String { current.path }
 
+  #if DEBUG
+    init() {
+      // Preview mode (App/Preview): opens on the page the launch asks for.
+      if PreviewMode.isOn {
+        let route = Route(path: PreviewMode.options.route)
+        path = route == .home ? [] : [route]
+      }
+    }
+  #endif
+
   /// A link inside a page: pushed, with Back to return.
   func push(_ route: Route) {
     if route == .home {
@@ -80,6 +90,14 @@ final class SuiteState {
     self.defaults = defaults
     storedDepartment = defaults.string(forKey: Self.departmentKey).flatMap(Department.init(rawValue:)) ?? .one
     lastApp = defaults.string(forKey: Self.lastAppKey).flatMap(SuiteAppID.init(rawValue:))
+    #if DEBUG
+      // Preview mode (App/Preview): the department the launch asks for, and
+      // no app remembered from an earlier launch.
+      if PreviewMode.isOn {
+        storedDepartment = PreviewMode.options.department
+        lastApp = nil
+      }
+    #endif
   }
 
   /// The department on screen, remembered.

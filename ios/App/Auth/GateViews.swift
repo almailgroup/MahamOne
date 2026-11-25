@@ -73,7 +73,7 @@ struct SecondStepView: View {
     .frame(maxWidth: .infinity)
     .background { MahamBackground() }
     .onAppear { focused = true }
-    .sensoryFeedback(Haptics.failed, trigger: problem) { _, new in new != nil }
+    .haptic(.error, trigger: problem) { _, new in new != nil }
   }
 
   private func verify() {

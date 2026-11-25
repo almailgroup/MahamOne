@@ -4,7 +4,9 @@ import SwiftUI
 /// The phone's menu ("More" or the top bar's menu button): a panel from
 /// the start edge, `min(320, width − 48)` wide, on `shell` with 24pt end
 /// corners and shadow-2xl (`src/app/layout.tsx` and
-/// `src/features/shell/sidebar.tsx`).
+/// `src/features/shell/sidebar.tsx`). The close and theme buttons are
+/// Liquid Glass. What closes it from inside plays its own haptic; a tap on
+/// the backdrop is felt as it goes.
 struct Drawer: View {
   let onClose: () -> Void
   @Environment(SuiteState.self) private var suite
@@ -12,6 +14,8 @@ struct Drawer: View {
   @Environment(ShellChrome.self) private var chrome
   @Environment(\.palette) private var palette
   @Environment(\.layoutDirection) private var direction
+  /// Closed by its own buttons and rows, which played their haptic already.
+  @State private var closedHere = false
 
   var body: some View {
     let shape = CornerShape.sides(topEnd: WebRadius.xxl, bottomEnd: WebRadius.xxl, direction: direction)
@@ -20,6 +24,7 @@ struct Drawer: View {
       header
       VStack(alignment: .leading, spacing: 6) {
         Button {
+          Haptics.play(.tap)
           go(.home)
         } label: {
           SuiteLogo(height: 32)
@@ -29,14 +34,17 @@ struct Drawer: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        CompanySwitcher(onNavigate: onClose)
-        AppTiles(onNavigate: onClose)
-        CurrentAppRow(app: app) { go(Route(path: app.home)) }
+        CompanySwitcher(onNavigate: closeHere)
+        AppTiles(onNavigate: closeHere)
+        CurrentAppRow(app: app) {
+          Haptics.play(.selection)
+          go(Route(path: app.home))
+        }
       }
       .padding(.horizontal, 12)
 
       ScrollView {
-        DrawerNavigation(app: app, onNavigate: onClose)
+        DrawerNavigation(app: app, onNavigate: closeHere)
           .padding(.horizontal, 12)
           .padding(.vertical, 4)
       }
@@ -46,9 +54,12 @@ struct Drawer: View {
         let current = PathMatch.activeLink(
           router.currentPath, app.visibleNav(suite.flags).flatMap(\.links) + app.footer.map { (to: $0.to, end: $0.end) })
         ForEach(app.footer, id: \.to) { link in
-          DrawerRow(icon: link.icon, label: t(link.label), active: current == link.to) { go(Route(path: link.to)) }
+          DrawerRow(icon: link.icon, label: t(link.label), active: current == link.to) {
+            Haptics.play(.selection)
+            go(Route(path: link.to))
+          }
         }
-        AccountCard(onNavigate: onClose)
+        AccountCard(onNavigate: closeHere)
       }
       .padding(.horizontal, 12)
       .padding(.bottom, max(12, chrome.safeArea.bottom))
@@ -57,6 +68,15 @@ struct Drawer: View {
     .frame(maxHeight: .infinity, alignment: .top)
     .background(palette.shell, in: shape)
     .boxShadow(WebShadow.xxl, in: shape)
+    .accessibilityElement(children: .contain)
+    .accessibilityAddTraits(.isModal)
+    .accessibilityAction(.escape) {
+      Haptics.play(.close)
+      closeHere()
+    }
+    .onDisappear {
+      if !closedHere { Haptics.play(.close) }
+    }
   }
 
   private var header: some View {
@@ -65,15 +85,8 @@ struct Drawer: View {
         .font(.web(14, .semibold))
         .foregroundStyle(palette.slate(600))
         .frame(maxWidth: .infinity, alignment: .leading)
-      ThemeMenuButton(onNavigate: onClose)
-      Button(action: onClose) {
-        IconView(.x, size: 20)
-          .foregroundStyle(palette.slate(500))
-          .frame(width: 44, height: 44)
-          .contentShape(Circle())
-      }
-      .buttonStyle(PressedFill(radius: 22))
-      .accessibilityLabel(Text(t("Close menu")))
+      ThemeMenuButton(onNavigate: closeHere)
+      GlassIconButton(.x, label: t("Close menu"), haptic: .close, action: closeHere)
     }
     .padding(.leading, 20)
     .padding(.trailing, 12)
@@ -81,8 +94,14 @@ struct Drawer: View {
   }
 
   private func go(_ route: Route) {
-    onClose()
+    closeHere()
     router.go(route)
+  }
+
+  /// Closes the drawer from one of its own controls (which played its haptic).
+  private func closeHere() {
+    closedHere = true
+    onClose()
   }
 }
 
@@ -132,7 +151,7 @@ struct DrawerRow<Trailing: View>: View {
       }
       .padding(.leading, indent > 0 ? indent : 12)
       .padding(.trailing, 12)
-      .frame(height: 44)
+      .frame(minHeight: 44)
       .background(active ? palette.surface : Color.clear, in: shape)
       .ring(active ? palette.hairline : .clear, in: shape)
       .boxShadow(active ? WebShadow.xs : [], in: shape)
@@ -201,6 +220,7 @@ struct DrawerNavigation: View {
         switch entry {
         case .link(let link):
           DrawerRow(icon: link.icon, label: t(link.label), active: current == link.to) {
+            Haptics.play(.selection)
             go(link.to)
           }
         case .group(let group):
@@ -221,11 +241,14 @@ struct DrawerNavigation: View {
         // Closed, it points to the end (mirrored in Arabic), as the web's turned chevron.
         IconView(open ? .chevronDown : .chevronRight, size: 16).foregroundStyle(palette.slate(400))
       } action: {
+        Haptics.play(.selection)
         toggle(group.id)
       }
+      .accessibilityValue(Text(open ? t("Open") : t("Closed")))
       if open {
         ForEach(group.children, id: \.to) { child in
           DrawerRow(icon: nil, label: t(child.label), active: current == child.to, indent: 42) {
+            Haptics.play(.selection)
             go(child.to)
           }
         }

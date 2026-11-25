@@ -31,18 +31,15 @@ struct WebShell: View {
     .background {
       // The screen and its safe area, read with the keyboard down (on
       // appearing and on turning), for the bars that float over the pages.
+      // The reader keeps the safe area (one that ignores it reads zero
+      // insets); the screen is its size plus the insets.
       GeometryReader { proxy in
         Color.clear
-          .onAppear {
-            chrome.safeArea = proxy.safeAreaInsets
-            chrome.screenSize = proxy.size
-          }
-          .onChange(of: proxy.size) { _, size in
-            chrome.safeArea = proxy.safeAreaInsets
-            chrome.screenSize = size
-          }
+          .onAppear { measure(proxy) }
+          .onChange(of: proxy.size) { _, _ in measure(proxy) }
+          .onChange(of: proxy.safeAreaInsets) { _, _ in measure(proxy) }
       }
-      .ignoresSafeArea()
+      .ignoresSafeArea(.keyboard)
     }
     .environment(router)
     .environment(suite)
@@ -59,6 +56,14 @@ struct WebShell: View {
       suite.rememberApp(forPath: path)
     }
     .onChange(of: model.pendingLink, initial: true) { _, link in follow(link) }
+  }
+
+  private func measure(_ proxy: GeometryProxy) {
+    let insets = proxy.safeAreaInsets
+    chrome.safeArea = insets
+    chrome.screenSize = CGSize(
+      width: proxy.size.width + insets.leading + insets.trailing,
+      height: proxy.size.height + insets.top + insets.bottom)
   }
 
   /// The person's role in the company on screen: until the companies are
@@ -114,10 +119,14 @@ private struct OneShell: View {
             RouteView(route: route)
           }
       }
-      .safeAreaInset(edge: .top, spacing: 0) {
+      // The bars float over the pages, as on the web (a sticky header and a
+      // fixed tab bar): the pages scroll under them, and leave room for them
+      // with their own margins (WebPage, ShellMetrics). A safe-area inset
+      // around the NavigationStack doesn't reach its pages.
+      .overlay(alignment: .top) {
         TopBar(onMenu: { open(drawer: true) }, onSearch: { searchOpen = true })
       }
-      .safeAreaInset(edge: .bottom, spacing: 0) {
+      .overlay(alignment: .bottom) {
         if chrome.showsTabBar {
           TabBar(
             app: app, canCreate: !groups.isEmpty, onCreate: { open(create: true) },
@@ -161,6 +170,10 @@ private struct OneShell: View {
       }
     }
     .animation(WebMotion.fade, value: searchOpen)
+    #if DEBUG
+      // Preview mode (App/Preview): opens the overlay the launch asks for.
+      .previewOverlay(drawer: { open(drawer: true) }, create: { open(create: true) }, search: { searchOpen = true })
+    #endif
   }
 
   /// `overlay` at 40%, fading in; a tap closes what is over it.

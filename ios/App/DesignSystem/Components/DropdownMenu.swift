@@ -4,9 +4,12 @@ import SwiftUI
 /// an anchored panel on surface with an 8pt radius, a slate-200 border, 4pt
 /// padding and shadow-lg, at least 192pt wide. Fill it with `DropdownItem`,
 /// `DropdownLabel` and `DropdownSeparator`; an item closes the menu once chosen.
+/// The trigger is a Liquid Glass button at least 44pt square around the
+/// label (a text label brings its own side padding); opening and choosing
+/// play haptics.
 ///
-///     DropdownMenu(alignment: .end) {
-///       IconView(.moreHorizontal)
+///     DropdownMenu(alignment: .end, name: t("More actions")) {
+///       IconView(.moreHorizontal).foregroundStyle(palette.slate(600))
 ///     } items: {
 ///       DropdownItem(t("Edit"), icon: .pencil) { … }
 ///       DropdownSeparator()
@@ -15,28 +18,48 @@ import SwiftUI
 struct DropdownMenu<Label: View, Items: View>: View {
   var alignment: PanelAlignment
   var width: CGFloat?
+  /// The trigger's name for VoiceOver, when its label is only an icon.
+  var accessibilityName: String?
   private let label: Label
   private let items: () -> Items
   @State private var open = false
 
   init(
-    alignment: PanelAlignment = .end, width: CGFloat? = nil, @ViewBuilder label: () -> Label,
-    @ViewBuilder items: @escaping () -> Items
+    alignment: PanelAlignment = .end, width: CGFloat? = nil, name accessibilityName: String? = nil,
+    @ViewBuilder label: () -> Label, @ViewBuilder items: @escaping () -> Items
   ) {
     self.alignment = alignment
     self.width = width
+    self.accessibilityName = accessibilityName
     self.label = label()
     self.items = items
   }
 
   var body: some View {
     Button {
+      Haptics.play(.tap)
       open = true
     } label: {
       label
+        .font(.web(14, .medium))
+        .frame(minWidth: 44, minHeight: 44)
     }
-    .buttonStyle(.plain)
+    .buttonStyle(.webGlass(.rounded(WebRadius.md)))
+    .modifier(OptionalAccessibilityLabel(text: accessibilityName))
     .dropdownPanel(isPresented: $open, alignment: alignment, width: width, items: items)
+  }
+}
+
+/// A VoiceOver name, when there is one.
+private struct OptionalAccessibilityLabel: ViewModifier {
+  let text: String?
+
+  func body(content: Content) -> some View {
+    if let text {
+      content.accessibilityLabel(Text(text))
+    } else {
+      content
+    }
   }
 }
 
@@ -100,6 +123,7 @@ struct DropdownItem<Trailing: View>: View {
 
   var body: some View {
     Button {
+      Haptics.play(.selection)
       dismissPanel()
       action()
     } label: {

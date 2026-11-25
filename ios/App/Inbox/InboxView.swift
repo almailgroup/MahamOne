@@ -48,6 +48,7 @@ struct InboxView: View {
         }
       }
       .refreshable {
+        await Haptics.refresh()
         switch section {
         case .tasks: await model.tasks.refresh()
         case .company: await model.business.refreshCompany()

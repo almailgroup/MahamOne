@@ -53,7 +53,10 @@ struct BusinessRootView: View {
         .containerRelativeFrame(.vertical)
       }
       .mahamScreen()
-      .refreshable { await business.refresh() }
+      .refreshable {
+        await Haptics.refresh()
+        await business.refresh()
+      }
     } else {
       ScrollView {
         VStack(alignment: .leading, spacing: 18) {
@@ -71,7 +74,10 @@ struct BusinessRootView: View {
         .frame(maxWidth: .infinity)
       }
       .mahamScreen()
-      .refreshable { await business.refresh() }
+      .refreshable {
+        await Haptics.refresh()
+        await business.refresh()
+      }
     }
   }
 
@@ -217,7 +223,7 @@ private struct BusinessCompanyMenu: View {
       Label("Switch company", systemImage: "building.2")
     }
     .accessibilityLabel(Text("Switch company"))
-    .sensoryFeedback(Haptics.pick, trigger: picks)
+    .haptic(.selection, trigger: picks)
   }
 }
 

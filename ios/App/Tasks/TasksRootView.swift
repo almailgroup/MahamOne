@@ -61,7 +61,10 @@ struct TasksRootView: View {
         projectsSection
       }
       .mahamScreen()
-      .refreshable { await model.tasks.refresh() }
+      .refreshable {
+        await Haptics.refresh()
+        await model.tasks.refresh()
+      }
       .animation(.smooth, value: model.tasks.myTasks)
       .onChange(of: scrollTick) { _, _ in
         withAnimation(.smooth) { proxy.scrollTo(HomeAnchor.top, anchor: .top) }
@@ -236,7 +239,7 @@ struct TasksRootView: View {
     .buttonStyle(.plain)
     .accessibilityAddTraits(selected ? .isSelected : [])
     .accessibilityHint(Text("Shows only these tasks"))
-    .sensoryFeedback(Haptics.pick, trigger: selected)
+    .haptic(.selection, trigger: selected)
   }
 
   // MARK: The toolbar

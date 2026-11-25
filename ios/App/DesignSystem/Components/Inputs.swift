@@ -134,6 +134,8 @@ struct TextInput: View {
             .allowsHitTesting(false)
         }
         field
+          // The placeholder is drawn above, so VoiceOver gets it as the name.
+          .accessibilityLabel(Text(placeholder))
           .focused($focused)
           .keyboardType(keyboard)
           .textContentType(contentType)
@@ -170,7 +172,8 @@ struct SelectOption<Value: Hashable>: Identifiable {
 }
 
 /// The web's native select: the field look with a `ChevronDown` at the end;
-/// it opens the iPhone's own list, as Safari's select does.
+/// it opens the iPhone's own list, as Safari's select does. A new choice
+/// plays the selection haptic.
 struct Select<Value: Hashable>: View {
   @Binding var selection: Value
   let options: [SelectOption<Value>]
@@ -185,7 +188,7 @@ struct Select<Value: Hashable>: View {
 
   var body: some View {
     Menu {
-      Picker(selection: $selection) {
+      Picker(selection: choice) {
         ForEach(options) { option in
           Text(option.label).tag(option.value)
         }
@@ -214,10 +217,21 @@ struct Select<Value: Hashable>: View {
   private var current: String? {
     options.first { $0.value == selection }?.label
   }
+
+  /// The selection, with a haptic when the person picks another option.
+  private var choice: Binding<Value> {
+    Binding(
+      get: { selection },
+      set: { picked in
+        if picked != selection { Haptics.play(.selection) }
+        selection = picked
+      })
+  }
 }
 
 /// The web's `Switch`: a 24×44pt track (primary-solid on, slate-300 off)
-/// with a 20pt white knob, after its label and description.
+/// with a 20pt white knob, after its label and description. The whole row
+/// is the touch target (at least 44pt tall); turning it plays the toggle haptic.
 struct Switch: View {
   @Binding var isOn: Bool
   let label: String
@@ -243,9 +257,11 @@ struct Switch: View {
       SwitchTrack(isOn: isOn)
         .opacity(isEnabled ? 1 : 0.5)
     }
+    .frame(minHeight: 44)
     .contentShape(Rectangle())
     .onTapGesture {
       guard isEnabled else { return }
+      Haptics.play(.toggle)
       withAnimation(WebMotion.standard) { isOn.toggle() }
     }
     .accessibilityRepresentation {

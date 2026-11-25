@@ -26,7 +26,10 @@ struct TeamUpdatesView: View {
           message: "Changes your team makes on mahamone.com show here.")
       }
     }
-    .refreshable { await business.refreshCompany() }
+    .refreshable {
+      await Haptics.refresh()
+      await business.refreshCompany()
+    }
   }
 
   /// The team's changes this role may read. The database leaves payroll and

@@ -51,8 +51,14 @@ final class AppModel {
   }
   private var backgroundedAt: Date?
 
-  /// The one model, shared by every window, the delegate and the intents.
-  static let shared = AppModel()
+  #if DEBUG
+    /// The one model, shared by every window, the delegate and the intents.
+    /// Preview mode (App/Preview): on the made-up services, which never reach the network.
+    static let shared = PreviewMode.isOn ? AppModel(services: PreviewMode.services) : AppModel()
+  #else
+    /// The one model, shared by every window, the delegate and the intents.
+    static let shared = AppModel()
+  #endif
 
   init(services: AppServices? = AppServices.shared) {
     self.services = services
@@ -78,6 +84,14 @@ final class AppModel {
   }
 
   private func start() async {
+    #if DEBUG
+      // Preview mode (App/Preview): signed in as the made-up person, no lock, no refresh.
+      if PreviewMode.isOn, let services {
+        session = await services.auth.currentSession
+        phase = .ready
+        return
+      }
+    #endif
     guard let services else {
       phase = .notConfigured
       return

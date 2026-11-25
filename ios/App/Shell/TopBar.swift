@@ -5,7 +5,8 @@ import SwiftUI
 /// at 85% with a blur and no border, a soft shadow once the page scrolls.
 /// From the start: the menu, the Maham One mark (a link home; hidden below
 /// 360pt), a divider, the company's name, then search, the language switch,
-/// the updates bell (owners and approvers who turned it on) and the app switcher.
+/// the updates bell (owners and approvers who turned it on) and the app
+/// switcher. Its buttons are Liquid Glass, 44pt.
 struct TopBar: View {
   let onMenu: () -> Void
   let onSearch: () -> Void
@@ -18,10 +19,11 @@ struct TopBar: View {
 
   var body: some View {
     HStack(spacing: 8) {
-      WebButton(icon: .menu, label: t("Open menu"), variant: .ghost, action: onMenu)
+      WebButton(icon: .menu, label: t("Open menu"), variant: .ghost, haptic: .open, action: onMenu)
         .padding(.leading, -4)
       if !narrow {
         Button {
+          Haptics.play(.tap)
           router.go(.home)
         } label: {
           Image("SuiteMark")
@@ -66,28 +68,32 @@ struct TopBar: View {
   }
 }
 
-/// Switches the interface between English and Arabic: 32pt tall, 10pt side
-/// padding, an 8pt radius, 14pt weight 500 slate-600, the `Languages` icon
-/// and the other language's own name.
+/// Switches the interface between English and Arabic: Liquid Glass with an
+/// 8pt radius, 14pt weight 500 slate-600, the `Languages` icon and the other
+/// language, short ("ع" / "EN"), so the company's name keeps its room on a
+/// phone (VoiceOver reads the full name); 44pt tall like the bar's other
+/// buttons (a phone's touch size).
 struct LanguageSwitch: View {
   @Environment(\.palette) private var palette
 
   var body: some View {
     let arabic = LanguageStore.shared.isArabic
     Button {
+      Haptics.play(.change)
       LanguageStore.shared.language = arabic ? .en : .ar
     } label: {
-      HStack(spacing: 6) {
+      HStack(spacing: 4) {
         IconView(.languages, size: 16)
-        Text(verbatim: arabic ? "English" : "العربية")
+        Text(verbatim: arabic ? "EN" : "ع")
+          .lineLimit(1)
+          .fixedSize()
       }
       .font(.web(14, .medium))
       .foregroundStyle(palette.slate(600))
-      .padding(.horizontal, 10)
-      .frame(height: 32)
-      .contentShape(Rectangle())
+      .padding(.horizontal, 8)
+      .frame(minWidth: 44, minHeight: 44)
     }
-    .buttonStyle(PressedFill(radius: WebRadius.md))
+    .buttonStyle(.webGlass(.rounded(WebRadius.md)))
     .accessibilityLabel(Text(verbatim: arabic ? "English" : "العربية"))
   }
 }

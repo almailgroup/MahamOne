@@ -140,7 +140,13 @@ struct Launcher: View {
     VStack(alignment: .leading, spacing: 24) {
       TextInput(
         text: $query, placeholder: t("Find an app or tool…"), leadingIcon: .search, rounded: true,
-        submitLabel: .go, onSubmit: { if let first = found.first { open(first) } }
+        submitLabel: .go,
+        onSubmit: {
+          if let first = found.first {
+            Haptics.play(.tap)
+            open(first)
+          }
+        }
       )
       .frame(maxWidth: 448)
       .accessibilityLabel(Text(t("Find an app or tool")))
@@ -257,9 +263,13 @@ private struct RoundTile: View {
   var badges: [String] = []
   let action: () -> Void
   @Environment(\.palette) private var palette
+  @Environment(\.layoutDirection) private var direction
 
   var body: some View {
-    Button(action: action) {
+    Button {
+      Haptics.play(.tap)
+      action()
+    } label: {
       VStack(spacing: 6) {
         IconView(tile.icon, size: large ? 28 : 24)
           .foregroundStyle(palette.color(tile.tone.foreground))
@@ -274,7 +284,8 @@ private struct RoundTile: View {
                 .frame(width: 20, height: 20)
                 .background(palette.primarySolid, in: Circle())
                 .ring(palette.surface, width: 2, in: Circle())
-                .offset(x: 2, y: 2)
+                // Out past the end corner, in either reading direction.
+                .offset(x: direction == .rightToLeft ? -2 : 2, y: 2)
             }
           }
         Text(tile.label)
@@ -315,6 +326,7 @@ private struct TileButtonStyle: ButtonStyle {
 private struct TileButtonBody: View {
   let configuration: ButtonStyleConfiguration
   @Environment(\.palette) private var palette
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
     configuration.label
@@ -322,7 +334,10 @@ private struct TileButtonBody: View {
         configuration.isPressed ? palette.slate(50) : Color.clear,
         in: RoundedRectangle(cornerRadius: WebRadius.xl, style: .continuous)
       )
-      .scaleEffect(configuration.isPressed ? 0.97 : 1)
+      .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
       .animation(WebMotion.standard, value: configuration.isPressed)
+      .onChange(of: configuration.isPressed) { _, now in
+        if now { Haptics.prepare() }
+      }
   }
 }

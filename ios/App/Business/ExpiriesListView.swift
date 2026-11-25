@@ -31,7 +31,10 @@ struct ExpiriesListView: View {
           message: "Licences, permits and papers with an expiry date show here.")
       }
     }
-    .refreshable { await business.refreshCompany() }
+    .refreshable {
+      await Haptics.refresh()
+      await business.refreshCompany()
+    }
   }
 
   @ViewBuilder

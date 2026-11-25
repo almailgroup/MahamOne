@@ -24,10 +24,11 @@ struct TasksDepartmentButtons: View {
     if suite != nil {
       HStack(spacing: 4) {
         Button {
+          Haptics.play(.tap)
           switcherOpen = true
         } label: {
           IconView(.layoutGrid, size: 20)
-            .frame(width: 32, height: 32)
+            .frame(width: 44, height: 44)
             .contentShape(Rectangle())
         }
         .accessibilityLabel(Text(t("Switch app")))
@@ -37,18 +38,20 @@ struct TasksDepartmentButtons: View {
           AppSwitcherPanel()
         }
         Button {
+          Haptics.play(.tap)
           showingInbox = true
         } label: {
           Image(systemName: model.tasks.unreadCount > 0 ? "tray.full" : "tray")
-            .frame(width: 32, height: 32)
+            .frame(width: 44, height: 44)
             .contentShape(Rectangle())
         }
         .accessibilityLabel(Text("Inbox"))
         Button {
+          Haptics.play(.tap)
           showingSettings = true
         } label: {
           Image(systemName: "gearshape")
-            .frame(width: 32, height: 32)
+            .frame(width: 44, height: 44)
             .contentShape(Rectangle())
         }
         .accessibilityLabel(Text("Settings"))

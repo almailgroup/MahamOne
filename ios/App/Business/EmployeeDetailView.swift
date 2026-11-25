@@ -58,7 +58,10 @@ struct EmployeeDetailView: View {
       .frame(maxWidth: 760)
       .frame(maxWidth: .infinity)
     }
-    .refreshable { await business.refreshCompany() }
+    .refreshable {
+      await Haptics.refresh()
+      await business.refreshCompany()
+    }
   }
 
   private func header(_ person: Employee) -> some View {

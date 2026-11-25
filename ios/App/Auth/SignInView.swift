@@ -92,7 +92,7 @@ struct SignInView: View {
     .scrollDismissesKeyboard(.interactively)
     .background { MahamBackground() }
     .animation(.smooth, value: problem)
-    .sensoryFeedback(Haptics.failed, trigger: problem) { _, new in new != nil }
+    .haptic(.error, trigger: problem) { _, new in new != nil }
     .sheet(isPresented: $showingReset) {
       PasswordResetSheet(email: email)
     }

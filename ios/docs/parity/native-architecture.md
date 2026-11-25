@@ -75,6 +75,27 @@ struct Palette {                       // one theme's variables, named as on the
 extension View { func webTheme() -> some View }   // the palette, fonts and layout direction for a screen tree
 // Read the palette in views with @Environment(\.palette).
 
+// Liquid Glass (App/DesignSystem/WebGlass.swift; the owner's choice on top of the web's look).
+// Buttons and the floating bars are glass; cards, lists, inputs and text stay the web's.
+.buttonStyle(.web(.primary, .md))            // WebButton's look: glass in the variant's colours
+.buttonStyle(.webGlass(.circle))             // glass behind a custom label (.rounded(r), tint:)
+GlassIconButton(.x, label: t("Close")) { … } // a 44pt glass icon button with a haptic
+// Inside a glass bar (StickyActions) `webButtonOnGlass` is set: clear buttons take a fill.
+
+// Haptics (App/System/Haptics.swift): every haptic at 50% of its usual strength.
+// Never use .sensoryFeedback or UIKit's generators directly.
+enum Haptic { case tap, press, selection, toggle, change, open, close, refresh, success, warning, error }
+@MainActor enum Haptics {
+  static func play(_ haptic: Haptic)
+  static func prepare(_ haptic: Haptic = .tap)   // as a control is pressed
+  nonisolated static func refresh() async        // first thing in .refreshable
+}
+extension View {
+  func haptic<T: Equatable>(_ haptic: Haptic, trigger: T) -> some View   // also (_:trigger:condition:), (trigger:_:)
+}
+// WebButton, GlassIconButton, ListRow, DropdownItem, Segmented, Switch, Select, Combobox,
+// DateField, the toasts and WebPage(refresh:) play theirs already.
+
 // Money and format (MahamKit/Foundation)
 public enum Money {
   static func dec(_ value: Double) -> Decimal      // via the shortest string, like JS String(n)

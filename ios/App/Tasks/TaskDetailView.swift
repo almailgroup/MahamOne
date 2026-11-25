@@ -91,9 +91,9 @@ struct TaskDetailView: View {
     } message: {
       Text("It goes to the bin for 30 days. You can restore it on the website.")
     }
-    .sensoryFeedback(Haptics.done, trigger: doneTick)
-    .sensoryFeedback(Haptics.pick, trigger: changeTick)
-    .sensoryFeedback(Haptics.warning, trigger: deleteTick)
+    .haptic(.success, trigger: doneTick)
+    .haptic(.selection, trigger: changeTick)
+    .haptic(.warning, trigger: deleteTick)
   }
 
   // MARK: The parts

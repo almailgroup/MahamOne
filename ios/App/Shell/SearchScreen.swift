@@ -5,7 +5,8 @@ import SwiftUI
 /// "Cancel" in primary-700; sections with 12pt slate-500 labels; rows at
 /// least 44pt, the icon in a 32pt slate-100 tile, the first result on
 /// primary-50. Records come with the sync engine; until then it finds the
-/// apps, the pages of the navigation and what can be created.
+/// apps, the pages of the navigation and what can be created. "Cancel" is
+/// a Liquid Glass button.
 struct SearchScreen: View {
   let onClose: () -> Void
   @Environment(SuiteState.self) private var suite
@@ -27,27 +28,37 @@ struct SearchScreen: View {
               .allowsHitTesting(false)
           }
           TextField("", text: $query)
+            .accessibilityLabel(Text(t("Search")))
             .focused($focused)
             .autocorrectionDisabled()
             .textInputAutocapitalization(.never)
             .submitLabel(.go)
-            .onSubmit { if let first = sections.first?.entries.first { choose(first) } }
+            .onSubmit {
+              if let first = sections.first?.entries.first {
+                Haptics.play(.selection)
+                choose(first)
+              }
+            }
         }
         .font(.web(16))
         .foregroundStyle(palette.slate(900))
-        Button(action: onClose) {
+        Button {
+          Haptics.play(.close)
+          onClose()
+        } label: {
           Text(t("Cancel"))
             .font(.web(14, .medium))
             .foregroundStyle(palette.primary(700))
-            .padding(.horizontal, 8)
+            .lineLimit(1)
+            .fixedSize()
+            .padding(.horizontal, 12)
             .frame(minHeight: 44)
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.webGlass(.rounded(WebRadius.md)))
         .padding(.trailing, -8)
       }
       .padding(.horizontal, 16)
-      .frame(height: 56)
+      .frame(minHeight: 56)
       .overlay(alignment: .bottom) { Rectangle().fill(palette.slate(200)).frame(height: 1) }
 
       ScrollView {
@@ -62,6 +73,7 @@ struct SearchScreen: View {
               .padding(.horizontal, 12)
               .padding(.top, 12)
               .padding(.bottom, 6)
+              .accessibilityAddTraits(.isHeader)
             ForEach(section.entries) { entry in
               row(entry, highlighted: entry.id == sections.first?.entries.first?.id)
             }
@@ -80,6 +92,7 @@ struct SearchScreen: View {
   private func row(_ entry: SearchEntry, highlighted: Bool) -> some View {
     let tile = RoundedRectangle(cornerRadius: WebRadius.sm, style: .continuous)
     return Button {
+      Haptics.play(.selection)
       choose(entry)
     } label: {
       HStack(spacing: 12) {

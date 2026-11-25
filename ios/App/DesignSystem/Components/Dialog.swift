@@ -5,7 +5,9 @@ import SwiftUI
 /// radius, shadow-xl, popping in from 97%. The header (20×16pt padding, a
 /// line below) has the title and a close button; the body scrolls; the
 /// footer sticks to the bottom on slate-50 with its buttons full width,
-/// stacked with the last one (the primary) on top.
+/// stacked with the last one (the primary) on top. The close and footer
+/// buttons are Liquid Glass; the footer's play their haptics as they are
+/// tapped, closing by the backdrop or the close button plays its own.
 ///
 ///     .webDialog(isPresented: $confirming, title: t("Sign out?")) {
 ///       Text(t("You can sign in again at any time."))
@@ -73,7 +75,7 @@ private struct DialogFrame<DialogBody: View, Footer: View>: View {
       ZStack {
         palette.overlay.opacity(shown ? 0.4 : 0)
           .ignoresSafeArea()
-          .onTapGesture { isPresented = false }
+          .onTapGesture { close() }
           .accessibilityHidden(true)
         if shown {
           // The whole dialog when it fits; else its body scrolls between
@@ -124,7 +126,14 @@ private struct DialogFrame<DialogBody: View, Footer: View>: View {
     .background(palette.surface, in: shape)
     .clipShape(shape)
     .boxShadow(WebShadow.xl, in: shape)
+    .accessibilityElement(children: .contain)
     .accessibilityAddTraits(.isModal)
+    .accessibilityAction(.escape) { close() }
+  }
+
+  private func close() {
+    Haptics.play(.close)
+    isPresented = false
   }
 
   private var bodyContent: some View {
@@ -140,24 +149,16 @@ private struct DialogFrame<DialogBody: View, Footer: View>: View {
     HStack(alignment: .top, spacing: 16) {
       VStack(alignment: .leading, spacing: 2) {
         Text(title).webText(.cardTitle)
+          .accessibilityAddTraits(.isHeader)
         if let description {
           Text(description).font(.web(14)).foregroundStyle(palette.slate(500))
         }
       }
       .frame(maxWidth: .infinity, alignment: .leading)
-      Button {
-        isPresented = false
-      } label: {
-        IconView(.x, size: 20)
-          .foregroundStyle(palette.slate(500))
-          .frame(width: 44, height: 44)
-          .contentShape(Rectangle())
-      }
-      .buttonStyle(PressedFill(radius: WebRadius.sm))
-      .padding(.top, -10)
-      .padding(.trailing, -10)
-      .padding(.bottom, -10)
-      .accessibilityLabel(Text(t("Close")))
+      GlassIconButton(.x, label: t("Close"), shape: .rounded(WebRadius.md), haptic: nil) { close() }
+        .padding(.top, -10)
+        .padding(.trailing, -10)
+        .padding(.bottom, -10)
     }
     .padding(.horizontal, 20)
     .padding(.vertical, 16)

@@ -1,8 +1,10 @@
 import SwiftUI
+import UIKit
 
 /// The web's toasts (Sonner, `richColors`, with a close button): at the
 /// bottom, 92pt above the safe area, so they clear the tab bar; gone after
-/// four seconds.
+/// four seconds. Each plays the success or error haptic as it shows and is
+/// read out by VoiceOver.
 extension View {
   func webToast(_ toast: Binding<Toast?>) -> some View {
     modifier(WebToastModifier(toast: toast))
@@ -27,6 +29,11 @@ private struct WebToastModifier: ViewModifier {
         }
       }
       .animation(.timingCurve(0.16, 1, 0.3, 1, duration: 0.4), value: toast?.id)
+      .onChange(of: toast?.id) { _, id in
+        guard id != nil, let shown = toast else { return }
+        Haptics.play(shown.kind == .error ? .error : .success)
+        UIAccessibility.post(notification: .announcement, argument: shown.message)
+      }
   }
 
   private func dismiss(_ shown: Toast) {
@@ -38,6 +45,7 @@ private struct ToastCard: View {
   let toast: Toast
   let onClose: () -> Void
   @Environment(\.palette) private var palette
+  @Environment(\.layoutDirection) private var direction
 
   var body: some View {
     let colors = ToastColors(kind: toast.kind, dark: palette.isDark)
@@ -58,8 +66,12 @@ private struct ToastCard: View {
     .background(colors.fill, in: shape)
     .border(colors.border, in: shape)
     .boxShadow([BoxShadow(color: .black.opacity(0.1), y: 4, blur: 12)], in: shape)
+    // At the start corner, half outside, as Sonner places it (mirrored in Arabic).
     .overlay(alignment: .topLeading) {
-      Button(action: onClose) {
+      Button {
+        Haptics.play(.tap)
+        onClose()
+      } label: {
         IconView(.x, size: 12)
           .foregroundStyle(colors.text)
           .frame(width: 20, height: 20)
@@ -69,7 +81,7 @@ private struct ToastCard: View {
           .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
-      .offset(x: -19, y: -19)
+      .offset(x: direction == .rightToLeft ? 19 : -19, y: -19)
       .accessibilityLabel(Text(t("Close")))
     }
     .accessibilityElement(children: .contain)

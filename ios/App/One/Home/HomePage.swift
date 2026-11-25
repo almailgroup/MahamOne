@@ -2,8 +2,8 @@ import SwiftUI
 
 /// Maham One's home, `/` (`src/suite/home/index.tsx`): the greeting, the
 /// company and the date, then the launcher. Sections are 20pt apart.
-/// (Needs attention, approval requests and At a glance follow with the
-/// sync engine.)
+/// Pulling down syncs again. (Needs attention, approval requests and At a
+/// glance follow with the sync engine.)
 struct HomePage: View {
   @Environment(AppModel.self) private var model
   @Environment(\.palette) private var palette
@@ -12,14 +12,17 @@ struct HomePage: View {
 
   var body: some View {
     let company = ShellCompany.name(model.business)
-    WebPage(spacing: 20) {
+    WebPage(spacing: 20, refresh: { [model] in await model.refreshAll() }) {
       VStack(alignment: .leading, spacing: 4) {
         Text(Self.greeting(hour: Calendar.current.component(.hour, from: Date())))
           .webText(.pageTitle)
+          .accessibilityAddTraits(.isHeader)
         HStack(spacing: 0) {
           if !company.isEmpty {
             Text(company).lineLimit(1)
-            Text(verbatim: " · ").fixedSize()
+            // Spaced by padding, not spaces: spaces around a lone dot swap
+            // sides in Arabic.
+            Text(verbatim: "·").fixedSize().padding(.horizontal, 4)
           }
           Text(CalendarDay.today.display).fixedSize()
         }
