@@ -3,7 +3,7 @@ import SwiftUI
 
 // The suite's shape (`src/suite/types.ts`): each app of Maham One describes
 // itself in a manifest (Shell/SuiteManifests.swift), and the shell (drawer,
-// app switcher, tab bar, Create sheet, search, home) is built from them.
+// app switcher, tab bar, create menu, search, home) is built from them.
 // Labels are the web's English keys; `t()` them when shown.
 
 /// The apps of Maham One: the classic four, and Sales and Inventory of the split layout.

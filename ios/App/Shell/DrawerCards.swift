@@ -2,8 +2,9 @@ import MahamKit
 import SwiftUI
 
 /// The company switcher card at the top of the drawer: surface, a 16pt
-/// radius, the hairline ring; the company's initials on primary-solid, its
-/// name and "Company type · KWD", and `ChevronsUpDown`. Its menu lists the
+/// radius, the hairline ring and a soft shadow; the company's initials on
+/// primary-solid (40pt), its name (15pt, 600) and currency, and
+/// `ChevronsUpDown`. Its menu lists the
 /// person's companies (the current one checked) and "Add company".
 struct CompanySwitcher: View {
   let onNavigate: () -> Void
@@ -21,19 +22,21 @@ struct CompanySwitcher: View {
       open = true
     } label: {
       HStack(spacing: 12) {
-        CompanyInitials(name: name)
-        VStack(alignment: .leading, spacing: 0) {
-          Text(name).font(.web(14, .semibold)).foregroundStyle(palette.slate(900)).lineLimit(1)
+        CompanyInitials(name: name, side: 40)
+        VStack(alignment: .leading, spacing: 1) {
+          Text(name).font(.web(15, .semibold)).foregroundStyle(palette.slate(900)).lineLimit(1)
           Text(business.currency).font(.web(12)).foregroundStyle(palette.slate(500)).lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         IconView(.chevronsUpDown, size: 16).foregroundStyle(palette.slate(400))
       }
-      .padding(8)
-      .frame(minHeight: 48)
+      .padding(.leading, 10)
+      .padding(.trailing, 14)
+      .padding(.vertical, 10)
+      .frame(minHeight: 60)
       .background(palette.surface, in: shape)
       .ring(palette.hairline, in: shape)
-      .boxShadow(WebShadow.xs, in: shape)
+      .boxShadow(WebShadow.sm, in: shape)
       .contentShape(shape)
     }
     .buttonStyle(PressedScale())
@@ -59,9 +62,11 @@ struct CompanySwitcher: View {
   }
 }
 
-/// A company without a logo: its initials on primary-solid, 32pt, an 8pt radius.
+/// A company without a logo: its initials on primary-solid, 32pt (or
+/// `side`), a quarter of its side for the radius.
 struct CompanyInitials: View {
   let name: String
+  var side: CGFloat = 32
   @Environment(\.palette) private var palette
 
   var body: some View {
@@ -70,19 +75,20 @@ struct CompanyInitials: View {
       if initials.isEmpty {
         IconView(.building2, size: 16)
       } else {
-        Text(initials).font(.web(12, .semibold))
+        Text(initials).font(.web(side > 32 ? 14 : 12, .semibold))
       }
     }
     .foregroundStyle(palette.onPrimary)
-    .frame(width: 32, height: 32)
-    .background(palette.primarySolid, in: RoundedRectangle(cornerRadius: WebRadius.md, style: .continuous))
+    .frame(width: side, height: side)
+    .background(palette.primarySolid, in: RoundedRectangle(cornerRadius: side / 4, style: .continuous))
     .accessibilityHidden(true)
   }
 }
 
 /// The signed-in person at the bottom of the drawer: a 36pt primary-100
-/// avatar with primary-800 initials, the name and the sync status. Its
-/// menu: Sync now, Cloud and sync, Team, Account settings, Sign out.
+/// avatar with primary-800 initials, the email and the sync status, and
+/// `ChevronsUpDown` for its menu: Sync now, Cloud and sync, Team, Account
+/// settings, Sign out.
 struct AccountCard: View {
   let onNavigate: () -> Void
   @Environment(AppModel.self) private var model
@@ -109,16 +115,15 @@ struct AccountCard: View {
           SyncStatusLine(syncing: model.business.isLoading)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        IconView(.chevronsUpDown, size: 16).foregroundStyle(palette.slate(400))
       }
-      .padding(.horizontal, 10)
+      .padding(.leading, 8)
+      .padding(.trailing, 14)
       .padding(.vertical, 8)
-      .frame(minHeight: 48)
-      .background(palette.surface.opacity(0.6), in: shape)
-      .ring(palette.hairline, in: shape)
+      .frame(minHeight: 52)
       .contentShape(shape)
     }
-    .buttonStyle(PressedFill(radius: WebRadius.xl, color: .surface))
-    .padding(.top, 8)
+    .buttonStyle(PressedFill(radius: WebRadius.xl, color: .slate(100)))
     .accessibilityLabel(Text(t("Account: {name}", ["name": email])))
     .dropdownPanel(isPresented: $open, alignment: .start, width: 288) {
       HStack(spacing: 10) {

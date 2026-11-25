@@ -90,6 +90,16 @@ enum SwitcherEntry: Identifiable {
     case .tasks: arabic ? "مهام تاسكس" : "Maham Tasks"
     }
   }
+
+  /// The name without "Maham" ("Books", "Compliance"; Arabic without "مهام"),
+  /// where the apps are shown together.
+  func shortTitle(arabic: Bool) -> String {
+    let full = title(arabic: arabic)
+    for prefix in ["Maham ", "مهام "] where full.hasPrefix(prefix) {
+      return String(full.dropFirst(prefix.count))
+    }
+    return full
+  }
 }
 
 extension SuiteState {
@@ -229,7 +239,9 @@ struct SuiteLogo: View {
   }
 }
 
-/// The phone menu's app tiles: every app a tap away; the current one on surface.
+/// The drawer's apps: one row of app icons (wrapping after five), each
+/// with its short name ("Books", "Compliance") under it. The open app's
+/// icon has a primary ring and its name is primary and bold.
 struct AppTiles: View {
   let onNavigate: () -> Void
   @Environment(SuiteState.self) private var suite
@@ -240,33 +252,34 @@ struct AppTiles: View {
     let entries = suite.switcherEntries
     let current = suite.currentEntry(path: router.currentPath)
     let arabic = LanguageStore.shared.isArabic
-    let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: entries.count > 4 ? 3 : 4)
-    LazyVGrid(columns: columns, spacing: 4) {
+    let columns = Array(repeating: GridItem(.flexible(), spacing: 0, alignment: .top), count: 5)
+    LazyVGrid(columns: columns, spacing: 12) {
       ForEach(entries) { entry in
         let active = entry.id == current
-        let shape = RoundedRectangle(cornerRadius: WebRadius.lg, style: .continuous)
         Button {
           Haptics.play(.selection)
           onNavigate()
           suite.open(entry, router: router)
         } label: {
-          VStack(spacing: 4) {
-            AppMark(icon: entry.icon, tone: entry.tone, size: .small)
-            Text(entry.title(arabic: arabic))
-              .font(.web(11, .medium))
-              .foregroundStyle(palette.slate(700))
-              .multilineTextAlignment(.center)
-              .lineLimit(2)
+          VStack(spacing: 6) {
+            AppMark(icon: entry.icon, tone: entry.tone, size: .medium)
+              .padding(3)
+              .overlay {
+                RoundedRectangle(cornerRadius: 15, style: .continuous)
+                  .strokeBorder(active ? palette.primary(500) : .clear, lineWidth: 2)
+              }
+            Text(entry.shortTitle(arabic: arabic))
+              .font(.web(11, active ? .semibold : .medium))
+              .foregroundStyle(active ? palette.primary(700) : palette.slate(600))
+              .lineLimit(1)
+              .minimumScaleFactor(0.7)
           }
-          .frame(maxWidth: .infinity, minHeight: 48)
-          .padding(.horizontal, 2)
-          .padding(.vertical, 8)
-          .background(active ? palette.surface : Color.clear, in: shape)
-          .ring(active ? palette.hairline : .clear, in: shape)
-          .boxShadow(active ? WebShadow.xs : [], in: shape)
+          .frame(maxWidth: .infinity)
+          .padding(.vertical, 2)
           .contentShape(Rectangle())
         }
-        .buttonStyle(PressedFill(radius: WebRadius.lg, color: .surface))
+        .buttonStyle(PressedScale())
+        .accessibilityLabel(Text(entry.title(arabic: arabic)))
         .accessibilityAddTraits(active ? .isSelected : [])
       }
     }

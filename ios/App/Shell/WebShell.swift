@@ -98,7 +98,8 @@ struct WebShell: View {
 }
 
 /// The Maham One department: the pages under the top bar, the floating tab
-/// bar, and over them the Create sheet, the drawer and search.
+/// bar (whose + opens the create menu in place), and over them the drawer
+/// and search.
 private struct OneShell: View {
   @Environment(ShellRouter.self) private var router
   @Environment(SuiteState.self) private var suite
@@ -126,74 +127,74 @@ private struct OneShell: View {
       .overlay(alignment: .top) {
         TopBar(onMenu: { open(drawer: true) }, onSearch: { searchOpen = true })
       }
-      .overlay(alignment: .bottom) {
-        if chrome.showsTabBar {
-          TabBar(
-            app: app, canCreate: !groups.isEmpty, onCreate: { open(create: true) },
-            onSearch: { searchOpen = true }, onMore: { open(drawer: true) })
-        }
-      }
       .background(palette.page.ignoresSafeArea())
 
+      // The create menu dims the page (and the top bar) but not the tab
+      // bar it grows from.
       if createOpen {
-        backdrop { close(create: true) }
+        backdrop(z: 1) {
+          Haptics.play(.close)
+          withAnimation(WebMotion.collapse) { createOpen = false }
+        }
+      }
+
+      if chrome.showsTabBar {
         VStack(spacing: 0) {
           Spacer(minLength: 0)
-          CreateSheet(
-            groups: groups,
-            onChoose: { action in
-              close(create: true)
-              router.go(path: action.to)
-            },
-            onClose: { close(create: true) })
+          TabBar(
+            app: app, groups: groups, createOpen: $createOpen,
+            onChoose: { action in router.go(path: action.to) },
+            onSearch: { searchOpen = true }, onMore: { open(drawer: true) })
         }
-        .ignoresSafeArea(edges: .bottom)
-        .transition(.move(edge: .bottom))
         .zIndex(2)
       }
 
       if drawerOpen {
-        backdrop { close(drawer: true) }
+        backdrop(z: 3) { close(drawer: true) }
         HStack(spacing: 0) {
           Drawer(onClose: { close(drawer: true) })
           Spacer(minLength: 0)
         }
         .ignoresSafeArea(edges: .vertical)
         .transition(.move(edge: .leading))
-        .zIndex(2)
+        .zIndex(4)
       }
 
       if searchOpen {
         SearchScreen(onClose: { withAnimation(WebMotion.fade) { searchOpen = false } })
           .transition(.opacity)
-          .zIndex(3)
+          .zIndex(5)
       }
     }
     .animation(WebMotion.fade, value: searchOpen)
+    // Leaving the page, or the keyboard coming up, folds the menu away.
+    .onChange(of: router.currentPath) { _, _ in createOpen = false }
+    .onChange(of: chrome.showsTabBar) { _, shows in
+      if !shows { createOpen = false }
+    }
     #if DEBUG
       // Preview mode (App/Preview): opens the overlay the launch asks for.
       .previewOverlay(drawer: { open(drawer: true) }, create: { open(create: true) }, search: { searchOpen = true })
     #endif
   }
 
-  /// `overlay` at 40%, fading in; a tap closes what is over it.
-  private func backdrop(_ onTap: @escaping () -> Void) -> some View {
+  /// `overlay` at 40%, fading in, at `z`; a tap closes what is over it.
+  private func backdrop(z: Double, _ onTap: @escaping () -> Void) -> some View {
     palette.overlay.opacity(0.4)
       .ignoresSafeArea()
       .onTapGesture(perform: onTap)
       .transition(.opacity)
-      .zIndex(1)
+      .zIndex(z)
       .accessibilityLabel(Text(t("Close")))
       .accessibilityAddTraits(.isButton)
   }
 
   private func open(drawer: Bool = false, create: Bool = false) {
     if drawer { withAnimation(WebMotion.drawer) { drawerOpen = true } }
-    if create { withAnimation(WebMotion.sheet) { createOpen = true } }
+    if create { withAnimation(WebMotion.expand) { createOpen = true } }
   }
 
-  private func close(drawer: Bool = false, create: Bool = false) {
+  private func close(drawer: Bool = false) {
     if drawer { withAnimation(WebMotion.drawer) { drawerOpen = false } }
-    if create { withAnimation(WebMotion.sheet) { createOpen = false } }
   }
 }

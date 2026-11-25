@@ -131,7 +131,7 @@ final class SuiteState {
   /// The apps the person may open, in the layout's order.
   var visibleApps: [SuiteApp] { apps.filter { access($0.id).canOpen } }
 
-  /// Viewers make nothing: no Create sheet, search in the tab bar's middle.
+  /// Viewers make nothing: no create menu, search in the tab bar's middle.
   var readOnly: Bool { role == .viewer }
 
   /// The app a page belongs to; nil for the suite's own pages (Home, Settings).
@@ -161,7 +161,7 @@ final class SuiteState {
     defaults.set(id.rawValue, forKey: Self.lastAppKey)
   }
 
-  /// What the Create sheet offers (`createGroups`): the current app's groups
+  /// What the create menu offers (`createGroups`): the current app's groups
   /// first, then those of the other apps the person works in, each action
   /// once and each group (by its name) once.
   func createGroups(current: SuiteAppID) -> [CreateGroup] {

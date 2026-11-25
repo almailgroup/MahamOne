@@ -68,6 +68,10 @@ enum WebMotion {
   static var drawer: Animation { .timingCurve(0.16, 1, 0.3, 1, duration: 0.2) }
   /// The Create sheet, 220ms.
   static var sheet: Animation { .timingCurve(0.16, 1, 0.3, 1, duration: 0.22) }
+  /// The create menu growing out of the tab bar: a spring with a little bounce.
+  static var expand: Animation { .spring(response: 0.36, dampingFraction: 0.8) }
+  /// The create menu folding back into the tab bar.
+  static var collapse: Animation { .spring(response: 0.28, dampingFraction: 1) }
   /// Other transitions (colours, the switch), 150ms `cubic-bezier(.4,0,.2,1)`.
   static var standard: Animation { .timingCurve(0.4, 0, 0.2, 1, duration: 0.15) }
 }

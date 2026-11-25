@@ -42,7 +42,7 @@ CASES=(
   "home-dark-ar||Home, dark, Arabic|$P -MahamRoute / -MahamScheme dark -MahamLanguage ar"
   "drawer-light-en||The drawer|$P -MahamOverlay drawer -MahamScheme light -MahamLanguage en"
   "drawer-light-ar||The drawer, Arabic (right to left)|$P -MahamOverlay drawer -MahamScheme light -MahamLanguage ar"
-  "create-light-en||The Create sheet|$P -MahamOverlay create -MahamScheme light -MahamLanguage en"
+  "create-light-en||The create menu, open from the +|$P -MahamOverlay create -MahamScheme light -MahamLanguage en"
   "switcher-light-en||The app switcher|$P -MahamOverlay switcher -MahamScheme light -MahamLanguage en"
   "search-light-en||Search|$P -MahamOverlay search -MahamScheme light -MahamLanguage en"
   "theme-light-en|Theme|The theme menu, from the drawer|$P -MahamOverlay theme -MahamScheme light -MahamLanguage en"

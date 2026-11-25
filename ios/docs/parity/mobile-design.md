@@ -90,6 +90,12 @@ primary-700; idle is slate-600.
 
 ### Create sheet (the + button)
 
+> **The iPhone app differs here, at the owner's request.** The + opens the
+> same groups and actions in place: the tab bar's glass grows upwards into a
+> panel above the tabs (four actions to a row), the + turns into a ×, and
+> the page stays put under a 40% backdrop (`Shell/CreateMenu.swift`,
+> `Shell/TabBar.swift`). The web's sheet is described below.
+
 **The sheet:**
 - Slides up over 220ms.
 - 24pt top corners, at most 88% of the screen tall, `surface`.

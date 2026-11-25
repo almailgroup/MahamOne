@@ -6,7 +6,7 @@
 
   extension View {
     /// Opens the overlay the launch asks for (nothing outside preview mode).
-    /// The drawer, the Create sheet and search are the shell's own: it hands
+    /// The drawer, the create menu and search are the shell's own: it hands
     /// over its `open` functions. The app switcher hangs from a top bar
     /// button whose state is its own, so its panel is opened here, from a
     /// stand-in drawn where that button is.

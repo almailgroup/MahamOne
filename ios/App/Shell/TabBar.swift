@@ -3,15 +3,18 @@ import SwiftUI
 /// The phone's floating tab bar (`src/features/shell/bottom-bar.tsx`): 12pt
 /// from the sides and max(12, safe area) from the bottom, a 16pt radius,
 /// in Liquid Glass. Five columns 64pt tall: the app's three tabs around the
-/// + (the Create sheet; search for those who only look) and More (the
-/// drawer, never active). In Arabic, Home is on the right. The bar and the
-/// + share a glass container, so the + (glass tinted primary-solid) blends
-/// with the bar as it is pressed, and turns into the search square when
-/// the person can only look.
+/// + and More (the drawer, never active). In Arabic, Home is on the right.
+///
+/// The + opens what can be created in place: the bar's glass grows upwards
+/// into a panel (`CreateMenu`, 24pt corners) above the tabs, and the +
+/// turns into a ×; a tab, More or the × closes it. For those who only
+/// look, the + is search. The bar and the + share a glass container, so
+/// the + (glass tinted primary-solid) blends with the bar as it is pressed.
 struct TabBar: View {
   let app: SuiteApp
-  let canCreate: Bool
-  let onCreate: () -> Void
+  let groups: [CreateGroup]
+  @Binding var createOpen: Bool
+  let onChoose: (CreateAction) -> Void
   let onSearch: () -> Void
   let onMore: () -> Void
   @Environment(ShellRouter.self) private var router
@@ -20,30 +23,53 @@ struct TabBar: View {
   @Namespace private var glass
 
   var body: some View {
-    let shape = RoundedRectangle(cornerRadius: WebRadius.xl, style: .continuous)
+    let open = createOpen && !groups.isEmpty
+    let shape = RoundedRectangle(cornerRadius: open ? WebRadius.xxl : WebRadius.xl, style: .continuous)
     let tabs = app.tabs
     GlassEffectContainer(spacing: 4) {
-      HStack(spacing: 0) {
-        if tabs.count > 0 { tab(tabs[0]) }
-        if tabs.count > 1 { tab(tabs[1]) }
-        centre.frame(maxWidth: .infinity)
-        if tabs.count > 2 { tab(tabs[2]) }
-        more
+      VStack(spacing: 0) {
+        if open {
+          CreateMenu(groups: groups, maxHeight: menuHeight) { action in
+            close(haptic: nil)
+            onChoose(action)
+          }
+          .transition(.opacity.combined(with: .scale(scale: 0.94, anchor: .bottom)))
+          .accessibilityAction(.escape) { close(haptic: .close) }
+          Rectangle().fill(palette.slate(900).opacity(0.08)).frame(height: 1)
+            .padding(.horizontal, 16)
+            .transition(.opacity)
+        }
+        HStack(spacing: 0) {
+          if tabs.count > 0 { tab(tabs[0]) }
+          if tabs.count > 1 { tab(tabs[1]) }
+          centre.frame(maxWidth: .infinity)
+          if tabs.count > 2 { tab(tabs[2]) }
+          more
+        }
+        .padding(.horizontal, 6)
+        .frame(height: 64)
       }
-      .padding(.horizontal, 6)
-      .frame(height: 64)
       .frame(maxWidth: 512)
-      .glassEffect(.regular, in: shape)
+      // Open, the glass is frosted with the surface, so the actions read clearly.
+      .glassEffect(open ? Glass.regular.tint(palette.surface.opacity(0.85)) : .regular, in: shape)
     }
     .padding(.horizontal, 12)
     .padding(.bottom, max(0, 12 - chrome.safeArea.bottom))
     .frame(maxWidth: .infinity)
   }
 
+  /// The most the create menu may take: up to 16pt below the top bar.
+  private var menuHeight: CGFloat {
+    let above = chrome.safeArea.top + ShellMetrics.topBar + 16
+    let below = max(12, chrome.safeArea.bottom) + 64 + 1
+    return max(240, chrome.screenSize.height - above - below)
+  }
+
   private func tab(_ link: NavTopLink) -> some View {
     let active = PathMatch.isActive(router.currentPath, link.to, end: link.end)
     return Button {
       Haptics.play(.selection)
+      close(haptic: nil)
       router.go(path: link.to)
     } label: {
       TabItem(icon: link.icon, label: t(link.label))
@@ -55,18 +81,24 @@ struct TabBar: View {
 
   @ViewBuilder
   private var centre: some View {
-    if canCreate {
+    if !groups.isEmpty {
       Button {
-        Haptics.play(.press)
-        onCreate()
+        if createOpen {
+          close(haptic: .close)
+        } else {
+          Haptics.play(.press)
+          withAnimation(WebMotion.expand) { createOpen = true }
+        }
       } label: {
         IconView(.plus, size: 24)
+          .rotationEffect(.degrees(createOpen ? 45 : 0))
           .foregroundStyle(palette.onPrimary)
           .frame(width: 48, height: 48)
       }
       .buttonStyle(CentreButtonStyle())
       .glassEffectID("centre", in: glass)
-      .accessibilityLabel(Text(t("Create new")))
+      .accessibilityLabel(Text(createOpen ? t("Close") : t("Create new")))
+      .accessibilityAddTraits(createOpen ? .isSelected : [])
     } else {
       Button {
         Haptics.play(.tap)
@@ -85,12 +117,20 @@ struct TabBar: View {
   private var more: some View {
     Button {
       Haptics.play(.open)
+      close(haptic: nil)
       onMore()
     } label: {
       TabItem(icon: .menu, label: t("More"))
         .foregroundStyle(palette.slate(600))
     }
     .buttonStyle(TabItemStyle())
+  }
+
+  /// Closes the create menu, if it is open, with `haptic`.
+  private func close(haptic: Haptic?) {
+    guard createOpen else { return }
+    if let haptic { Haptics.play(haptic) }
+    withAnimation(WebMotion.collapse) { createOpen = false }
   }
 }
 

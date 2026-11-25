@@ -1,7 +1,7 @@
 import SwiftUI
 import UIKit
 
-/// What a haptic says. Every one plays at half the iPhone's usual strength
+/// What a haptic says. Every one plays at the iPhone's full strength
 /// (`Haptics.strength`), all over the app.
 enum Haptic: Sendable, Equatable {
   /// A button or a row tapped: a light tap.
@@ -15,7 +15,7 @@ enum Haptic: Sendable, Equatable {
   /// Something that changes the whole screen (the theme, the language) or a
   /// swipe that changes a task.
   case change
-  /// A panel or sheet opening (the drawer, the Create sheet).
+  /// A panel opening (the drawer, the create menu).
   case open
   /// A panel or sheet closing.
   case close
@@ -30,19 +30,21 @@ enum Haptic: Sendable, Equatable {
 }
 
 /// The app's haptics, in one place so they feel the same everywhere: each
-/// one is a short pattern of impacts played at `strength` (50%) of its
-/// usual intensity. UIKit's success, warning and error have no intensity,
-/// so they are played as impact patterns of the same shape. The generators
-/// are kept and prepared, so a haptic comes with the touch, not after it.
-/// When the iPhone's System Haptics are off, UIKit plays nothing.
+/// one is a short pattern of impacts played at `strength` (100%) of its
+/// intensity, firm enough to be felt through a case: taps are crisp
+/// (rigid), main actions and panels firmer (medium); never the soft
+/// impact, which is hard to feel. Success, warning and error are UIKit's
+/// own. The generators are kept and prepared, so a haptic comes with the
+/// touch, not after it. When the iPhone's System Haptics are off, UIKit
+/// plays nothing.
 ///
 ///     Haptics.play(.tap)
 ///     .haptic(.selection, trigger: filter)
 ///     .refreshable { await Haptics.refresh(); await store.refresh() }
 @MainActor
 enum Haptics {
-  /// Every haptic plays at this share of its usual strength.
-  static let strength: CGFloat = 0.5
+  /// Every haptic plays at this share of its full strength.
+  static let strength: CGFloat = 1
 
   /// Taps closer together than this are felt as one (a button whose action
   /// also changes a selection). Success, warning and error always play.
@@ -71,29 +73,30 @@ enum Haptics {
   }
 
   private static var generators: [Weight: UIImpactFeedbackGenerator] = [:]
+  private static let notifications = UINotificationFeedbackGenerator()
   private static var lastPlayed: TimeInterval = 0
 
   private static func pattern(_ haptic: Haptic) -> [Beat] {
     switch haptic {
-    case .tap: [Beat(weight: .light, intensity: 1)]
+    case .tap: [Beat(weight: .rigid, intensity: 1)]
     case .press: [Beat(weight: .medium, intensity: 1)]
-    // UISelectionFeedbackGenerator's tick, which is lighter than a tap.
-    case .selection: [Beat(weight: .rigid, intensity: 0.6)]
-    case .toggle: [Beat(weight: .rigid, intensity: 0.8)]
+    case .selection: [Beat(weight: .rigid, intensity: 1)]
+    case .toggle: [Beat(weight: .rigid, intensity: 1)]
     case .change: [Beat(weight: .medium, intensity: 1)]
-    case .open: [Beat(weight: .soft, intensity: 1)]
-    case .close: [Beat(weight: .soft, intensity: 0.8)]
-    case .refresh: [Beat(weight: .soft, intensity: 1)]
-    // The shapes of UINotificationFeedbackGenerator's three.
-    case .success:
-      [Beat(weight: .medium, intensity: 0.7), Beat(weight: .medium, intensity: 1, delay: 110)]
-    case .warning:
-      [Beat(weight: .medium, intensity: 1), Beat(weight: .light, intensity: 0.8, delay: 150)]
-    case .error:
-      [
-        Beat(weight: .heavy, intensity: 1), Beat(weight: .rigid, intensity: 0.8, delay: 80),
-        Beat(weight: .rigid, intensity: 0.6, delay: 160),
-      ]
+    case .open: [Beat(weight: .medium, intensity: 1)]
+    case .close: [Beat(weight: .light, intensity: 1)]
+    case .refresh: [Beat(weight: .medium, intensity: 1)]
+    // UIKit's own (`notification`).
+    case .success, .warning, .error: []
+    }
+  }
+
+  private static func notification(_ haptic: Haptic) -> UINotificationFeedbackGenerator.FeedbackType? {
+    switch haptic {
+    case .success: .success
+    case .warning: .warning
+    case .error: .error
+    default: nil
     }
   }
 
@@ -103,6 +106,11 @@ enum Haptics {
     let always = haptic == .success || haptic == .warning || haptic == .error
     if !always, now - lastPlayed < minimumGap { return }
     lastPlayed = now
+    if let type = notification(haptic) {
+      notifications.notificationOccurred(type)
+      notifications.prepare()
+      return
+    }
     for beat in pattern(haptic) {
       if beat.delay == 0 {
         fire(beat)
@@ -118,6 +126,10 @@ enum Haptics {
   /// Wakes the Taptic Engine for a haptic that is about to play (a button
   /// being pressed), so it is felt without delay.
   static func prepare(_ haptic: Haptic = .tap) {
+    if notification(haptic) != nil {
+      notifications.prepare()
+      return
+    }
     var seen = Set<Weight>()
     for beat in pattern(haptic) where seen.insert(beat.weight).inserted {
       generator(beat.weight).prepare()
