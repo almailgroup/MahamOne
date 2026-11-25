@@ -130,7 +130,13 @@ async function stillLinked(companyId: string, ctx: SyncContext): Promise<boolean
 /* -------------------------------------------------------------------------- */
 
 /** What a sync asks for to bring changes in: given up at once when the sync is told to stop. */
-const RECEIVING = new Set<string>(['pullRecords', 'recordIds', 'syncInfo', 'downloadFile']);
+const RECEIVING = new Set<string>([
+  'pullRecords',
+  'readRecords',
+  'recordIds',
+  'syncInfo',
+  'downloadFile',
+]);
 /** The same while catching up on a table (see catchUpTables); sending uses getRecord too. */
 const CATCHING_UP = new Set<string>([...RECEIVING, 'getRecord']);
 const FILE_TRANSFERS = new Set<string>(['uploadFile', 'downloadFile']);
@@ -1258,18 +1264,32 @@ type Applied = 'applied' | 'stale' | 'gone';
 async function pullAll(companyId: string, ctx: SyncContext, result: SyncResult): Promise<Touched> {
   const touched: Touched = { tables: new Set(), documents: new Set() };
   let resynced = false;
+  // Reading straight from the records rather than pulling (see below).
+  let reading = false;
   for (;;) {
     const link = await db.syncState.get(companyId);
     if (!link || link.status === 'removed') return touched;
     const asked = { since: link.cursor, epoch: link.epoch ?? 0 };
+    const page = ctx.pullPage ?? PULL_PAGE;
     let rows: PulledRow[];
     try {
-      rows = await ctx.api.pullRecords(companyId, link.cursor, ctx.pullPage ?? PULL_PAGE);
+      rows = reading
+        ? await ctx.api.readRecords(companyId, link.cursor, page)
+        : await ctx.api.pullRecords(companyId, link.cursor, page);
     } catch (error) {
       const e = cloudError(error);
-      if (e.code !== 'resync' || resynced) throw e;
-      resynced = true;
-      await fullResync(companyId, ctx, touched);
+      if (e.code !== 'resync' || reading) throw e;
+      if (!resynced) {
+        resynced = true;
+        await fullResync(companyId, ctx, touched);
+        continue;
+      }
+      // Pulling from the start, and still told to resync: deletes newer than
+      // this pull's later pages were purged, and the cloud can't tell those
+      // pages from a device that was away (a download, or the re-pull of a
+      // resync, of more than a page). Read the rest straight from the records;
+      // deletes meanwhile are dropped when it ends.
+      reading = true;
       continue;
     }
     if (rows.length) {
@@ -1287,8 +1307,13 @@ async function pullAll(companyId: string, ctx: SyncContext, result: SyncResult):
         done: Math.min(link.total, result.pulled),
       });
     }
-    if (rows.length < (ctx.pullPage ?? PULL_PAGE)) break;
+    if (rows.length < page) {
+      // What was deleted while it read (the records carry no deletes).
+      if (reading) await keepWhatTheCloudHas(companyId, ctx, touched);
+      break;
+    }
   }
+  // After a resync the cursor moves past what was purged, so pulls work again.
   await finishPull(companyId, ctx, resynced);
   return touched;
 }
@@ -1590,6 +1615,25 @@ async function finishPull(companyId: string, ctx: SyncContext, resynced: boolean
  * everything again.
  */
 async function fullResync(companyId: string, ctx: SyncContext, touched: Touched): Promise<void> {
+  await keepWhatTheCloudHas(companyId, ctx, touched, { cursor: 0, tables: [...DATA_TABLES] });
+  const link = await db.syncState.get(companyId);
+  if (link?.role === 'owner') {
+    // Left-over files of records deleted while this device was away.
+    void cleanupFiles(companyId, ctx).catch(() => undefined);
+  }
+}
+
+/**
+ * Drops the records the cloud no longer has, keeping what is waiting to be
+ * sent from here; `then` changes the link in the same transaction (a full
+ * resync starts the cursor again).
+ */
+async function keepWhatTheCloudHas(
+  companyId: string,
+  ctx: SyncContext,
+  touched: Touched,
+  then?: Partial<CloudLink>,
+): Promise<void> {
   const ids = new Set<string>();
   let after: { tbl: string; id: string } | null = null;
   try {
@@ -1623,14 +1667,8 @@ async function fullResync(companyId: string, ctx: SyncContext, touched: Touched)
       await table(name).bulkDelete(gone.map((r) => String(r.id)));
       await db.syncRevs.bulkDelete(gone.map((r) => [name, String(r.id)] as [string, string]));
     }
-    // Everything comes again, of every table.
-    await db.syncState.update(companyId, { cursor: 0, tables: [...DATA_TABLES] });
+    if (then) await db.syncState.update(companyId, then);
   });
-  const link = await db.syncState.get(companyId);
-  if (link?.role === 'owner') {
-    // Left-over files of records deleted while this device was away.
-    void cleanupFiles(companyId, ctx).catch(() => undefined);
-  }
 }
 
 /* -------------------------------------------------------------------------- */

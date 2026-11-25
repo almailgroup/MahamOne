@@ -266,6 +266,13 @@ export interface CloudApi {
   myCompanies(): Promise<CloudCompany[]>;
   pushRecords(companyId: string, changes: PushChange[]): Promise<PushResult[]>;
   pullRecords(companyId: string, since: number, limit: number): Promise<PulledRow[]>;
+  /**
+   * Records after a rev, oldest first, read straight from the records: no
+   * deletion markers, and no "resync" answer. For reading a company from the
+   * start when deletes newer than its first page have been purged (see
+   * pullAll); what was deleted meanwhile is dropped by listing the ids.
+   */
+  readRecords(companyId: string, since: number, limit: number): Promise<PulledRow[]>;
   recordIds(
     companyId: string,
     after: RecordKey | null,

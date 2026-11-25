@@ -168,6 +168,43 @@ describe('download', () => {
     // What came from the cloud is not sent back.
     expect(await db.outbox.count()).toBe(0);
   });
+
+  it('finishes when deletes newer than its first page were purged', async () => {
+    // More records than one page, and a delete over 30 days old that the
+    // cloud has forgotten. Every page after the first is older than what
+    // was purged, and the cloud can't tell such a page from a device that
+    // was away, so it answers "resync" to all of them.
+    const { company } = await uploaded();
+    const owner = server.client(OWNER);
+    const item = (id: string) => ({
+      tbl: 'products',
+      id,
+      data: { id, companyId: company.id, name: `Item ${id}`, unitPrice: 1 },
+    });
+    for (let i = 0; i < 12; i++) await owner.pushRecords(company.id, [item(`p${i}`)]);
+    await owner.pushRecords(company.id, [item('gone')]);
+    await owner.pushRecords(company.id, [{ tbl: 'products', id: 'gone', deleted: true }]);
+    server.purgeMarkers(company.id);
+    await owner.pushRecords(company.id, [item('later')]);
+    const before = serverRecords(company.id);
+
+    const device = await newDevice();
+    device.pullPage = 5;
+    await startDownload({ id: company.id, name: company.name, role: 'owner' }, device);
+    await syncCompany(company.id, device);
+    const local = await localRecords(company.id);
+    for (const name of DATA_TABLES) expect(byId(local[name]), name).toEqual(byId(before[name]));
+    expect(await db.products.get('gone')).toBeUndefined();
+    expect((await db.syncState.get(company.id))?.status).toBe('ready');
+    expect(await db.outbox.count()).toBe(0);
+
+    // From then on it pulls as usual, deletes included.
+    await owner.pushRecords(company.id, [item('newest')]);
+    await owner.pushRecords(company.id, [{ tbl: 'products', id: 'p3', deleted: true }]);
+    await syncCompany(company.id, device);
+    expect(await db.products.get('newest')).toBeDefined();
+    expect(await db.products.get('p3')).toBeUndefined();
+  });
 });
 
 describe('changes from other devices', () => {

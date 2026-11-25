@@ -518,6 +518,29 @@ export class FakeCloud {
         return rows.slice(0, limit);
       },
 
+      readRecords: async (company, since, limit): Promise<PulledRow[]> => {
+        guard('readRecords');
+        member(company);
+        const rows: PulledRow[] = [];
+        for (const row of this.records.values()) {
+          if (
+            row.company === company &&
+            row.rev > since &&
+            this.canRead(company, user, row.tbl, row.data)
+          ) {
+            rows.push({
+              tbl: row.tbl,
+              id: row.id,
+              data: structuredClone(row.data),
+              rev: row.rev,
+              deleted: false,
+            });
+          }
+        }
+        rows.sort((a, b) => a.rev - b.rev);
+        return rows.slice(0, limit);
+      },
+
       recordIds: async (company, after: RecordKey | null, limit, tbl): Promise<RecordKey[]> => {
         guard('recordIds');
         member(company);

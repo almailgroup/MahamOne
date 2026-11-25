@@ -214,6 +214,24 @@ export function supabaseApi(supabase: SupabaseClient): CloudApi {
       return rows.map((r) => ({ ...r, rev: Number(r.rev) }));
     },
 
+    async readRecords(companyId, since, limit) {
+      const { data, error, status } = await supabase
+        .from('records')
+        .select('tbl, id, data, rev')
+        .eq('company_id', companyId)
+        .gt('rev', since)
+        .order('rev', { ascending: true })
+        .limit(limit);
+      if (error) throw cloudError({ ...error, status: status || undefined });
+      const rows = (data ?? []) as {
+        tbl: string;
+        id: string;
+        data: Record<string, unknown>;
+        rev: number;
+      }[];
+      return rows.map((r) => ({ ...r, rev: Number(r.rev), deleted: false }));
+    },
+
     async recordIds(companyId, after: RecordKey | null, limit, table) {
       return rpc<RecordKey[]>('company_record_ids', {
         p_company: companyId,
