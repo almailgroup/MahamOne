@@ -6,8 +6,10 @@ printed: only whether each thing matches.
 Reads KEY_ID, ISSUER_ID, TEAM_ID and AUTH_KEY_PATH from the environment.
 Needs PyJWT with cryptography (the workflow installs them).
 """
+import base64
 import json
 import os
+import plistlib
 import sys
 import time
 import urllib.error
@@ -18,6 +20,7 @@ import jwt
 
 API = "https://api.appstoreconnect.apple.com/v1"
 BUNDLE_ID = "com.almailgroup.mahamone"
+APP_GROUP = "group.com.almailgroup.mahamone"
 HELP = 'See ios/README.md, "Getting it to TestFlight".'
 
 
@@ -25,17 +28,58 @@ def error(message: str) -> None:
     print(f"::error::{message} {HELP}")
 
 
-def get(path: str, token: str) -> tuple[int, dict]:
-    request = urllib.request.Request(f"{API}{path}", headers={"Authorization": f"Bearer {token}"})
+def get(path: str, token: str, method: str = "GET") -> tuple[int, dict]:
+    request = urllib.request.Request(
+        f"{API}{path}", method=method, headers={"Authorization": f"Bearer {token}"})
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
             return response.status, json.load(response)
     except urllib.error.HTTPError as failure:
         try:
             body = json.load(failure)
-        except ValueError:
+        except (ValueError, json.JSONDecodeError):
             body = {}
         return failure.code, body
+
+
+def app_groups(profile_content: str) -> list[str]:
+    """The App Groups a provisioning profile allows (it's a signed plist)."""
+    data = base64.b64decode(profile_content)
+    start, end = data.find(b"<?xml"), data.find(b"</plist>")
+    if start < 0 or end < 0:
+        return []
+    plist = plistlib.loads(data[start : end + len(b"</plist>")])
+    return list(plist.get("Entitlements", {}).get("com.apple.security.application-groups", []))
+
+
+def check_profiles(identifier: str, token: str) -> None:
+    """What Apple holds for one app id: its capabilities, and each profile's
+    App Groups. A profile made before the App Group was attached is deleted,
+    so Xcode makes a fresh one with the group in it."""
+    query = urllib.parse.urlencode({"filter[identifier]": identifier, "limit": 5})
+    status, body = get(f"/bundleIds?{query}", token)
+    items = [item for item in body.get("data", []) if item["attributes"].get("identifier") == identifier]
+    if not items:
+        print(f"{identifier}: not registered yet (Xcode registers it).")
+        return
+    bundle = items[0]["id"]
+    status, body = get(f"/bundleIds/{bundle}/bundleIdCapabilities", token)
+    capabilities = sorted(item["attributes"].get("capabilityType", "") for item in body.get("data", []))
+    print(f"{identifier}: capabilities {', '.join(capabilities) or 'none'}.")
+    if "APP_GROUPS" not in capabilities:
+        print(f"::error::{identifier} doesn't have App Groups switched on. {HELP}")
+    status, body = get(f"/bundleIds/{bundle}/profiles?limit=50", token)
+    for profile in body.get("data", []):
+        attributes = profile["attributes"]
+        name = attributes.get("name", "")
+        groups = app_groups(attributes["profileContent"]) if attributes.get("profileContent") else []
+        print(f"  profile \"{name}\" ({attributes.get('profileType')}, {attributes.get('profileState')}): App Groups {groups or 'none'}")
+        if APP_GROUP not in groups:
+            status, _ = get(f"/profiles/{profile['id']}", token, method="DELETE")
+            if status in (200, 204):
+                print(f"  deleted it: it was made without {APP_GROUP}, and Xcode makes a new one.")
+            else:
+                print(f"  couldn't delete it (Apple answered {status}).")
 
 
 def main() -> int:
@@ -91,6 +135,9 @@ def main() -> int:
         print("The app exists in App Store Connect.")
     else:
         print(f"::warning::Couldn't check the app in App Store Connect (Apple answered {status}).")
+
+    for identifier in (BUNDLE_ID, BUNDLE_ID + ".widgets"):
+        check_profiles(identifier, token)
 
     # Xcode's automatic signing makes a development profile for the archive,
     # and Apple only makes those for a team with at least one device.
