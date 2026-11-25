@@ -6,7 +6,6 @@
 // See ios/README.md.
 
 APP_BUNDLE_ID = com.almailgroup.mahamone
-APP_GROUP = group.com.almailgroup.mahamone
 KEYCHAIN_GROUP = com.almailgroup.mahamone.shared
 
 // Maham One's Supabase project. Only the host: in an xcconfig "//" starts a

@@ -2,9 +2,8 @@ import Foundation
 import MahamKit
 
 /// Your day for the widgets: fetched over the network with the session the
-/// app and its widgets share, kept in the App Group's cache, and read back
-/// from there when there is no network. The app writes the same snapshot
-/// after each of its own refreshes (SystemSync).
+/// app and its widgets share (through the Keychain), kept in the widgets'
+/// own cache, and read back from there when there is no network.
 enum TodayLoader {
   /// The last snapshot the app or a widget saved, without the network.
   static func cached() -> TodaySnapshot? {

@@ -1,8 +1,8 @@
 import Foundation
 
 /// The last answers the app had, kept on the iPhone so a screen opens at once
-/// and still shows something offline. The app keeps it in the App Group's
-/// container, which its widgets read too.
+/// and still shows something offline. The app and its widgets each keep
+/// their own.
 public struct DiskCache: Sendable {
   public let directory: URL
 

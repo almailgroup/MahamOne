@@ -44,7 +44,7 @@ see. Staff and viewers never see payroll or employee documents.
 - `App/`: the app's screens and its connection to iOS.
 - `Widgets/`: the widgets, the controls and the Live Activity.
 - `Shared/`: the parts the app and its widgets both use: the session in the
-  Keychain, the App Group cache, links and App Intents.
+  Keychain, links and App Intents.
 - `project.yml`: the Xcode project, made by [XcodeGen](https://github.com/yonaskolb/XcodeGen).
   The `.xcodeproj` is not kept in git.
 
@@ -85,10 +85,9 @@ it up once; after that a new TestFlight build is one button.
    Profiles → Identifiers → **+** → App IDs → App. Fill it in like this:
    - Description: `Maham One`
    - Bundle ID: Explicit, `com.almailgroup.mahamone`
-   - Capability: tick **App Groups**
    - Then Continue → Register.
 
-   The widgets' id and the App Group are made by the workflow itself.
+   The widgets' id is made by the workflow itself.
 
 3. **The app in App Store Connect.** Go to appstoreconnect.apple.com →
    Apps → **+** → New App, and fill it in like this:

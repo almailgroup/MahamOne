@@ -52,8 +52,6 @@ targets:
     entitlements:
       path: App/MahamOne.entitlements
       properties:
-        com.apple.security.application-groups:
-          - $(APP_GROUP)
         keychain-access-groups:
           - $(AppIdentifierPrefix)$(KEYCHAIN_GROUP)
     info:
@@ -95,7 +93,6 @@ targets:
         NSContactsUsageDescription: Maham One saves a client's phone and email to your contacts when you ask it to.
         SupabaseURL: https://$(SUPABASE_HOST)
         SupabasePublishableKey: $(SUPABASE_PUBLISHABLE_KEY)
-        AppGroup: $(APP_GROUP)
         KeychainGroup: $(KEYCHAIN_GROUP)
     settings:
       base:
@@ -118,8 +115,6 @@ targets:
     entitlements:
       path: Widgets/MahamWidgets.entitlements
       properties:
-        com.apple.security.application-groups:
-          - $(APP_GROUP)
         keychain-access-groups:
           - $(AppIdentifierPrefix)$(KEYCHAIN_GROUP)
     info:
@@ -132,7 +127,6 @@ targets:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
         SupabaseURL: https://$(SUPABASE_HOST)
         SupabasePublishableKey: $(SUPABASE_PUBLISHABLE_KEY)
-        AppGroup: $(APP_GROUP)
         KeychainGroup: $(KEYCHAIN_GROUP)
     settings:
       base:

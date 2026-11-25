@@ -25,7 +25,7 @@ struct AppServices: Sendable {
     let db = DatabaseClient(auth: auth, transport: transport)
     return AppServices(
       config: config, auth: auth, db: db, tasks: TasksRepository(db: db),
-      one: OneRepository(db: db), cache: DiskCache(directory: cacheDirectory(info)),
+      one: OneRepository(db: db), cache: DiskCache(directory: cacheDirectory()),
       sessions: sessions)
   }
 
@@ -63,14 +63,12 @@ struct AppServices: Sendable {
     return String(group[...dot])
   }
 
-  /// The App Group's container, so the widgets see the same cache.
-  private static func cacheDirectory(_ info: [String: Any]) -> URL {
-    if let group = info["AppGroup"] as? String,
-      let shared = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group)
-    {
-      return shared.appendingPathComponent("Library/Caches/Maham", isDirectory: true)
-    }
-    return FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-      .appendingPathComponent("Maham", isDirectory: true)
+  /// Each side's own cache: the app's, and the widgets' (which fetch their
+  /// own copy with the session the Keychain shares). No App Group: Xcode's
+  /// signing with an API key can't attach one to the app ids.
+  private static func cacheDirectory() -> URL {
+    let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
+      ?? FileManager.default.temporaryDirectory
+    return caches.appendingPathComponent("Maham", isDirectory: true)
   }
 }
