@@ -40,3 +40,7 @@ ios/App/Info.plist
 ios/App/MahamOne.entitlements
 ios/Widgets/Info.plist
 ios/Widgets/MahamWidgets.entitlements
+
+# Python caches (ios/scripts)
+__pycache__/
+*.pyc
