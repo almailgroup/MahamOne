@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "maham-one-mark.png",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

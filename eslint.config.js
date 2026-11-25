@@ -17,6 +17,8 @@ export default tseslint.config(
       'workers/*/dist-check',
       // Maham Tasks is its own app, with its own tools and settings.
       'maham-tasks',
+      // The iPhone app has its own tools (Xcode, swift-format), as in .prettierignore.
+      'ios',
     ],
   },
   {

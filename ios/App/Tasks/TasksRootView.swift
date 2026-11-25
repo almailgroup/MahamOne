@@ -16,6 +16,10 @@ struct TasksRootView: View {
     NavigationStack(path: $path) {
       content
         .navigationTitle("Maham Tasks")
+        // Back to Maham One (the app switcher), the inbox and settings.
+        .toolbar {
+          ToolbarItem(placement: .topBarLeading) { TasksDepartmentButtons() }
+        }
         .taskDestinations()
     }
     .sheet(isPresented: $showingNewTask) {

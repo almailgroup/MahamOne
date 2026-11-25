@@ -1,7 +1,9 @@
 import MahamKit
 import SwiftUI
 
-/// What is on screen: signing in, the lock, or the app.
+/// What is on screen: signing in, the lock, or the app: Maham One's phone
+/// shell (`WebShell`), in the web's theme, fonts and reading direction. The
+/// sign-in and lock screens stay as they were, in the system's fonts.
 struct RootView: View {
   @Environment(AppModel.self) private var model
 
@@ -11,24 +13,30 @@ struct RootView: View {
       switch model.phase {
       case .notConfigured:
         NotConfiguredView()
+          .systemDesign()
       case .starting:
         StartingView()
+          .systemDesign()
       case .signedOut:
         SignInView()
+          .systemDesign()
           .transition(.opacity)
       case .secondStep:
         SecondStepView()
+          .systemDesign()
           .transition(.move(edge: .trailing).combined(with: .opacity))
       case .locked:
         LockView()
+          .systemDesign()
           .transition(.opacity)
       case .ready:
-        MainTabView()
+        WebShell()
           .transition(.opacity)
       }
     }
     .animation(.smooth(duration: 0.35), value: model.phase)
-    .toast($model.toast)
+    .webToast($model.toast)
+    .webTheme()
   }
 }
 

@@ -118,20 +118,5 @@ public func expiries(documents: [ComplianceDocument], employees: [Employee]) -> 
   return (register + papers).sorted { $0.date < $1.date }
 }
 
-/// Money as Maham One shows it: three decimals for dinars, two otherwise.
-public enum Money {
-  public static func fractionDigits(_ currency: String) -> Int {
-    ["KWD", "BHD", "OMR", "JOD", "IQD", "LYD", "TND"].contains(currency.uppercased()) ? 3 : 2
-  }
-
-  public static func format(_ amount: Double, currency: String, locale: Locale = .current) -> String {
-    let formatter = NumberFormatter()
-    formatter.numberStyle = .currency
-    formatter.currencyCode = currency
-    formatter.locale = locale
-    let digits = fractionDigits(currency)
-    formatter.minimumFractionDigits = digits
-    formatter.maximumFractionDigits = digits
-    return formatter.string(from: NSNumber(value: amount)) ?? "\(currency) \(amount)"
-  }
-}
+// `Money`, with the `fractionDigits` and `format` these screens use, is in
+// Foundation/Money.swift, the port of the web's money.ts.

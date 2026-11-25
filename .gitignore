@@ -44,3 +44,6 @@ ios/Widgets/MahamWidgets.entitlements
 # Python caches (ios/scripts)
 __pycache__/
 *.pyc
+
+# Intermediate output of ios/scripts/web-fixtures (the Swift file is kept)
+ios/scripts/web-fixtures/fixtures.json

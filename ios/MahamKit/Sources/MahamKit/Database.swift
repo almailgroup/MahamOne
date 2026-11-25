@@ -133,11 +133,21 @@ public struct DatabaseClient: Sendable {
     return try decode(Result.self, from: data)
   }
 
+  /// A function called with a body already in JSON, answering with the raw
+  /// body (empty when the function answers 204). The sync engine reads its
+  /// large pages with its own parser, and waits longer for them.
+  public func rpcData(
+    _ function: String, schema: DatabaseSchema, body: Data, timeout: TimeInterval = 30
+  ) async throws -> Data {
+    try await send(
+      method: "POST", path: "rpc/\(function)", schema: schema, query: [], body: body, timeout: timeout)
+  }
+
   // MARK: Wire
 
   private func send(
     method: String, path: String, schema: DatabaseSchema, query: [Query], body: Data? = nil,
-    prefer: String? = nil, retried: Bool = false
+    prefer: String? = nil, timeout: TimeInterval = 30, retried: Bool = false
   ) async throws -> Data {
     let session = try await auth.validSession()
     var components = URLComponents(
@@ -150,7 +160,7 @@ public struct DatabaseClient: Sendable {
     }
     var request = URLRequest(url: components.url!)
     request.httpMethod = method
-    request.timeoutInterval = 30
+    request.timeoutInterval = timeout
     request.setValue(auth.config.publishableKey, forHTTPHeaderField: "apikey")
     request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
     request.setValue(schema.rawValue, forHTTPHeaderField: "Accept-Profile")
@@ -170,7 +180,7 @@ public struct DatabaseClient: Sendable {
       _ = try await auth.refresh()
       return try await send(
         method: method, path: path, schema: schema, query: query, body: body, prefer: prefer,
-        retried: true)
+        timeout: timeout, retried: true)
     case 401:
       throw MahamError.sessionExpired
     default:

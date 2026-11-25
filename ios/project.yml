@@ -91,6 +91,17 @@ targets:
         NSFaceIDUsageDescription: Maham One uses Face ID to keep your company's data locked when you're away.
         NSCalendarsWriteOnlyAccessUsageDescription: Maham One adds a task's due date to your calendar when you ask it to.
         NSContactsUsageDescription: Maham One saves a client's phone and email to your contacts when you ask it to.
+        # The web's fonts (App/Resources/Fonts): Inter for Latin text and
+        # figures, IBM Plex Sans Arabic for Arabic (DesignSystem/Typography.swift).
+        UIAppFonts:
+          - Inter-Regular.ttf
+          - Inter-Medium.ttf
+          - Inter-SemiBold.ttf
+          - Inter-Bold.ttf
+          - IBMPlexSansArabic-Regular.ttf
+          - IBMPlexSansArabic-Medium.ttf
+          - IBMPlexSansArabic-SemiBold.ttf
+          - IBMPlexSansArabic-Bold.ttf
         SupabaseURL: https://$(SUPABASE_HOST)
         SupabasePublishableKey: $(SUPABASE_PUBLISHABLE_KEY)
         KeychainGroup: $(KEYCHAIN_GROUP)
