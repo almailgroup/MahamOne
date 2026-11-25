@@ -1,0 +1,139 @@
+name: iOS screenshots
+
+# Screenshots of the iPhone app on each screen and overlay, to review its UI
+# without a device. The Debug build runs in preview mode (ios/App/Preview: a
+# made-up owner and company, no account, no network) on an iOS 26 simulator;
+# ios/scripts/screenshots.sh opens it on each case and saves a picture. Run
+# it from the Actions tab; the pictures are the run's "screenshots" artifact,
+# kept 7 days, and the run's summary lists them.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-screenshots-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  screenshots:
+    name: Screenshots (iOS simulator)
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Xcode 26
+        run: |
+          latest=$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)
+          sudo xcode-select -s "$latest"
+          xcodebuild -version
+
+      - name: Generate the Xcode project
+        working-directory: ios
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      # The iPhone 17 Pro, or the newest iPhone the runner has. It boots
+      # while the app builds.
+      - name: Boot an iPhone
+        id: sim
+        working-directory: ios
+        run: |
+          IFS=$'\t' read -r udid name <<< "$(scripts/screenshots.sh --pick-device)"
+          if [ -z "$udid" ]; then
+            echo "::error::No iPhone simulator with iOS 26 on this runner."
+            xcrun simctl list devices available
+            exit 1
+          fi
+          echo "Using $name ($udid)"
+          echo "udid=$udid" >> "$GITHUB_OUTPUT"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          xcrun simctl boot "$udid" || true
+
+      # The one tap the app can't make itself: the theme menu, in the drawer.
+      # Without AXe that screenshot shows the drawer, and the summary says so.
+      - name: Install AXe (simulator taps)
+        continue-on-error: true
+        run: brew install cameroncooke/axe/axe
+
+      - name: Build for the simulator
+        working-directory: ios
+        env:
+          UDID: ${{ steps.sim.outputs.udid }}
+        run: |
+          set +e
+          xcodebuild build \
+            -project MahamOne.xcodeproj \
+            -scheme MahamOne \
+            -configuration Debug \
+            -destination "id=$UDID" \
+            -derivedDataPath DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            > build.log 2>&1
+          status=$?
+          echo "::group::Errors"
+          grep -E ": error: " build.log | sed -E 's|^.*/ios/||' | sort -u | head -200
+          echo "::endgroup::"
+          tail -3 build.log
+          exit $status
+
+      - name: Take the screenshots
+        working-directory: ios
+        env:
+          DEVICE: ${{ steps.sim.outputs.udid }}
+        run: |
+          xcrun simctl bootstatus "$DEVICE" -b
+          # The simulator's window, for the taps (harmless if it doesn't open).
+          open -a Simulator --args -CurrentDeviceUDID "$DEVICE" || true
+          scripts/screenshots.sh DerivedData/Build/Products/Debug-iphonesimulator/MahamOne.app screenshots
+
+      - name: Keep the screenshots
+        id: upload
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: ios/screenshots
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: Keep the build log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-screenshots-build-log
+          path: ios/build.log
+          retention-days: 7
+          if-no-files-found: ignore
+
+      # A contact sheet in the run's summary: each case, what it shows, and
+      # whether it was taken. The pictures themselves are in the artifact.
+      - name: Contact sheet
+        if: always()
+        env:
+          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+          DEVICE_NAME: ${{ steps.sim.outputs.name }}
+        run: |
+          sheet=ios/screenshots/cases.tsv
+          {
+            echo "## iOS screenshots"
+            echo
+            if [ -f "$sheet" ]; then
+              echo "On ${DEVICE_NAME:-the simulator}, in preview mode: a made-up owner and company, no account, no network."
+              echo
+              if [ -n "$ARTIFACT_URL" ]; then
+                echo "Download: [screenshots]($ARTIFACT_URL), kept 7 days."
+                echo
+              fi
+              echo "| Picture | Shows | Result |"
+              echo "|---|---|---|"
+              tail -n +2 "$sheet" | while IFS=$'\t' read -r name result shows; do
+                echo "| \`$name.png\` | $shows | $result |"
+              done
+            else
+              echo "No screenshots were taken: see the steps above."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

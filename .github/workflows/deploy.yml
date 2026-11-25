@@ -5,13 +5,14 @@ on:
     branches: [main]
     # Maham Tasks is its own app, with its own checks (maham-tasks.yml) and
     # its own Vercel site: a push that changes only it leaves Maham One alone.
-    # The same for the iPhone app (ios.yml).
+    # The same for the iPhone app (ios.yml, ios-screenshots.yml).
     paths-ignore:
       - 'maham-tasks/**'
       - '.github/workflows/maham-tasks.yml'
       - '.github/workflows/maham-tasks-backup.yml'
       - 'ios/**'
       - '.github/workflows/ios.yml'
+      - '.github/workflows/ios-screenshots.yml'
       - '.github/workflows/testflight.yml'
       - '.github/workflows/testflight-status.yml'
   workflow_dispatch:
