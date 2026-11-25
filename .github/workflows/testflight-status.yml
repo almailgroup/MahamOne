@@ -1,0 +1,33 @@
+name: TestFlight status
+
+# Asks App Store Connect whether a TestFlight build has finished Apple's
+# processing, and waits for it (up to 45 minutes). Actions → TestFlight
+# status → Run workflow; leave the build empty for the newest one.
+# Uses the same secrets as the TestFlight workflow.
+on:
+  workflow_dispatch:
+    inputs:
+      build:
+        description: Build number, for example 7.1 (empty = the newest)
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  status:
+    name: Ask Apple
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Wait until the build is ready in TestFlight
+        env:
+          RAW_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          RAW_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
+          BUILD: ${{ inputs.build }}
+        run: bash ios/scripts/with-asc-key.sh ios/scripts/build_status.py --wait "$BUILD"

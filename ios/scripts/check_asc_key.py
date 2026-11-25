@@ -39,17 +39,26 @@ def get(path: str, token: str, method: str = "GET") -> tuple[int, dict]:
         return failure.code, body
 
 
-def main() -> int:
-    key_id, issuer, team = os.environ["KEY_ID"].strip(), os.environ["ISSUER_ID"].strip(), os.environ["TEAM_ID"].strip()
+def make_token() -> str:
+    """A 10-minute App Store Connect token from KEY_ID, ISSUER_ID and the key
+    file. Raises ValueError when the key isn't a valid .p8 key."""
+    key_id, issuer = os.environ["KEY_ID"].strip(), os.environ["ISSUER_ID"].strip()
     with open(os.environ["AUTH_KEY_PATH"]) as file:
         private_key = file.read()
-
     try:
         now = int(time.time())
-        token = jwt.encode(
+        return jwt.encode(
             {"iss": issuer, "iat": now, "exp": now + 600, "aud": "appstoreconnect-v1"},
             private_key, algorithm="ES256", headers={"kid": key_id, "typ": "JWT"})
-    except Exception:
+    except Exception as failure:
+        raise ValueError("not a .p8 key") from failure
+
+
+def main() -> int:
+    team = os.environ["TEAM_ID"].strip()
+    try:
+        token = make_token()
+    except ValueError:
         error("APP_STORE_CONNECT_KEY isn't a valid .p8 key. Paste the whole text of the file again.")
         return 1
 

@@ -38,6 +38,8 @@ jobs:
     name: Build, sign and upload
     runs-on: macos-26
     timeout-minutes: 60
+    outputs:
+      build: ${{ steps.number.outputs.build }}
     env:
       UPLOAD: ${{ inputs.upload }}
     steps:
@@ -106,10 +108,12 @@ jobs:
           xcodegen generate
 
       - name: Choose the build number
+        id: number
         run: |
           # Grows with every run (and every re-run), as App Store Connect
           # needs: 12.1, 12.2, 13.1, …
           echo "BUILD_NUMBER=${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_ENV"
+          echo "build=${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
 
       - name: Archive
         working-directory: ios
@@ -216,3 +220,23 @@ jobs:
       - name: Remove the key
         if: always()
         run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8 "$RUNNER_TEMP/ExportOptions.plist"
+
+  # Apple processes an upload for 10–30 minutes before testers can install
+  # it. This waits for that on a Linux machine (the Mac is done) and says
+  # in the run's summary when the build is ready in TestFlight.
+  processing:
+    name: Wait for Apple's processing
+    needs: testflight
+    if: inputs.upload
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Wait until the build is ready in TestFlight
+        env:
+          RAW_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          RAW_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
+          BUILD: ${{ needs.testflight.outputs.build }}
+        run: bash ios/scripts/with-asc-key.sh ios/scripts/build_status.py --wait "$BUILD"

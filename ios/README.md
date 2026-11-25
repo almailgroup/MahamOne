@@ -129,12 +129,17 @@ it up once; after that a new TestFlight build is one button.
 
 ### Each new build
 
-1. In the repository: Actions → **TestFlight** → **Run workflow** → Run.
-2. Wait about 15 minutes for the run to turn green. Its summary says which
-   build it uploaded, for example `1.0.0 (12.1)`.
-3. Apple then processes the build. That usually takes 10–30 minutes, and
-   Apple emails you when it's ready. Testers install it with the
-   **TestFlight** app on their iPhone or iPad.
+1. In the repository, go to Actions → **TestFlight** → **Run workflow** →
+   Run.
+2. After about 6 minutes, the first part turns green. Its summary names the
+   uploaded build, for example `1.0.0 (12.1)`.
+3. The second part, "Wait for Apple's processing", turns green once Apple
+   has processed the build. That usually takes 10–30 minutes more. Its
+   summary then says "ready in TestFlight", and Apple emails you too.
+   Testers install it with the **TestFlight** app on their iPhone or iPad.
+
+To check a build at any time, go to Actions → **TestFlight status** → Run
+workflow. Leave the build number empty to check the newest build.
 
 The first build asks one question in App Store Connect. Under TestFlight,
 the build may show "Missing Compliance". The app only uses the iPhone's
