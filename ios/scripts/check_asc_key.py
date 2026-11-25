@@ -69,7 +69,12 @@ def check_profiles(identifier: str, token: str) -> None:
     if "APP_GROUPS" not in capabilities:
         print(f"::error::{identifier} doesn't have App Groups switched on. {HELP}")
     status, body = get(f"/bundleIds/{bundle}/profiles?limit=50", token)
-    for profile in body.get("data", []):
+    profiles = body.get("data", [])
+    if status != 200:
+        print(f"  (Apple answered {status} when asked for its profiles.)")
+    elif not profiles:
+        print("  no stored profiles (Xcode's own team profiles aren't listed here).")
+    for profile in profiles:
         attributes = profile["attributes"]
         name = attributes.get("name", "")
         groups = app_groups(attributes["profileContent"]) if attributes.get("profileContent") else []
