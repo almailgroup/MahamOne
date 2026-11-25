@@ -77,6 +77,15 @@ jobs:
           fi
           echo "AUTH_KEY_PATH=$key" >> "$GITHUB_ENV"
 
+      # Asks Apple whether the key, the team and the app all line up, and
+      # says which one doesn't (without printing any of them).
+      - name: Check the key with Apple
+        if: inputs.upload
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install --quiet --disable-pip-version-check pyjwt cryptography
+          "$RUNNER_TEMP/venv/bin/python" ios/scripts/check_asc_key.py
+
       - name: Generate the Xcode project
         working-directory: ios
         run: |
