@@ -94,7 +94,11 @@ primary-700; idle is slate-600.
 > same groups and actions in place: the tab bar's glass grows upwards into a
 > panel above the tabs (four actions to a row), the + turns into a ×, and
 > the page stays put under a 40% backdrop (`Shell/CreateMenu.swift`,
-> `Shell/TabBar.swift`). The web's sheet is described below.
+> `Shell/TabBar.swift`). The + is always in the bar: for a viewer the panel
+> says the company is view only and offers search (the web puts search in
+> the + slot), and while the role loads it shows a spinner. Pages opened
+> from the shell cross-fade into place (`PageSwap`) rather than switching
+> at once. The web's sheet is described below.
 
 **The sheet:**
 - Slides up over 220ms.

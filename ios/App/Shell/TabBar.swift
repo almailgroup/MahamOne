@@ -5,11 +5,13 @@ import SwiftUI
 /// in Liquid Glass. Five columns 64pt tall: the app's three tabs around the
 /// + and More (the drawer, never active). In Arabic, Home is on the right.
 ///
-/// The + opens what can be created in place: the bar's glass grows upwards
-/// into a panel (`CreateMenu`, 24pt corners) above the tabs, and the +
-/// turns into a ×; a tab, More or the × closes it. For those who only
-/// look, the + is search. The bar and the + share a glass container, so
-/// the + (glass tinted primary-solid) blends with the bar as it is pressed.
+/// The + is always there. It opens what can be created in place: the
+/// bar's glass grows upwards into a panel (`CreateMenu`, 24pt corners)
+/// above the tabs, and the + turns into a ×; a tab, More or the × closes
+/// it. While the person's role is loading the panel waits with a spinner;
+/// for those who may only look it says so and offers search
+/// (`CreateMenuNote`). The bar and the + share a glass container, so the +
+/// (glass tinted primary-solid) blends with the bar as it is pressed.
 struct TabBar: View {
   let app: SuiteApp
   let groups: [CreateGroup]
@@ -19,19 +21,29 @@ struct TabBar: View {
   let onMore: () -> Void
   @Environment(ShellRouter.self) private var router
   @Environment(ShellChrome.self) private var chrome
+  @Environment(SuiteState.self) private var suite
   @Environment(\.palette) private var palette
   @Namespace private var glass
 
   var body: some View {
-    let open = createOpen && !groups.isEmpty
+    let open = createOpen
     let shape = RoundedRectangle(cornerRadius: open ? WebRadius.xxl : WebRadius.xl, style: .continuous)
     let tabs = app.tabs
     GlassEffectContainer(spacing: 4) {
       VStack(spacing: 0) {
         if open {
-          CreateMenu(groups: groups, maxHeight: menuHeight) { action in
-            close(haptic: nil)
-            onChoose(action)
+          Group {
+            if groups.isEmpty {
+              CreateMenuNote(loading: !suite.roleKnown) {
+                close(haptic: nil)
+                onSearch()
+              }
+            } else {
+              CreateMenu(groups: groups, maxHeight: menuHeight) { action in
+                close(haptic: nil)
+                onChoose(action)
+              }
+            }
           }
           .transition(.opacity.combined(with: .scale(scale: 0.94, anchor: .bottom)))
           .accessibilityAction(.escape) { close(haptic: .close) }
@@ -79,39 +91,24 @@ struct TabBar: View {
     .accessibilityAddTraits(active ? .isSelected : [])
   }
 
-  @ViewBuilder
   private var centre: some View {
-    if !groups.isEmpty {
-      Button {
-        if createOpen {
-          close(haptic: .close)
-        } else {
-          Haptics.play(.press)
-          withAnimation(WebMotion.expand) { createOpen = true }
-        }
-      } label: {
-        IconView(.plus, size: 24)
-          .rotationEffect(.degrees(createOpen ? 45 : 0))
-          .foregroundStyle(palette.onPrimary)
-          .frame(width: 48, height: 48)
+    Button {
+      if createOpen {
+        close(haptic: .close)
+      } else {
+        Haptics.play(.press)
+        withAnimation(WebMotion.expand) { createOpen = true }
       }
-      .buttonStyle(CentreButtonStyle())
-      .glassEffectID("centre", in: glass)
-      .accessibilityLabel(Text(createOpen ? t("Close") : t("Create new")))
-      .accessibilityAddTraits(createOpen ? .isSelected : [])
-    } else {
-      Button {
-        Haptics.play(.tap)
-        onSearch()
-      } label: {
-        IconView(.search, size: 20)
-          .foregroundStyle(palette.slate(600))
-          .frame(width: 48, height: 48)
-      }
-      .buttonStyle(.webGlass(.rounded(WebRadius.xl), tint: palette.slate(100).opacity(0.7)))
-      .glassEffectID("centre", in: glass)
-      .accessibilityLabel(Text(t("Search")))
+    } label: {
+      IconView(.plus, size: 24)
+        .rotationEffect(.degrees(createOpen ? 45 : 0))
+        .foregroundStyle(palette.onPrimary)
+        .frame(width: 48, height: 48)
     }
+    .buttonStyle(CentreButtonStyle())
+    .glassEffectID("centre", in: glass)
+    .accessibilityLabel(Text(createOpen ? t("Close") : t("Create new")))
+    .accessibilityAddTraits(createOpen ? .isSelected : [])
   }
 
   private var more: some View {

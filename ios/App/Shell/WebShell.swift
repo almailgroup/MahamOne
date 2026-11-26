@@ -23,7 +23,7 @@ struct WebShell: View {
           .transition(.opacity)
       }
     }
-    .animation(WebMotion.fade, value: suite.department)
+    .animation(WebMotion.department, value: suite.department)
     // The whole shell is rebuilt in the other language, as the web reloads;
     // the page on screen stays.
     .id(LanguageStore.shared.isArabic)
@@ -115,10 +115,16 @@ private struct OneShell: View {
     let groups = suite.createGroups(current: app.id)
     ZStack {
       NavigationStack(path: $router.path) {
-        HomePage()
-          .navigationDestination(for: Route.self) { route in
-            RouteView(route: route)
-          }
+        // The page opened from the shell cross-fades into place; pages
+        // opened from links slide in over it.
+        ZStack {
+          RouteView(route: router.root)
+            .id(router.root)
+            .pageSwap()
+        }
+        .navigationDestination(for: Route.self) { route in
+          RouteView(route: route)
+        }
       }
       // The bars float over the pages, as on the web (a sticky header and a
       // fixed tab bar): the pages scroll under them, and leave room for them

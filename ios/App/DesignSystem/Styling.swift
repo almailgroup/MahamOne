@@ -68,6 +68,11 @@ enum WebMotion {
   static var drawer: Animation { .timingCurve(0.16, 1, 0.3, 1, duration: 0.2) }
   /// The Create sheet, 220ms.
   static var sheet: Animation { .timingCurve(0.16, 1, 0.3, 1, duration: 0.22) }
+  /// A page replacing another (the tab bar, the drawer, the launcher):
+  /// 420ms, easing out gently (`PageSwap`).
+  static var page: Animation { .timingCurve(0.22, 1, 0.36, 1, duration: 0.42) }
+  /// Switching between Maham One and Maham Tasks.
+  static var department: Animation { .timingCurve(0.22, 1, 0.36, 1, duration: 0.45) }
   /// The create menu growing out of the tab bar: a spring with a little bounce.
   static var expand: Animation { .spring(response: 0.36, dampingFraction: 0.8) }
   /// The create menu folding back into the tab bar.
@@ -179,4 +184,25 @@ func withoutAnimation(_ change: () -> Void) {
   var transaction = Transaction()
   transaction.disablesAnimations = true
   withTransaction(transaction, change)
+}
+
+/// A page taking another's place: the new one fades in while rising 12pt
+/// and settling from 98.5%; the old one fades out quickly, so the two are
+/// never seen through each other. With Reduce Motion, a plain fade.
+struct PageSwap: ViewModifier {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+  func body(content: Content) -> some View {
+    content.transition(
+      .asymmetric(
+        insertion: reduceMotion
+          ? .opacity
+          : .opacity.combined(with: .offset(y: 12)).combined(with: .scale(scale: 0.985, anchor: .top)),
+        removal: .opacity.animation(.easeOut(duration: 0.16))))
+  }
+}
+
+extension View {
+  /// Fades this page in and the one it replaces out (`PageSwap`).
+  func pageSwap() -> some View { modifier(PageSwap()) }
 }

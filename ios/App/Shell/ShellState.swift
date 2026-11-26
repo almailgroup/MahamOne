@@ -2,16 +2,20 @@ import MahamKit
 import Observation
 import SwiftUI
 
-/// Where the shell is: the pages pushed over Home, as the web's address bar.
-/// Pages read it with `@Environment(ShellRouter.self)`.
+/// Where the shell is, as the web's address bar: the page opened from the
+/// tab bar, the drawer, the launcher or search (`root`), and the pages
+/// pushed over it from links inside pages (`path`). Pages read it with
+/// `@Environment(ShellRouter.self)`.
 @MainActor
 @Observable
 final class ShellRouter {
-  /// The pages over Home (`/`); empty on Home.
+  /// The page opened from the shell; Home at first.
+  private(set) var root: Route = .home
+  /// The pages pushed over `root`, each with Back to return.
   var path: [Route] = []
 
   /// The page on screen.
-  var current: Route { path.last ?? .home }
+  var current: Route { path.last ?? root }
 
   /// Its web address, for the tab bar and the drawer.
   var currentPath: String { current.path }
@@ -20,13 +24,12 @@ final class ShellRouter {
     init() {
       // Preview mode (App/Preview): opens on the page the launch asks for.
       if PreviewMode.isOn {
-        let route = Route(path: PreviewMode.options.route)
-        path = route == .home ? [] : [route]
+        root = Route(path: PreviewMode.options.route)
       }
     }
   #endif
 
-  /// A link inside a page: pushed, with Back to return.
+  /// A link inside a page: pushed (sliding in, as iOS does), with Back to return.
   func push(_ route: Route) {
     if route == .home {
       go(.home)
@@ -40,12 +43,14 @@ final class ShellRouter {
     push(Route(path: path))
   }
 
-  /// The tab bar, the drawer, the launcher and the search: the page replaces
-  /// what was there, at once, as the web's links do.
+  /// The tab bar, the drawer, the launcher and search: the page replaces
+  /// what was there, as the web's links do, cross-fading into place
+  /// (`WebMotion.page`); pages pushed over the old one go with it.
   func go(_ route: Route) {
-    guard route != current || path.count > 1 else { return }
-    withoutAnimation {
-      path = route == .home ? [] : [route]
+    guard route != current else { return }
+    withAnimation(WebMotion.page) {
+      root = route
+      path = []
     }
   }
 
@@ -131,7 +136,7 @@ final class SuiteState {
   /// The apps the person may open, in the layout's order.
   var visibleApps: [SuiteApp] { apps.filter { access($0.id).canOpen } }
 
-  /// Viewers make nothing: no create menu, search in the tab bar's middle.
+  /// Viewers make nothing: the create menu says so and offers search.
   var readOnly: Bool { role == .viewer }
 
   /// The app a page belongs to; nil for the suite's own pages (Home, Settings).

@@ -94,3 +94,43 @@ struct CreateMenu: View {
     }
   }
 }
+
+/// The create menu when there is nothing to create: while the person's
+/// role in the company is still loading, a spinner (the actions follow as
+/// soon as it is known); for those who may only look, why, and search
+/// (what the + is for them on the web).
+struct CreateMenuNote: View {
+  let loading: Bool
+  let onSearch: () -> Void
+  @Environment(\.palette) private var palette
+
+  var body: some View {
+    VStack(spacing: 0) {
+      if loading {
+        Spinner(t("Loading…"))
+          .padding(.vertical, 32)
+      } else {
+        IconView(.eye, size: 22)
+          .foregroundStyle(palette.primary(700))
+          .frame(width: 48, height: 48)
+          .background(palette.primary(500).opacity(0.14), in: Circle())
+          .padding(.bottom, 12)
+        Text(t("View only"))
+          .font(.web(16, .semibold))
+          .foregroundStyle(palette.slate(900))
+          .accessibilityAddTraits(.isHeader)
+        Text(t("You can view this company but not change it. Ask an owner or admin for more access."))
+          .font(.web(14))
+          .foregroundStyle(palette.slate(500))
+          .multilineTextAlignment(.center)
+          .fixedSize(horizontal: false, vertical: true)
+          .padding(.top, 4)
+          .padding(.bottom, 16)
+        WebButton(t("Search"), icon: .search, variant: .outline, haptic: .tap, action: onSearch)
+      }
+    }
+    .frame(maxWidth: .infinity)
+    .padding(.horizontal, 24)
+    .padding(.vertical, 20)
+  }
+}
