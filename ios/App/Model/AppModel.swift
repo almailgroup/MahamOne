@@ -39,6 +39,8 @@ final class AppModel {
   let services: AppServices?
   let tasks: TasksStore
   let business: BusinessStore
+  /// Every record of the company on screen, kept in step with the cloud.
+  let one: OneData
 
   var selectedTab: AppTab = .home
   /// A link the shell should follow once it is on screen.
@@ -64,6 +66,7 @@ final class AppModel {
     self.services = services
     tasks = TasksStore(services: services)
     business = BusinessStore(services: services)
+    one = OneData(services: services)
     lockEnabled = UserDefaults.standard.object(forKey: Preferences.lockKey) as? Bool ?? true
     tasks.onError = { [weak self] in self?.show($0) }
     business.onError = { [weak self] in self?.show($0) }
@@ -113,7 +116,23 @@ final class AppModel {
   func refreshAll() async {
     async let tasksLoad: Void = tasks.refresh()
     async let businessLoad: Void = business.refresh()
-    _ = await (tasksLoad, businessLoad)
+    async let oneLoad: Void = one.sync()
+    _ = await (tasksLoad, businessLoad, oneLoad)
+  }
+
+  /// Opens the company on screen's records (downloading them the first time).
+  func openCompanyData() {
+    guard let company = business.company, let userId = session?.user.id else {
+      one.close()
+      return
+    }
+    #if DEBUG
+      if PreviewMode.isOn {
+        one.openPreview(company, userId: userId, records: PreviewRecords.all(company: company))
+        return
+      }
+    #endif
+    one.open(company, userId: userId)
   }
 
   // MARK: Signing in and out
@@ -150,10 +169,12 @@ final class AppModel {
   }
 
   func signOut() async {
+    let userId = session?.user.id
     await services?.auth.signOut()
     services?.cache.clear()
     tasks.reset()
     business.reset()
+    if let userId { one.removeAll(userId: userId) } else { one.close() }
     SystemSync.signedOut()
     session = nil
     selectedTab = .home
@@ -181,6 +202,8 @@ final class AppModel {
         phase = .locked
       } else if phase == .ready, let away = backgroundedAt, Date().timeIntervalSince(away) > 60 {
         Task { await refreshAll() }
+      } else if phase == .ready {
+        Task { await one.appBecameActive() }
       }
       backgroundedAt = nil
     default:

@@ -1,14 +1,13 @@
 import SwiftUI
 
 /// Maham One's home, `/` (`src/suite/home/index.tsx`): the greeting, the
-/// company and the date, then the launcher. Sections are 20pt apart.
-/// Pulling down syncs again. (Needs attention, approval requests and At a
-/// glance follow with the sync engine.)
+/// company and the date, the launcher (each app with its line: "3 overdue
+/// invoices", "12 employees"), Needs attention and At a glance. Sections
+/// are 20pt apart. Pulling down syncs again.
 struct HomePage: View {
   @Environment(AppModel.self) private var model
+  @Environment(SuiteState.self) private var suite
   @Environment(\.palette) private var palette
-  /// A line under each app: "3 overdue invoices", "12 employees".
-  var stats: [SuiteAppID: String] = [:]
 
   var body: some View {
     let company = ShellCompany.name(model.business)
@@ -29,7 +28,11 @@ struct HomePage: View {
         .font(.web(14))
         .foregroundStyle(palette.slate(500))
       }
-      Launcher(stats: stats)
+      Launcher(stats: HomeStats.lines(model.one, suite: suite))
+      if suite.access(.books).canOpen {
+        NeedsAttentionCard(alerts: HomeAlerts.collect(model.one))
+        AtAGlanceCard()
+      }
     }
   }
 

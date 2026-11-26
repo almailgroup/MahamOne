@@ -85,15 +85,28 @@ nonisolated enum Localization {
     I18n.Translator(language: language, table: language == .ar ? arabic : .empty)
   }
 
-  /// The Arabic dictionary, read from the bundle once.
+  /// The Arabic dictionary, read from the bundle once: the web's words
+  /// (`ar.json`, generated) and the app's own (`ar-native*.json`, for words
+  /// only the iPhone app shows). The web's win where both have a key.
   static let arabic: I18n.Table = {
-    guard let url = Bundle.main.url(forResource: "ar", withExtension: "json"),
-      let data = try? Data(contentsOf: url),
-      let table = try? I18n.Table(json: data)
-    else {
-      assertionFailure("Shared/Resources/ar.json is missing or unreadable; run scripts/ios-strings.ts")
-      return .empty
+    var merged: [String: Any] = [:]
+    // The app's own words may be split by area: ar-native.json, ar-native-people.json, …
+    let native = (Bundle.main.urls(forResourcesWithExtension: "json", subdirectory: nil) ?? [])
+      .map { $0.deletingPathExtension().lastPathComponent }
+      .filter { $0.hasPrefix("ar-native") }
+      .sorted()
+    for name in ["ar"] + native {
+      guard let url = Bundle.main.url(forResource: name, withExtension: "json"),
+        let data = try? Data(contentsOf: url),
+        let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+      else {
+        if name == "ar" { assertionFailure("Shared/Resources/ar.json is missing or unreadable; run scripts/ios-strings.ts") }
+        continue
+      }
+      merged.merge(object) { web, _ in web }
     }
+    guard let data = try? JSONSerialization.data(withJSONObject: merged), let table = try? I18n.Table(json: data)
+    else { return .empty }
     return table
   }()
 }

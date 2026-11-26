@@ -50,7 +50,10 @@ struct WebShell: View {
     .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
       chrome.keyboardVisible = false
     }
-    .onChange(of: model.business.company?.id, initial: true) { _, _ in syncRole() }
+    .onChange(of: model.business.company?.id, initial: true) { _, _ in
+      syncRole()
+      model.openCompanyData()
+    }
     .onChange(of: model.business.loadedOnce) { _, _ in syncRole() }
     .onChange(of: router.currentPath, initial: true) { _, path in
       suite.rememberApp(forPath: path)

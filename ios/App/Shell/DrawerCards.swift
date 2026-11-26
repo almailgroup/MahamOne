@@ -112,7 +112,7 @@ struct AccountCard: View {
             .foregroundStyle(palette.slate(900))
             .lineLimit(1)
             .environment(\.layoutDirection, .leftToRight)
-          SyncStatusLine(syncing: model.business.isLoading)
+          SyncStatusLine(syncing: model.business.isLoading || model.one.syncing)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         IconView(.chevronsUpDown, size: 16).foregroundStyle(palette.slate(400))

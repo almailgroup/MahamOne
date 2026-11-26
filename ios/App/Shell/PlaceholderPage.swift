@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// The page for a web address (`src/app/routes.tsx`). Home is built; every
-/// other page shows the placeholder until its stage fills it in here.
+/// The page for a web address (`src/app/routes.tsx`): Home and the
+/// documents here, every other area's pages from `AreaPages`.
 struct RouteView: View {
   let route: Route
 
@@ -11,8 +11,20 @@ struct RouteView: View {
       HomePage()
     case .notFound:
       NotFoundPage()
+    case .salesDocuments(let kind):
+      DocumentListPage(type: DocType(kind))
+    case .salesDocument(let kind, let id):
+      DocumentPage(type: DocType(kind), id: id)
+    case .purchaseDocuments(let kind):
+      DocumentListPage(type: DocType(kind))
+    case .purchaseDocument(let kind, let id):
+      DocumentPage(type: DocType(kind), id: id)
     default:
-      PlaceholderPage(title: t(route.titleKey))
+      if let page = AreaPages.page(for: route) {
+        page
+      } else {
+        PlaceholderPage(title: t(route.titleKey))
+      }
     }
   }
 }

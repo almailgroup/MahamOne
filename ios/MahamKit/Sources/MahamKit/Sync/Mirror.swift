@@ -69,6 +69,21 @@ public final class Mirror: Sendable {
       inner: Inner(data: data, generation: 1, journal: journal, journalBytes: 0, snapshotBytes: bytes))
   }
 
+  /// A mirror holding `records` (each table's records, by their "id"), as
+  /// if downloaded: for previews and tests; it is never synced.
+  public static func seeded(directory: URL, state: SyncState, records: [String: [JSONValue]]) throws -> Mirror {
+    let mirror = try create(directory: directory, state: state)
+    try mirror.write { tx in
+      for (table, list) in records {
+        for record in list {
+          guard let id = record["id"]?.string else { continue }
+          tx.put(table, id, record)
+        }
+      }
+    }
+    return mirror
+  }
+
   /// Opens the mirror kept in `directory`: its last snapshot and every
   /// complete transaction after it. Throws `MirrorError.missing` when there is none.
   public static func open(directory: URL) throws -> Mirror {
