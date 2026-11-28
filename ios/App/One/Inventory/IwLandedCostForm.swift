@@ -242,14 +242,16 @@ struct IwLandedPlan {
     precision = Money.precision(company.str("currency"))
     products = one.records(.products)
     clients = one.records(.clients)
-    bills = one.records(.documents)
+    // A local copy: closures below can't capture `self` before every property is set.
+    let billList = one.records(.documents)
       .filter { $0.str("type") == "bill" && IwPreview.movesStock($0) }
       .sorted { a, b in
         let date = InvStock.plain(b.str("issueDate"), a.str("issueDate"))
         if date != 0 { return date < 0 }
         return b.str("number").localizedCompare(a.str("number")) == .orderedAscending
       }
-    let costBill = bills.first { $0.rid == billId }
+    bills = billList
+    let costBill = billList.first { $0.rid == billId }
     self.costBill = costBill
     parts = costBill.map { IwPreview.lineParts($0, company: company, clients: one.records(.clients)) } ?? [:]
     var taken = Set<String>()
@@ -272,7 +274,7 @@ struct IwLandedPlan {
     let productList = products
     let goodsBills: [JSONValue] =
       costBill.map { bill in
-        bills.filter { candidate in
+        billList.filter { candidate in
           InvStock.plain(candidate.str("issueDate"), bill.str("issueDate")) <= 0
             && !IwPreview.stockLineIds(candidate, products: productList).isEmpty
         }
