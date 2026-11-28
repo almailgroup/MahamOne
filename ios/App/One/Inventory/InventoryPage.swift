@@ -15,6 +15,8 @@ struct InvInventoryPage: View {
   @State private var shown = 50
   @State private var opened: String?
   @State private var showing = false
+  @State private var warehouseDraft: IwWarehouseDraft?
+  @State private var rebuilding = false
 
   var body: some View {
     let one = model.one
@@ -35,6 +37,7 @@ struct InvInventoryPage: View {
       InvItemDialog(
         sheet: itemSheet(inventory, format: format), isPresented: $showing,
         onOpen: { route in follow(route) }))
+    .iwWarehouseDialog($warehouseDraft)
     .onChange(of: tab) { _, _ in shown = 50 }
     .onChange(of: query) { _, _ in shown = 50 }
     .onChange(of: warehouseId) { _, _ in shown = 50 }
@@ -44,19 +47,51 @@ struct InvInventoryPage: View {
 
   private func header(_ inventory: InvInventory) -> some View {
     let active = inventory.warehouses.filter { !$0.flag("archived") }.count
+    let edits = IwGate.edits(model)
+    let entries = edits && IwGate.entries
+    let landed = edits && IwGate.landedCosts
+    let rebuild = edits && IwGate.rebuild
     return PageHeader(t("Inventory"), description: t("Stock on hand, its value and every movement, by warehouse.")) {
-      WebButton(t("Adjust stock"), icon: .slidersHorizontal, variant: .outline) {
-        router.push(.newStockAdjustment)
+      if entries {
+        WebButton(t("Adjust stock"), icon: .slidersHorizontal, variant: .outline) { newEntry("adjustment") }
       }
       WebButton(t("Stock count"), icon: .clipboardList) { router.push(.stockCount) }
-      DropdownMenu(alignment: .end, name: t("More actions")) {
-        IconView(.moreHorizontal).foregroundStyle(palette.slate(600))
-      } items: {
-        DropdownItem(t("Transfer stock"), icon: .arrowLeftRight) { router.push(.newStockAdjustment) }
-          .disabled(active < 2)
-        DropdownItem(t("Record opening stock"), icon: .packagePlus) { router.push(.newStockAdjustment) }
-        DropdownItem(t("Allocate landed costs"), icon: .shipWheel) { router.push(.newLandedCost) }
+      if entries || landed || rebuild {
+        DropdownMenu(alignment: .end, name: t("More actions")) {
+          IconView(.moreHorizontal).foregroundStyle(palette.slate(600))
+        } items: {
+          if entries {
+            DropdownItem(t("Transfer stock"), icon: .arrowLeftRight) { newEntry("transfer") }
+              .disabled(active < 2)
+            DropdownItem(t("Record opening stock"), icon: .packagePlus) { newEntry("opening") }
+          }
+          if landed {
+            DropdownItem(t("Allocate landed costs"), icon: .shipWheel) { router.push(.newLandedCost) }
+          }
+          if rebuild {
+            DropdownSeparator()
+            DropdownItem(t("Recalculate stock"), icon: .refreshCw) { recalculate() }
+              .disabled(rebuilding)
+          }
+        }
       }
+    }
+  }
+
+  /// `/inventory/adjustments/new?kind=…`.
+  private func newEntry(_ kind: String) {
+    IwIntent.entry(kind: kind)
+    router.push(.newStockAdjustment)
+  }
+
+  /// `rebuildStock(companyId)`: every movement planned and costed again.
+  private func recalculate() {
+    rebuilding = true
+    Task {
+      await IwSave.run(model, done: { (_: Void) in t("Stock recalculated") }) { ctx in
+        try InventoryWrites.rebuildStock(ctx)
+      }
+      rebuilding = false
     }
   }
 
@@ -80,7 +115,19 @@ struct InvInventoryPage: View {
       }
       TextInput(text: $query, placeholder: t("Search items…"), leadingIcon: .search)
     }
-    if tab == "landed-costs" {
+    if tab == "warehouses", IwGate.warehouses, IwGate.edits(model) {
+      FlowLayout(spacing: 8, lineSpacing: 8) {
+        if IwWarehouseAccess(model).subsOffered, let main = inventory.defaultWarehouse {
+          WebButton(t("New sub-warehouse"), icon: .cornerDownRight, variant: .outline, size: .sm) {
+            warehouseDraft = IwWarehouseDraft.new(companyId: model.one.companyId ?? "", parentId: main.rid)
+          }
+        }
+        WebButton(t("New warehouse"), icon: .plus, variant: .outline, size: .sm) {
+          warehouseDraft = IwWarehouseDraft.new(companyId: model.one.companyId ?? "")
+        }
+      }
+    }
+    if tab == "landed-costs", IwGate.landedCosts, IwGate.edits(model) {
       WebButton(t("Allocate landed costs"), icon: .plus, variant: .outline, size: .sm) {
         router.push(.newLandedCost)
       }
@@ -117,7 +164,7 @@ struct InvInventoryPage: View {
       case "history":
         InvEntriesTab(entries: InvEntries.newestFirst(model.one.records(.stockEntries)), inventory: inventory, format: format)
       case "warehouses":
-        InvWarehousesTab(inventory: inventory, format: format)
+        InvWarehousesTab(inventory: inventory, format: format, onEdit: { draft in warehouseDraft = draft })
       case "landed-costs":
         InvLandedCostsTab(inventory: inventory, format: format)
       default:
@@ -148,7 +195,12 @@ struct InvInventoryPage: View {
           "Mark the goods you keep as stock items. Bills bring them in, invoices take them out, and the cost of sales follows."
         )
       ) {
-        WebButton(t("New stock item"), icon: .plus) { router.push(.newProduct) }
+        if IwGate.items && IwGate.edits(model) {
+          WebButton(t("New stock item"), icon: .plus) {
+            IwIntent.newItem(kind: "stock")
+            router.push(.newProduct)
+          }
+        }
       }
     } else if items.isEmpty {
       InvNothingMatches()
@@ -213,8 +265,13 @@ struct InvKeeperCard: View {
         Text(t("Issue uniforms and other items from it to employees. Each issue waits for an approver."))
           .font(.web(12))
           .foregroundStyle(palette.slate(500))
-        WebButton(t("Issue items"), icon: .shirt, size: .sm) { router.push(.newStockIssue) }
+        if IwGate.issues {
+          WebButton(t("Issue items"), icon: .shirt, size: .sm) {
+            IwIntent.issue(warehouse: warehouse.rid)
+            router.push(.newStockIssue)
+          }
           .padding(.top, 8)
+        }
       }
       .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -313,6 +370,7 @@ struct InvEntriesTab: View {
   let entries: [JSONValue]
   let inventory: InvInventory
   let format: CompanyFormat
+  @Environment(AppModel.self) private var model
   @Environment(ShellRouter.self) private var router
   @State private var shown = 50
 
@@ -328,8 +386,11 @@ struct InvEntriesTab: View {
         icon: .slidersHorizontal, title: t("No adjustments yet"),
         description: t("Opening stock, write-offs, count differences and transfers between warehouses show here.")
       ) {
-        WebButton(t("Adjust stock"), icon: .slidersHorizontal, variant: .outline) {
-          router.push(.newStockAdjustment)
+        if IwGate.entries && IwGate.edits(model) {
+          WebButton(t("Adjust stock"), icon: .slidersHorizontal, variant: .outline) {
+            IwIntent.entry(kind: "adjustment")
+            router.push(.newStockAdjustment)
+          }
         }
       }
     } else {
@@ -368,6 +429,8 @@ struct InvEntriesTab: View {
 struct InvWarehousesTab: View {
   let inventory: InvInventory
   let format: CompanyFormat
+  /// Opens the warehouse form (where warehouses can be saved from this iPhone).
+  var onEdit: ((IwWarehouseDraft) -> Void)?
 
   var body: some View {
     ForEach(inventory.ordered.map(Rec.init)) { record in
@@ -378,14 +441,20 @@ struct InvWarehousesTab: View {
   private func row(_ warehouse: JSONValue) -> some View {
     let sub = warehouse.text("parentId") != nil
     let icon: Icon = sub ? .cornerDownRight : .warehouse
-    return InvRow(
-      title: InvText.name(warehouse), subtitle: subtitle(warehouse), icon: icon, indent: sub ? 24 : 0
-    ) {
-      if warehouse.flag("isDefault") {
-        Badge(inventory.hasSubs(warehouse) ? t("Main warehouse") : t("Default"), tone: .blue)
+    return HStack(spacing: 0) {
+      InvRow(
+        title: InvText.name(warehouse), subtitle: subtitle(warehouse), icon: icon, indent: sub ? 24 : 0
+      ) {
+        if warehouse.flag("isDefault") {
+          Badge(inventory.hasSubs(warehouse) ? t("Main warehouse") : t("Default"), tone: .blue)
+        }
+        if sub { Badge(t("Sub-warehouse"), tone: .gray) }
+        if warehouse.flag("archived") { Badge(t("Archived"), tone: .gray) }
       }
-      if sub { Badge(t("Sub-warehouse"), tone: .gray) }
-      if warehouse.flag("archived") { Badge(t("Archived"), tone: .gray) }
+      if let onEdit {
+        IwWarehouseMenu(warehouse: warehouse, inventory: inventory, onEdit: onEdit)
+          .padding(.trailing, 8)
+      }
     }
   }
 
@@ -429,7 +498,9 @@ struct InvLandedCostsTab: View {
         description: t(
           "Add customs duty, freight, clearing and insurance from a bill to the cost of the goods they brought in.")
       ) {
-        WebButton(t("Allocate landed costs"), icon: .plus, variant: .outline) { router.push(.newLandedCost) }
+        if IwGate.landedCosts && IwGate.edits(model) {
+          WebButton(t("Allocate landed costs"), icon: .plus, variant: .outline) { router.push(.newLandedCost) }
+        }
       }
     } else {
       ForEach(costs.map(Rec.init)) { record in

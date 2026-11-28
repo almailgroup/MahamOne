@@ -42,3 +42,21 @@ so a different record means conflicts and churn in the company's books).
 
 The Swift tests run on Linux in CI (`swift test` in ios/MahamKit); there is no Swift
 toolchain on the development machine, so write code that compiles first time.
+
+## Numbers from the cloud (documents)
+
+The web asks the cloud's `reserve_number` for a document's counter *before* its Dexie
+transaction (`reserveDocumentCounter`, `reserveIssueCounter`), so two devices never give the
+same number. A `WriteContext` body is synchronous, so the app does the same in two steps:
+
+1. A first `model.one.write` that only reads works out what the web would ask for:
+   `DcDocuments.counterRequest(ctx, input)` (saving), `issueCounterRequest(ctx, id:, status:)`
+   (mark as sent, a status that issues it), `newDraftCounterRequest(ctx, companyId:, type:)`
+   (duplicate, convert, reissue, part of an order). It returns a `DcCounterRequest`
+   (`kind` = the document type, `date` = its issue date, `min` = this device's next counter
+   − 1) or nil when the web asks nothing (a number typed, a draft that waits for its number on
+   issue, a document saved again, a locked period).
+2. `await model.one.reserveNumber(request)` (`SyncEngine.reserveNumber`) returns the
+   `ReservedCounter`, or nil offline, for a viewer or after 3 s.
+3. The real write passes it as `reserved:`; with nil the port numbers on the device, as the
+   web's fallback does. Its parity tests check the requests too (`cloudNumbersAreAskedForAsTheWebAsks`).

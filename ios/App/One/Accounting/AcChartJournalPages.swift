@@ -2,7 +2,9 @@ import MahamKit
 import SwiftUI
 
 // `/accounts` (src/apps/books/pages/accounting/chart.tsx), `/journals` and
-// `/journals/:id` (journals.tsx, journal-editor.tsx), read only.
+// `/journals/:id` (journals.tsx, journal-editor.tsx). Accounts and journals
+// are made and changed natively (AwAccountDialog, AwJournalEditor) once
+// they can be saved on this iPhone.
 
 // MARK: Chart of accounts
 
@@ -10,18 +12,26 @@ import SwiftUI
 struct AcChartPage: View {
   @Environment(AppModel.self) private var model
   @Environment(ShellRouter.self) private var router
+  @Environment(SuiteState.self) private var suite: SuiteState?
   @State private var query = ""
   @State private var showArchived = false
+  @State private var editing: JSONValue?
 
   var body: some View {
     let books = model.one.acBooks
     let balances = books.balances(upTo: AcDate.today)
     let visible = visibleAccounts(books)
     let format = model.one.format
+    let editable = AwWrite.accounts && AwAccess(model, suite).accounting
     WebPage(refresh: { [model] in await model.one.sync() }) {
       PageHeader(
         t("Chart of accounts"),
-        description: t("Every invoice, payment and journal is recorded in these accounts. Balances are as of today."))
+        description: t("Every invoice, payment and journal is recorded in these accounts. Balances are as of today.")
+      ) {
+        if editable {
+          WebButton(t("New account"), icon: .plus, haptic: .press) { startNew(books) }
+        }
+      }
       AcPayrollNote()
       ListCard {
         TextInput(text: $query, placeholder: t("Search accounts…"), leadingIcon: .search)
@@ -37,16 +47,36 @@ struct AcChartPage: View {
             if !rows.isEmpty {
               AcGroupHeading(title: t(group.label))
               ForEach(rows) { account in
-                AcAccountRow(account: account, balance: balances[account.id] ?? 0, format: format) {
-                  router.push(
-                    AcLinks.ledger(account.id, AcRange(from: "0000-01-01", to: AcDate.today)))
-                }
+                AcAccountRow(
+                  account: account, balance: balances[account.id] ?? 0, format: format,
+                  action: {
+                    router.push(AcLinks.ledger(account.id, AcRange(from: "0000-01-01", to: AcDate.today)))
+                  },
+                  onEdit: editAction(account, editable))
               }
             }
           }
         }
       }
     }
+    .awAccountDialog($editing)
+  }
+
+  /// Opens the account dialog on an account, for those who may change the chart.
+  private func editAction(_ account: AcAccount, _ editable: Bool) -> (() -> Void)? {
+    guard editable else { return nil }
+    return { editing = account.raw }
+  }
+
+  /// A new expense account, coded after the last one (`startNew`).
+  private func startNew(_ books: AcBooks) {
+    guard let companyId = model.one.companyId else { return }
+    let raw = books.accounts.map(\.raw)
+    editing = AwAccounts.blank(
+      companyId: companyId,
+      overrides: [
+        "type": .string("expense"), "code": .string(AwAccountTypeHints.suggestCode(raw, type: "expense")),
+      ])
   }
 
   private func visibleAccounts(_ books: AcBooks) -> [AcAccount] {
@@ -68,11 +98,32 @@ struct AcAccountRow: View {
   let balance: Int
   let format: CompanyFormat
   let action: () -> Void
+  /// Opens the account dialog, for those who may change the chart.
+  var onEdit: (() -> Void)? = nil
   @Environment(\.palette) private var palette
 
   var body: some View {
-    AcTapRow(action: action) {
-      HStack(alignment: .top, spacing: 12) {
+    if let onEdit {
+      HStack(spacing: 0) {
+        Button {
+          Haptics.play(.tap)
+          action()
+        } label: {
+          content.contentShape(Rectangle())
+        }
+        .buttonStyle(PressedFill(radius: 0, color: .slate(100)))
+        WebButton(
+          icon: .pencil, label: t("Edit {name}", ["name": localName(account.raw)]), variant: .ghost,
+          size: .iconSmall, action: onEdit)
+      }
+      .overlay(alignment: .top) { Rectangle().fill(palette.slate(100)).frame(height: 1) }
+    } else {
+      AcTapRow(action: action) { content }
+    }
+  }
+
+  private var content: some View {
+    HStack(alignment: .top, spacing: 12) {
         Text(account.code)
           .font(.web(14, tabular: true))
           .foregroundStyle(palette.slate(500))
@@ -102,7 +153,6 @@ struct AcAccountRow: View {
       .padding(.horizontal, 16)
       .padding(.vertical, 10)
       .frame(minHeight: 48)
-    }
   }
 
   private var balanceText: String {
@@ -195,11 +245,13 @@ enum AcJournals {
 struct AcJournalsPage: View {
   @Environment(AppModel.self) private var model
   @Environment(ShellRouter.self) private var router
+  @Environment(SuiteState.self) private var suite: SuiteState?
 
   var body: some View {
     let one = model.one
     let format = one.format
     let journals = one.records(.journals).sorted(by: AcJournals.newestFirst)
+    let canNew = AwWrite.journals && AwAccess(model, suite).accounting
     RecordListPage(
       title: t("Manual journals"),
       description: t(
@@ -207,12 +259,18 @@ struct AcJournalsPage: View {
       ),
       records: journals.map(Rec.init), chips: chips(journals),
       chipFilter: { record, chip in (chip == "system") == AcJournals.isSystem(record.raw) },
-      newLabel: t("New journal"), onNew: { router.push(.newJournal) }, emptyIcon: .notebookPen,
+      newLabel: canNew ? t("New journal") : nil, onNew: newAction(canNew), emptyIcon: .notebookPen,
       emptyTitle: t("No manual journals yet"),
       emptyDescription: t("Invoices and payments are recorded automatically. Use a journal for anything else.")
     ) { record in
       AcJournalRow(journal: record.raw, format: format)
     }
+  }
+
+  /// A new journal, for those who may make one on this iPhone.
+  private func newAction(_ allowed: Bool) -> (() -> Void)? {
+    guard allowed else { return nil }
+    return { router.push(.newJournal) }
   }
 
   private func chips(_ journals: [JSONValue]) -> [ListChip] {
@@ -263,14 +321,32 @@ struct AcJournalBadges: View {
 }
 
 /// `/journals/:id`: the journal's date, reference and notes, and its lines.
+/// A journal that can still be changed by hand opens in the editor, as on
+/// the web, for those who may change it on this iPhone.
 struct AcJournalPage: View {
   let id: String
   @Environment(AppModel.self) private var model
   @Environment(ShellRouter.self) private var router
+  @Environment(SuiteState.self) private var suite: SuiteState?
 
   var body: some View {
+    let journal = model.one.record(.journals, id)
+    if let journal, editable(journal) {
+      AwJournalEditor(initial: journal, isNew: false)
+        .id(journal.rid + journal.str("updatedAt"))
+    } else {
+      readOnly(journal)
+    }
+  }
+
+  private func editable(_ journal: JSONValue) -> Bool {
+    AwWrite.journals && AwJournalEditing.editable(journal)
+      && AwJournalEditing.allowed(journal, AwAccess(model, suite))
+  }
+
+  @ViewBuilder
+  private func readOnly(_ journal: JSONValue?) -> some View {
     let one = model.one
-    let journal = one.record(.journals, id)
     let kind = journal.flatMap(AcJournalKind.of)
     RecordDetailPage(
       record: journal, title: t("Journal {number}", ["number": journal?.str("number") ?? ""]),

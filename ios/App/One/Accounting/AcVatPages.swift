@@ -166,7 +166,15 @@ struct AcVatReturnPage: View {
   @Environment(AppModel.self) private var model
   @Environment(ShellRouter.self) private var router
   @Environment(\.palette) private var palette
+  @Environment(SuiteState.self) private var suite: SuiteState?
   @State private var open: Set<String> = []
+  @State private var filing = false
+  @State private var paying: JSONValue?
+  @State private var confirm: AwConfirm?
+
+  init(start: String) {
+    self.start = start
+  }
 
   var body: some View {
     let one = model.one
@@ -238,6 +246,9 @@ struct AcVatReturnPage: View {
         onBreadcrumb: { router.back() }
       ) {
         Badge(status: AcVat.statusMeta(status))
+        if writable {
+          writeActions(record, net: net, period: period, now: now, format: format)
+        }
       }
       .padding(.bottom, -16)
       if !changedBoxes.isEmpty {
@@ -277,6 +288,49 @@ struct AcVatReturnPage: View {
             .font(.web(14))
             .foregroundStyle(palette.slate(500))
         }
+      }
+    }
+    .awVatFileDialog($filing, period: period, figures: filingFigures(live, books: books, period: period))
+    .awVatPaymentDialog($paying)
+    .awConfirm($confirm)
+  }
+
+  /// Filing, paying and undoing a return change the books: owners, admins and accountants.
+  private var writable: Bool {
+    AwWrite.vat && AwAccess(model, suite).accounting
+  }
+
+  /// What filing keeps and posts, worked out only where it can be filed.
+  private func filingFigures(_ live: AcVatReturn, books: AcBooks, period: AcRange) -> AwVatFigures {
+    guard writable else { return AwVatFigures(boxes: [], net: 0, output: 0, input: 0) }
+    return AwVatFiling.figures(live, books: books, period: period)
+  }
+
+  /// The payment (or refund) recorded for a filed return.
+  private func paid(_ record: JSONValue) -> Bool {
+    guard let id = record.text("paymentJournalId") else { return false }
+    return model.one.record(.journals, id) != nil
+  }
+
+  /// Undo filing and Record payment (or refund) once filed; Mark as filed once the period is over.
+  @ViewBuilder
+  private func writeActions(
+    _ record: JSONValue?, net: Int, period: AcRange, now: String, format: CompanyFormat
+  ) -> some View {
+    if let record {
+      WebButton(t("Undo filing"), icon: .undo2, variant: .outline) {
+        confirm = AwVatFiling.undo(record, model: model)
+      }
+      if net != 0 && !paid(record) {
+        WebButton(net > 0 ? t("Record payment") : t("Record refund")) { paying = record }
+      }
+    } else {
+      WebButton(t("Mark as filed")) { filing = true }
+        .disabled(period.to >= now)
+      if period.to >= now {
+        Text(t("You can file after {date}.", ["date": format.date(period.to)]))
+          .font(.web(12))
+          .foregroundStyle(palette.slate(500))
       }
     }
   }

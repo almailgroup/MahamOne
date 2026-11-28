@@ -3,15 +3,20 @@ import SwiftUI
 
 // `/assets` and `/assets/:id` (src/apps/books/pages/assets/index.tsx,
 // detail.tsx): the register with its figures, the depreciation runs, and an
-// asset with its depreciation schedule, read only.
+// asset with its depreciation schedule. Assets are made, disposed of and
+// voided, and depreciation run and undone, natively (AwAssetForm,
+// AwAssetActions) once they can be saved on this iPhone.
 
 /// `/assets`: the fixed asset register and the monthly depreciation runs.
 struct AcAssetsPage: View {
   @Environment(AppModel.self) private var model
   @Environment(ShellRouter.self) private var router
+  @Environment(SuiteState.self) private var suite: SuiteState?
   @State private var tab = "register"
   @State private var filter = "active"
   @State private var query = ""
+  @State private var running = false
+  @State private var confirm: AwConfirm?
 
   var body: some View {
     let one = model.one
@@ -24,6 +29,9 @@ struct AcAssetsPage: View {
     let cost = active.reduce(0) { $0 + AcLedger.minor($1.num("cost"), p) }
     let depreciated = active.reduce(0) { $0 + AcAssets.posted($1, runs, p) }
     let lastRun = AcAssets.activeRuns(runs).max { $0.str("period") < $1.str("period") }
+    let accounting = AwAccess(model, suite).accounting
+    let canNew = AwWrite.assets && accounting
+    let canRun = AwWrite.depreciation && accounting
     WebPage(spacing: 16, refresh: { [model] in await model.one.sync() }) {
       PageHeader(
         t("Fixed assets"),
@@ -31,7 +39,13 @@ struct AcAssetsPage: View {
           "Equipment, vehicles, furniture and other things the business keeps for more than a year, and their depreciation."
         )
       ) {
-        WebButton(t("New asset"), icon: .plus, haptic: .press) { router.push(.newAsset) }
+        if canRun {
+          WebButton(t("Run depreciation"), icon: .calendarClock, variant: .outline) { running = true }
+            .disabled(active.isEmpty)
+        }
+        if canNew {
+          WebButton(t("New asset"), icon: .plus, haptic: .press) { router.push(.newAsset) }
+        }
       }
       .padding(.bottom, -16)
       AcStat(t("Cost of assets in use"), value: format.acMoney(cost))
@@ -40,6 +54,17 @@ struct AcAssetsPage: View {
         hint: lastRun.map { t("Depreciation posted up to {date}", ["date": format.date($0.text("date"))]) }
           ?? t("No depreciation posted yet"))
       AcStat(t("Book value"), value: format.acMoney(cost - depreciated))
+      if canNew, unlinkedBillLines > 0 {
+        AcNotice(
+          tp(
+            unlinkedBillLines, "{count} bill line was booked to a fixed asset account but is not in the register.",
+            "{count} bill lines were booked to fixed asset accounts but are not in the register."),
+          tone: .blue, link: t("Add from a bill"),
+          onLink: {
+            AwAssetDraft.source = "bill"
+            router.push(.newAsset)
+          })
+      }
       ListCard {
         Segmented(
           selection: $tab,
@@ -58,7 +83,7 @@ struct AcAssetsPage: View {
         }
       } rows: {
         if tab == "runs" {
-          AcRunsList(runs: runs)
+          AcRunsList(runs: runs, onUndo: undoAction(canRun))
         } else if assets.isEmpty, !one.hasData {
           DataLoadingRow()
         } else if live.isEmpty {
@@ -68,7 +93,9 @@ struct AcAssetsPage: View {
               "Add what the business owns, such as computers, furniture or vehicles. Maham Books works out the depreciation every month."
             )
           ) {
-            WebButton(t("New asset"), icon: .plus) { router.push(.newAsset) }
+            if canNew {
+              WebButton(t("New asset"), icon: .plus) { router.push(.newAsset) }
+            }
           }
         } else {
           let shown = shownAssets(live)
@@ -82,6 +109,24 @@ struct AcAssetsPage: View {
         }
       }
     }
+    .awRunDialog($running)
+    .awConfirm($confirm)
+  }
+
+  /// Bill lines booked to fixed asset accounts that no asset was made from.
+  private var unlinkedBillLines: Int {
+    let one = model.one
+    guard let company = one.company else { return 0 }
+    let bills = one.records(.documents).filter { $0.str("type") == "bill" }
+    return AwAssets.billAssetLines(
+      company: company, bills: bills, accounts: one.records(.accounts), assets: one.records(.assets)
+    ).filter { $0.assetId == nil }.count
+  }
+
+  /// Undoing the latest run, for those who may.
+  private func undoAction(_ allowed: Bool) -> ((JSONValue) -> Void)? {
+    guard allowed else { return nil }
+    return { run in confirm = AwAssetActions.undoRun(run, model: model) }
   }
 
   private func shownAssets(_ live: [JSONValue]) -> [JSONValue] {
@@ -123,6 +168,8 @@ struct AcAssetRow: View {
 /// The depreciation runs, newest first; undone ones struck through.
 struct AcRunsList: View {
   let runs: [JSONValue]
+  /// Undoes the latest run that was not undone, for those who may.
+  var onUndo: ((JSONValue) -> Void)? = nil
   @Environment(AppModel.self) private var model
   @Environment(ShellRouter.self) private var router
   @Environment(\.palette) private var palette
@@ -144,13 +191,37 @@ struct AcRunsList: View {
     }
   }
 
+  /// The latest run that was not undone: the only one that can be undone.
+  private var latest: JSONValue? {
+    AcAssets.activeRuns(runs).max { $0.str("period") < $1.str("period") }
+  }
+
   @ViewBuilder
   private func runRow(_ run: JSONValue) -> some View {
+    if let onUndo, run.rid == latest?.rid {
+      HStack(spacing: 0) {
+        Button {
+          Haptics.play(.tap)
+          router.push(.journal(id: run.str("journalId")))
+        } label: {
+          runContent(run).contentShape(Rectangle())
+        }
+        .buttonStyle(PressedFill(radius: 0, color: .slate(100)))
+        WebButton(t("Undo"), icon: .undo2, variant: .ghost, size: .sm) { onUndo(run) }
+          .padding(.trailing, 8)
+      }
+      .overlay(alignment: .top) { Rectangle().fill(palette.slate(100)).frame(height: 1) }
+    } else {
+      AcTapRow(action: { router.push(.journal(id: run.str("journalId"))) }) { runContent(run) }
+    }
+  }
+
+  @ViewBuilder
+  private func runContent(_ run: JSONValue) -> some View {
     let format = model.one.format
     let undone = run.text("reversedAt") != nil
     let journal = model.one.record(.journals, run.str("journalId"))
     let reversal = run.text("reversalJournalId").flatMap { model.one.record(.journals, $0) }
-    AcTapRow(action: { router.push(.journal(id: run.str("journalId"))) }) {
       HStack(spacing: 12) {
         VStack(alignment: .leading, spacing: 3) {
           HStack(spacing: 6) {
@@ -173,7 +244,6 @@ struct AcRunsList: View {
       .padding(.horizontal, 16)
       .padding(.vertical, 12)
       .frame(minHeight: 56)
-    }
   }
 
   private func journalNumbers(_ journal: JSONValue?, _ reversal: JSONValue?) -> String {
@@ -189,19 +259,27 @@ struct AcAssetPage: View {
   let id: String
   @Environment(AppModel.self) private var model
   @Environment(ShellRouter.self) private var router
+  @Environment(SuiteState.self) private var suite: SuiteState?
   @State private var fullSchedule = false
+  @State private var disposing: JSONValue?
+  @State private var confirm: AwConfirm?
+
+  init(id: String) {
+    self.id = id
+  }
 
   var body: some View {
     let one = model.one
     let asset = one.record(.assets, id)
+    let accounting = AwAccess(model, suite).accounting
     RecordDetailPage(
       record: asset, title: asset.map { localName($0) } ?? "", subtitle: asset?.str("number"),
       breadcrumb: t("Fixed assets")
     ) {
       if let asset { Badge(status: AcAssets.status(asset.str("status"))) }
     } actions: {
-      if let asset, asset.str("status") != "void" {
-        WebButton(t("Edit"), icon: .pencil, variant: .outline, size: .sm) { router.push(.editAsset(id: id)) }
+      if let asset, asset.str("status") != "void", accounting {
+        actions(asset)
       }
     } content: {
       if let asset {
@@ -211,6 +289,35 @@ struct AcAssetPage: View {
         }
         AcAssetEntries(asset: asset)
         AcAssetValue(asset: asset)
+      }
+    }
+    .awDisposeDialog($disposing)
+    .awConfirm($confirm)
+  }
+
+  /// Dispose of, Undo disposal, Edit and Void asset, as each can be saved on this iPhone.
+  @ViewBuilder
+  private func actions(_ asset: JSONValue) -> some View {
+    let status = asset.str("status")
+    let depreciated = AcAssets.lastDepreciationDate(asset, model.one.records(.depreciationRuns)) != nil
+    if status == "active", AwWrite.disposals {
+      WebButton(t("Dispose of"), icon: .trash2, variant: .outline, size: .sm) { disposing = asset }
+    }
+    if status == "disposed", AwWrite.assets {
+      WebButton(t("Undo disposal"), icon: .undo2, variant: .outline, size: .sm) {
+        confirm = AwAssetActions.undoDisposal(asset, model: model)
+      }
+    }
+    if AwWrite.assets {
+      WebButton(t("Edit"), icon: .pencil, variant: .outline, size: .sm) { router.push(.editAsset(id: id)) }
+    }
+    if status == "active", !depreciated, AwWrite.assets {
+      DropdownMenu(name: t("More actions")) {
+        IconView(.moreHorizontal, size: 16)
+      } items: {
+        DropdownItem(t("Void asset"), icon: .ban, danger: true) {
+          confirm = AwAssetActions.voidAsset(asset, model: model, router: router)
+        }
       }
     }
   }

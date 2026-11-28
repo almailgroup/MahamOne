@@ -1,15 +1,22 @@
 import MahamKit
 import SwiftUI
 
-// `/year-end` (src/apps/books/pages/accounting/year-end.tsx), read only: the
-// profit for a financial year, the statutory reserve and the levies as the
-// web proposes them (or as the year was closed with), and the closed years.
+// `/year-end` (src/apps/books/pages/accounting/year-end.tsx): the profit for
+// a financial year, the statutory reserve and the levies as the web proposes
+// them (or as the year was closed with), closing the year with the amounts
+// as typed and reopening it, and the closed years.
 
 struct AcYearEndPage: View {
   @Environment(AppModel.self) private var model
   @Environment(ShellRouter.self) private var router
   @Environment(\.palette) private var palette
+  @Environment(SuiteState.self) private var suite: SuiteState?
   @State private var chosen: String?
+  /// The amounts typed over the proposals, by kind, in major units.
+  @State private var amounts: [String: Double] = [:]
+  @State private var lock = true
+  @State private var busy = false
+  @State private var confirm: AwConfirm?
 
   var body: some View {
     let one = model.one
@@ -57,10 +64,20 @@ struct AcYearEndPage: View {
           icon: .triangleAlert, link: t("Run depreciation"), onLink: { router.push(.assets) })
       }
       profitCard(figures, applies: applies, close: close, label: label, rates: rates)
-      if let close { closedCard(close) }
+      if let close {
+        closedCard(close, label: label, blocked: reopenBlocked(year, closes: closes, settings: books.settings))
+      } else if writable {
+        closeCard(year, figures: figures, applies: applies, label: label, laterClosed: laterClosed(year, closes))
+      }
       companyCard(figures, profile: profile, applies: applies, close: close)
       closedYearsCard(closes)
     }
+    .awConfirm($confirm)
+  }
+
+  /// Closing and reopening a year change the books: owners, admins and accountants.
+  private var writable: Bool {
+    AwWrite.yearEnd && AwAccess(model, suite).accounting
   }
 
   // MARK: Choosing the year
@@ -72,7 +89,12 @@ struct AcYearEndPage: View {
   }
 
   private func yearBinding(_ year: AcRange) -> Binding<String> {
-    Binding(get: { chosen ?? year.to }, set: { chosen = $0 })
+    Binding(
+      get: { chosen ?? year.to },
+      set: {
+        chosen = $0
+        amounts = [:]
+      })
   }
 
   private func yearOptions(_ years: [AcRange], _ closed: Set<String>) -> [SelectOption<String>] {
@@ -92,10 +114,23 @@ struct AcYearEndPage: View {
 
   // MARK: Cards
 
+  /// As the year was closed with, or as typed over the proposal (`amountOf`).
   private func amountOf(_ proposal: AcYearEndProposal, _ close: JSONValue?) -> Int {
-    guard let close else { return proposal.amount }
+    let p = model.one.acBooks.precision
+    guard let close else { return AcLedger.minor(amounts[proposal.kind] ?? major(proposal.amount, p), p) }
     let line = close.list("lines").first { $0.str("kind") == proposal.kind }
-    return AcLedger.minor(line?.num("amount") ?? 0, model.one.acBooks.precision)
+    return AcLedger.minor(line?.num("amount") ?? 0, p)
+  }
+
+  private func major(_ minor: Int, _ p: Int) -> Double {
+    Money.toNumber(Money.fromMinor(Int64(minor), p))
+  }
+
+  /// The amount of an open year's line, typed over the proposal.
+  private func amountBinding(_ proposal: AcYearEndProposal) -> Binding<Double> {
+    let kind = proposal.kind
+    let proposed = major(proposal.amount, model.one.acBooks.precision)
+    return Binding(get: { amounts[kind] ?? proposed }, set: { amounts[kind] = $0 })
   }
 
   @ViewBuilder
@@ -121,7 +156,9 @@ struct AcYearEndPage: View {
           .padding(.vertical, 12)
         }
         ForEach(applies.indices, id: \.self) { index in
-          proposalRow(applies[index], amount: amountOf(applies[index], close), figures: figures, rates: rates)
+          proposalRow(
+            applies[index], amount: amountOf(applies[index], close), figures: figures, rates: rates,
+            editing: close == nil && writable)
         }
         if levies.isEmpty {
           Text(
@@ -156,10 +193,10 @@ struct AcYearEndPage: View {
   }
 
   private func proposalRow(
-    _ proposal: AcYearEndProposal, amount: Int, figures: AcYearEndFigures, rates: AcLevyRates
+    _ proposal: AcYearEndProposal, amount: Int, figures: AcYearEndFigures, rates: AcLevyRates, editing: Bool
   ) -> some View {
     let format = model.one.format
-    return HStack(alignment: .top, spacing: 12) {
+    return HStack(alignment: .center, spacing: 12) {
       VStack(alignment: .leading, spacing: 2) {
         Text(t(AcYearEnd.label(proposal.kind))).font(.web(14, .medium)).foregroundStyle(palette.slate(900))
         Text(explanation(proposal, figures: figures, rates: rates, format: format))
@@ -167,10 +204,7 @@ struct AcYearEndPage: View {
           .foregroundStyle(palette.slate(500))
       }
       .frame(maxWidth: .infinity, alignment: .leading)
-      Text(format.acMoney(amount))
-        .font(.web(14, .semibold, tabular: true))
-        .foregroundStyle(palette.slate(900))
-        .environment(\.layoutDirection, .leftToRight)
+      proposalAmount(proposal, amount: amount, editing: editing, format: format)
     }
     .padding(.vertical, 12)
     .overlay(alignment: .top) { Rectangle().fill(palette.slate(100)).frame(height: 1) }
@@ -209,17 +243,139 @@ struct AcYearEndPage: View {
     }
   }
 
-  private func closedCard(_ close: JSONValue) -> some View {
+  @ViewBuilder
+  private func proposalAmount(_ proposal: AcYearEndProposal, amount: Int, editing: Bool, format: CompanyFormat)
+    -> some View
+  {
+    if editing {
+      AwAmountField(value: amountBinding(proposal), placeholder: t(AcYearEnd.label(proposal.kind)), blankZero: false)
+        .frame(width: 150)
+    } else {
+      Text(format.acMoney(amount))
+        .font(.web(14, .semibold, tabular: true))
+        .foregroundStyle(palette.slate(900))
+        .environment(\.layoutDirection, .leftToRight)
+    }
+  }
+
+  // MARK: Closing and reopening
+
+  /// `isolate`: a date kept whole inside Arabic text.
+  private func isolate(_ text: String) -> String {
+    LanguageStore.shared.isArabic && !text.isEmpty ? "\u{2068}\(text)\u{2069}" : text
+  }
+
+  private func laterClosed(_ year: AcRange, _ closes: [JSONValue]) -> Bool {
+    closes.contains { $0.str("status") == "closed" && $0.str("yearEnd") > year.to }
+  }
+
+  /// Why the year can't be reopened yet: a later year is closed, or the lock date covers it.
+  private func reopenBlocked(_ year: AcRange, closes: [JSONValue], settings: AcSettings) -> String? {
+    if laterClosed(year, closes) { return t("Reopen the later years first.") }
+    let lockDate = settings.lockDate ?? ""
+    if !lockDate.isEmpty && lockDate >= year.to {
+      return t("To reopen the year, remove the lock date in Settings → Accounting first.")
+    }
+    return nil
+  }
+
+  @ViewBuilder
+  private func closedCard(_ close: JSONValue, label: String, blocked: String?) -> some View {
+    let format = model.one.format
+    Card {
+      CardBody {
+        HStack(spacing: 8) {
+          IconView(.circleCheck, size: 16)
+          Text(t("Closed on {date}", ["date": isolate(format.dateTime(close.text("createdAt")))]))
+          if close.text("lockedTo") != nil { Badge(t("Locked")) }
+        }
+        .font(.web(14))
+        .foregroundStyle(palette[.emerald(700)])
+        if writable {
+          WebButton(t("Reopen"), icon: .undo2, variant: .outline) { askReopen(close, label: label) }
+            .disabled(blocked != nil)
+        }
+      }
+      if writable, let blocked {
+        Text(blocked)
+          .font(.web(12))
+          .foregroundStyle(palette.slate(500))
+          .padding(.horizontal, 20)
+          .padding(.bottom, 16)
+          .padding(.top, -4)
+      }
+    }
+  }
+
+  /// "Lock the books up to {date}" and "Close {year}".
+  private func closeCard(
+    _ year: AcRange, figures: AcYearEndFigures, applies: [AcYearEndProposal], label: String, laterClosed: Bool
+  ) -> some View {
     let format = model.one.format
     return Card {
-      HStack(spacing: 8) {
-        IconView(.circleCheck, size: 16)
-        Text(t("Closed on {date}", ["date": format.dateTime(close.text("createdAt"))]))
-        if close.text("lockedTo") != nil { Badge(t("Locked")) }
+      CardBody {
+        Switch(
+          t("Lock the books up to {date}", ["date": isolate(format.date(year.to))]),
+          description: t("Nothing dated on or before it can be changed afterwards."), isOn: $lock)
+        WebButton(t("Close {year}", ["year": label]), icon: .calendarCheck, loading: busy) {
+          askClose(year, figures: figures, applies: applies, label: label)
+        }
+        .disabled(laterClosed)
       }
-      .font(.web(14))
-      .foregroundStyle(palette[.emerald(700)])
-      .padding(20)
+    }
+  }
+
+  /// "Close {year}?", then the levies and reserves posted on the last day of the year.
+  private func askClose(_ year: AcRange, figures: AcYearEndFigures, applies: [AcYearEndProposal], label: String) {
+    let date = isolate(model.one.format.date(year.to))
+    let description =
+      lock
+      ? t("The entries are dated {date} and the books are locked up to that date.", ["date": date])
+      : t("The entries are dated {date}.", ["date": date])
+    confirm = AwConfirm(
+      title: t("Close {year}?", ["year": label]), description: description, confirmLabel: t("Close the year")
+    ) {
+      closeYear(year, figures: figures, applies: applies, label: label)
+    }
+  }
+
+  private func closeYear(_ year: AcRange, figures: AcYearEndFigures, applies: [AcYearEndProposal], label: String) {
+    guard let companyId = model.one.companyId else { return }
+    let p = model.one.acBooks.precision
+    let lines = applies.map { proposal in
+      AwYearEndLine(
+        kind: proposal.kind, base: major(proposal.base, p), rate: proposal.rate,
+        amount: major(amountOf(proposal, nil), p))
+    }
+    let profit = major(figures.profitBeforeLevies, p)
+    let locking = lock
+    busy = true
+    Task {
+      let closed = await AwSave.perform(model, done: t("Financial year {year} closed", ["year": label])) { ctx, tr in
+        try AwYearEnd.close(
+          ctx, companyId: companyId, yearStart: year.from, yearEnd: year.to, profitBeforeLevies: profit, lines: lines,
+          lock: locking, tr: tr)
+      }
+      if closed { amounts = [:] }
+      busy = false
+    }
+  }
+
+  /// "Reopen {year}?": reversing entries; the original entries stay in the books.
+  private func askReopen(_ close: JSONValue, label: String) {
+    let id = close.rid
+    let model = self.model
+    confirm = AwConfirm(
+      title: t("Reopen {year}?", ["year": label]),
+      description: t(
+        "Reversing entries undo the levies and the transfers to reserves. The original entries stay in the books."),
+      confirmLabel: t("Reopen"), danger: true
+    ) {
+      Task {
+        await AwSave.perform(model, done: t("Financial year {year} reopened", ["year": label])) { ctx, tr in
+          try AwYearEnd.reopen(ctx, id: id, tr: tr)
+        }
+      }
     }
   }
 

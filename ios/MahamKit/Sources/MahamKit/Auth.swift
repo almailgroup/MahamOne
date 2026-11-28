@@ -257,6 +257,17 @@ public actor AuthService {
       token: nil)
   }
 
+  /// Changes the signed-in person's password, as the web's Settings →
+  /// Your account does (`supabase.auth.updateUser({ password })`:
+  /// `PUT /auth/v1/user`). This session stays signed in. Supabase's refusals
+  /// come back as `MahamError.server` with their code (`weak_password`,
+  /// `same_password`, …).
+  public func updatePassword(_ password: String) async throws {
+    let session = try await validSession()
+    let _: [String: AnyCodable] = try await authJSON(
+      path: "user", method: "PUT", body: ["password": password], token: session.accessToken)
+  }
+
   // MARK: Wire
 
   private func tokenRequest(

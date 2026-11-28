@@ -12,7 +12,8 @@ export default {
     globals: true,
     include: ['writes-*.gen.ts'],
     root: here,
-    setupFiles: ['fake-indexeddb/auto'],
+    // Fixed ids and no outbox for every generator (writes-setup.ts).
+    setupFiles: ['fake-indexeddb/auto', './writes-setup.ts'],
     // Dates and "today" as in Kuwait, where the company is.
     env: { TZ: 'Asia/Kuwait' },
     testTimeout: 120_000,

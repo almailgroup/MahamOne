@@ -260,7 +260,7 @@ struct DocumentListPage: View {
           doc.str("vendorReference"), doc.str("receiverName"),
         ].joined(separator: " ")
       },
-      newLabel: t(type.newLabel), onNew: { router.push(type.newRoute) },
+      newLabel: DcWrite.documents && DcWrite.edits(model) ? t(type.newLabel) : nil, onNew: { router.push(type.newRoute) },
       emptyIcon: type.icon, emptyTitle: t(type.emptyTitle)
     ) { record in
       DocumentRow(doc: record.raw, type: type, format: format)
@@ -391,6 +391,13 @@ struct DocumentPage: View {
   let id: String
   @Environment(AppModel.self) private var model
   @Environment(ShellRouter.self) private var router
+  /// What the page's actions are doing, and their dialogs (DcActions.swift).
+  @State private var actionState = DcActionState()
+
+  init(type: DocType, id: String) {
+    self.type = type
+    self.id = id
+  }
 
   var body: some View {
     let one = model.one
@@ -410,6 +417,9 @@ struct DocumentPage: View {
         Badge(status: StatusMeta.delivery(delivery))
       }
     } actions: {
+      if let doc {
+        DcDocumentActions(type: type, doc: doc, state: actionState)
+      }
       if let contactId, !contactId.isEmpty {
         WebButton(
           type.isPurchase ? t("Open vendor") : t("Open client"), icon: .userRound, variant: .outline, size: .sm
@@ -429,6 +439,7 @@ struct DocumentPage: View {
         DocumentLinksCard(doc: doc, format: format)
       }
     }
+    .modifier(DcActionDialogs(state: actionState))
   }
 }
 

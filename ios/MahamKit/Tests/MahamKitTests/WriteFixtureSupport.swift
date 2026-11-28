@@ -74,8 +74,13 @@ enum WriteParity {
       throw FixtureError.missing("Fixtures/writes-\(area).json")
     }
     let root = try JSONValue.parse(Data(contentsOf: url))
+    // Format 2: every record once in `pool`; tables as indexes; only the changes after.
+    let pool = root["pool"]?.array ?? []
+    let compact = root["format"]?.int == 2
     return (root["scenarios"]?.array ?? []).map { item in
-      WriteScenario(
+      let before = compact ? unpack(item["before"], pool) : tables(item["before"])
+      let after = compact ? applyChanges(before, put: unpack(item["put"], pool), deleted: item["deleted"]) : tables(item["after"])
+      return WriteScenario(
         name: item["name"]?.string ?? "",
         now: parseStamp(item["now"]?.string ?? "") ?? Date(timeIntervalSince1970: 0),
         today: item["today"]?.string ?? "",
@@ -84,10 +89,37 @@ enum WriteParity {
         role: MemberRole(rawValue: item["role"]?.string ?? "") ?? .owner,
         input: item["input"] ?? .null,
         idStart: item["idStart"]?.int ?? 0,
-        before: tables(item["before"]),
-        after: tables(item["after"]),
+        before: before,
+        after: after,
         error: item["error"]?.string)
     }
+  }
+
+  /// Tables of pool indexes, as records.
+  private static func unpack(_ value: JSONValue?, _ pool: [JSONValue]) -> [String: [JSONValue]] {
+    (value?.object ?? [:]).mapValues { refs in
+      (refs.array ?? []).compactMap { ref in ref.int.flatMap { $0 >= 0 && $0 < pool.count ? pool[$0] : nil } }
+    }
+  }
+
+  /// `before` with the records put and the ids deleted, each table sorted by id.
+  private static func applyChanges(
+    _ before: [String: [JSONValue]], put: [String: [JSONValue]], deleted: JSONValue?
+  ) -> [String: [JSONValue]] {
+    var tables = before.mapValues { rows in
+      Dictionary(rows.map { ($0["id"]?.string ?? "", $0) }, uniquingKeysWith: { _, last in last })
+    }
+    for (table, rows) in put {
+      for row in rows { tables[table, default: [:]][row["id"]?.string ?? ""] = row }
+    }
+    for (table, ids) in deleted?.object ?? [:] {
+      for id in ids.array ?? [] { if let id = id.string { tables[table]?[id] = nil } }
+    }
+    var result: [String: [JSONValue]] = [:]
+    for (table, rows) in tables where !rows.isEmpty {
+      result[table] = rows.keys.sorted().compactMap { rows[$0] }
+    }
+    return result
   }
 
   enum FixtureError: Error, CustomStringConvertible {

@@ -19,7 +19,8 @@ struct InvStockIssuesPage: View {
     let inventory = InvInventoryCache.inventory(one)
     let rows = InvIssues.rows(issues: one.records(.stockIssues), requests: one.records(.approvals))
     let visible = filtered(rows)
-    let canIssue = InvIssueAccess.canIssue(inventory, role: suite?.role, userId: model.session?.user.id)
+    let canIssue =
+      IwGate.issues && InvIssueAccess.canIssue(inventory, role: suite?.role, userId: model.session?.user.id)
     WebPage(refresh: { [model] in await model.one.sync() }) {
       header(canIssue: canIssue)
       ListCard {
@@ -56,7 +57,10 @@ struct InvStockIssuesPage: View {
     let description = t("Uniforms and other items handed to employees, and who confirmed them.")
     if canIssue {
       PageHeader(title, description: description) {
-        WebButton(t("Issue items"), icon: .plus, haptic: .press) { router.push(.newStockIssue) }
+        WebButton(t("Issue items"), icon: .plus, haptic: .press) {
+          IwIntent.issue(warehouse: nil)
+          router.push(.newStockIssue)
+        }
       }
     } else {
       PageHeader(title, description: description)
@@ -174,6 +178,7 @@ struct InvStockIssuePage: View {
   @Environment(ShellRouter.self) private var router
   @Environment(SuiteState.self) private var suite: SuiteState?
   @Environment(\.palette) private var palette
+  @State private var confirmingVoid = false
 
   init(id: String) {
     self.id = id
@@ -186,11 +191,19 @@ struct InvStockIssuePage: View {
     let rows = InvIssues.rows(issues: one.records(.stockIssues), requests: one.records(.approvals))
     let row = rows.first { $0.id == id }
     let issue = row?.issue
+    let number = issue?.str("number") ?? ""
+    let voids = row?.state == .posted && IwGate.issues && IwStockIssues.isApprover(IwSave.link(model))
     RecordDetailPage(
       record: issue, title: title(issue),
       subtitle: issue.map { InvIssues.recipientLabel($0.obj("recipient"), arabic: InvText.arabic) },
       breadcrumb: t("Issued items")
     ) {
+      EmptyView()
+    } actions: {
+      if voids {
+        WebButton(t("Void"), icon: .ban, variant: .outline) { confirmingVoid = true }
+      }
+    } content: {
       if let row, let issue {
         if let request = row.request, !row.state.isKept {
           InvIssueRequestCard(
@@ -201,6 +214,27 @@ struct InvStockIssuePage: View {
         }
         InvIssueLinesCard(issue: issue, format: format)
         stockLink(inventory.warehouse(issue.text("warehouseId")))
+      }
+    }
+    .webDialog(
+      isPresented: $confirmingVoid, title: t("Void {number}?", ["number": number]),
+      description: t(
+        "The items stay on record as void, their stock comes back to the warehouse and their cost leaves the books.")
+    ) {
+      EmptyView()
+    } footer: {
+      IwConfirmFooter(label: t("Void"), onCancel: { confirmingVoid = false }, onConfirm: { voidNow(number) })
+    }
+  }
+
+  /// `voidStockIssue(id)`, confirmed.
+  private func voidNow(_ number: String) {
+    confirmingVoid = false
+    let id = self.id
+    let link = IwSave.link(model)
+    Task {
+      await IwSave.run(model, done: { (_: Void) in t("{number} voided", ["number": number]) }) { ctx in
+        try IwStockIssues.voidStockIssue(ctx, id: id, link: link)
       }
     }
   }

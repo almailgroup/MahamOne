@@ -7,6 +7,10 @@ import SwiftUI
 enum AreaPages {
   /// Every area's page maker.
   static let makers: [@MainActor (Route) -> AnyView?] = [
+    // The forms first: they answer the new and edit routes.
+    DocumentsWriteArea.page(for:),
+    InventoryWriteArea.page(for:),
+    AccountingWriteArea.page(for:),
     FormBridge.page(for:),
     InventoryArea.page(for:),
     ContactsArea.page(for:),

@@ -2,7 +2,9 @@
 // fresh fake IndexedDB per scenario seeded with the records it starts from,
 // and a dump of every table after the web's write function has run.
 //
-// A generator (writes-<area>.gen.ts) looks like:
+// Ids are fixed and the outbox is left out for every generator by
+// writes-setup.ts (the config's setupFiles). A generator
+// (writes-<area>.gen.ts) looks like:
 //
 //   import { vi } from 'vitest';
 //   vi.mock('@/lib/ids', async (load) => ({
@@ -59,6 +61,9 @@ export interface Scenario {
 async function dump(): Promise<Tables> {
   const tables: Tables = {};
   for (const table of db.tables) {
+    // Records only: tables keyed by something else (meta's settings) are the
+    // device's own and never synced.
+    if (table.schema.primKey.keyPath !== 'id') continue;
     const rows = (await table.toArray()) as { id?: string }[];
     if (rows.length === 0) continue;
     tables[table.name] = rows.sort((a, b) => String(a.id ?? '').localeCompare(String(b.id ?? '')));
@@ -116,10 +121,44 @@ export async function scenario(
   };
 }
 
-/** Writes Tests/MahamKitTests/Fixtures/writes-<area>.json. */
+/**
+ * Writes Tests/MahamKitTests/Fixtures/writes-<area>.json, compactly: every
+ * distinct record once (`pool`), each scenario's tables as indexes into it,
+ * and only what the action changed (`put`: records added or changed, by
+ * pool index; `deleted`: ids). WriteFixtureSupport.swift rebuilds `before`
+ * and `after` from them.
+ */
 export function writeFixtures(area: string, scenarios: Scenario[]): void {
+  const pool: unknown[] = [];
+  const index = new Map<string, number>();
+  const ref = (row: unknown): number => {
+    const key = JSON.stringify(row);
+    let found = index.get(key);
+    if (found === undefined) {
+      found = pool.length;
+      pool.push(row);
+      index.set(key, found);
+    }
+    return found;
+  };
+  const pack = (tables: Tables) =>
+    Object.fromEntries(Object.entries(tables).map(([table, rows]) => [table, rows.map(ref)]));
+  const packed = scenarios.map(({ before, after, ...rest }) => {
+    const put: Record<string, number[]> = {};
+    const deleted: Record<string, string[]> = {};
+    for (const table of new Set([...Object.keys(before), ...Object.keys(after)])) {
+      const was = new Map((before[table] ?? []).map((row) => [String((row as { id?: string }).id), JSON.stringify(row)]));
+      const now = after[table] ?? [];
+      const changed = now.filter((row) => was.get(String((row as { id?: string }).id)) !== JSON.stringify(row));
+      if (changed.length) put[table] = changed.map(ref);
+      const kept = new Set(now.map((row) => String((row as { id?: string }).id)));
+      const gone = [...was.keys()].filter((id) => !kept.has(id));
+      if (gone.length) deleted[table] = gone;
+    }
+    return { ...rest, before: pack(before), put, deleted };
+  });
   const path = fileURLToPath(
     new URL(`../../MahamKit/Tests/MahamKitTests/Fixtures/writes-${area}.json`, import.meta.url),
   );
-  writeFileSync(path, JSON.stringify({ area, scenarios }, null, 1) + '\n');
+  writeFileSync(path, JSON.stringify({ area, format: 2, pool, scenarios: packed }) + '\n');
 }

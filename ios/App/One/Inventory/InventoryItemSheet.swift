@@ -128,18 +128,108 @@ enum InvItemSheets {
   }
 }
 
-/// Opens an item's dialog over a page, and follows a link from it.
+/// Opens an item's dialog over a page, and follows a link from it. Where
+/// items can be saved from this iPhone, the dialog also edits the item (its
+/// form takes the dialog's place, as the web's item dialog), archives or
+/// restores it, and deletes one without stock history.
 struct InvItemDialog: ViewModifier {
   let sheet: InvItemSheet?
   @Binding var isPresented: Bool
   let onOpen: (Route) -> Void
+  @Environment(AppModel.self) private var model
+  @State private var editor: IwItemDraft?
+  @State private var saving = false
+  @State private var deleting = false
 
   func body(content: Content) -> some View {
     content
-      .webDialog(isPresented: $isPresented, title: sheet?.title ?? "") {
-        if let sheet {
+      .webDialog(isPresented: $isPresented, title: title) {
+        if let binding = Binding($editor) {
+          IwItemFields(draft: binding)
+        } else if let sheet {
           InvItemDetails(sheet: sheet, onOpen: onOpen)
+            .webDialog(
+              isPresented: $deleting, title: t("Delete {name}?", ["name": product?.str("name") ?? ""]),
+              description: t("Existing invoices keep their copy of this item.")
+            ) {
+              EmptyView()
+            } footer: {
+              IwConfirmFooter(label: t("Delete"), onCancel: { deleting = false }, onConfirm: { remove() })
+            }
+        }
+      } footer: {
+        footer
+      }
+      .onChange(of: isPresented) { _, open in
+        if !open { editor = nil }
+      }
+  }
+
+  /// The item as stored.
+  private var product: JSONValue? {
+    guard let sheet else { return nil }
+    return model.one.record(.products, sheet.id)
+  }
+
+  private var title: String {
+    if let editor { return t("Edit {name}", ["name": editor.original.str("name")]) }
+    return sheet?.title ?? ""
+  }
+
+  @ViewBuilder
+  private var footer: some View {
+    if editor != nil {
+      WebButton(t("Cancel"), variant: .outline) { editor = nil }
+      WebButton(t("Save"), loading: saving) { save() }
+    } else {
+      WebButton(t("Close"), variant: .outline) { isPresented = false }
+      if let product, IwGate.edits(model) {
+        if IwGate.deleteItems {
+          WebButton(t("Delete"), icon: .trash2, variant: .ghost) { deleting = true }
+        }
+        if IwGate.items {
+          WebButton(
+            product.flag("archived") ? t("Restore") : t("Archive"),
+            icon: product.flag("archived") ? Icon.archiveRestore : Icon.archive, variant: .outline
+          ) { toggleArchive(product) }
+          WebButton(t("Edit"), icon: .pencil) { editor = IwItemDraft.edit(product, one: model.one) }
         }
       }
+    }
+  }
+
+  private func save() {
+    guard let current = editor else { return }
+    let binding = Binding(get: { editor ?? current }, set: { editor = $0 })
+    saving = true
+    Task {
+      let ok = await IwItemSaving.save(binding, model: model)
+      saving = false
+      if ok { editor = nil }
+    }
+  }
+
+  /// `saveItem({ ...p, archived: !p.archived })`.
+  private func toggleArchive(_ product: JSONValue) {
+    var changed = product
+    changed.set("archived", .bool(!product.flag("archived")))
+    let input = changed
+    Task {
+      await IwSave.run(model) { ctx in try InventoryWrites.saveItem(ctx, input) }
+    }
+  }
+
+  /// `deleteItem(id)`, confirmed.
+  private func remove() {
+    deleting = false
+    guard let product else { return }
+    let id = product.rid
+    let name = product.str("name")
+    Task {
+      let done = await IwSave.run(model, done: { (_: Void) in t("{name} deleted", ["name": name]) }) { ctx in
+        try InventoryWrites.deleteItem(ctx, id: id)
+      }
+      if done != nil { isPresented = false }
+    }
   }
 }

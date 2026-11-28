@@ -86,6 +86,8 @@ struct SuExpiryBadge: View {
 struct SuComplianceCalendarPage: View {
   @Environment(AppModel.self) private var model
   @Environment(ShellRouter.self) private var router
+  @State private var renewing: SwRenewing?
+  @State private var adding: SwDocDraft?
 
   private static let windowDays = 90
 
@@ -108,10 +110,14 @@ struct SuComplianceCalendarPage: View {
                 "Statutory deadlines and documents that expire appear here, with reminders before each date."))
           }
         } else {
-          SuCalendarList(items: items, register: register)
+          SuCalendarList(items: items, register: register) { entry in
+            renewing = SwRenewing(entry: entry, owner: register.owner(entry))
+          }
         }
       }
     }
+    .swRenewDialog($renewing, model: model)
+    .swDocumentDialog($adding, model: model)
   }
 
   private func calendar(_ register: SuRegister) -> [SuCalendarItem] {
@@ -160,7 +166,11 @@ struct SuComplianceCalendarPage: View {
         }
         if !hasLicence && editor {
           Text(t("Add your commercial licence to be reminded before it expires."))
-          SuWebButton(t("Add commercial licence"), path: "/compliance")
+          if SwComplianceGate.documents, let companyId = register.company?.rid {
+            WebButton(t("Add commercial licence"), icon: .plus, variant: .outline, size: .sm) {
+              adding = SwDocDraft.new(companyId: companyId, ["type": "commercial_licence"])
+            }
+          }
         }
       }
     }
@@ -171,6 +181,7 @@ struct SuComplianceCalendarPage: View {
 private struct SuCalendarList: View {
   let items: [SuCalendarItem]
   let register: SuRegister
+  let onRenew: (SuEntry) -> Void
   @Environment(AppModel.self) private var model
   @Environment(\.palette) private var palette
 
@@ -203,7 +214,7 @@ private struct SuCalendarList: View {
   private func card(_ list: [SuCalendarItem]) -> some View {
     ListCard(rows: {
       ForEach(list) { item in
-        SuCalendarRow(item: item, register: register)
+        SuCalendarRow(item: item, register: register, onRenew: onRenew)
       }
     })
   }
@@ -239,11 +250,19 @@ private struct SuMonthGroup {
 private struct SuCalendarRow: View {
   let item: SuCalendarItem
   let register: SuRegister
+  let onRenew: (SuEntry) -> Void
   @Environment(AppModel.self) private var model
   @Environment(ShellRouter.self) private var router
   @Environment(\.palette) private var palette
 
   var body: some View {
+    VStack(alignment: .leading, spacing: 0) {
+      line
+      SwCalendarAction(item: item, title: title, onRenew: onRenew)
+    }
+  }
+
+  private var line: some View {
     SuRow(action: action) {
       HStack(alignment: .top, spacing: 16) {
         tile
@@ -351,6 +370,8 @@ struct SuComplianceDocumentsPage: View {
   @State private var query = ""
   @State private var detail: SuDocumentRow? = nil
   @State private var detailOpen = false
+  @State private var editing: SwDocDraft?
+  @State private var renewing: SwRenewing?
 
   var body: some View {
     let register = SuRegister(model.one)
@@ -362,6 +383,16 @@ struct SuComplianceDocumentsPage: View {
     let format = model.one.format
     WebPage(refresh: { [model] in await model.one.sync() }) {
       SuComplianceHeader(current: .complianceDocuments, extras: register.extras)
+      if SwAccess(model).edits && SwComplianceGate.documents, let companyId = register.company?.rid {
+        HStack {
+          Spacer(minLength: 0)
+          WebButton(t("Add document"), icon: .plus, size: .md) {
+            let overrides: [String: JSONValue] = owner.isEmpty ? [:] : ["ownerType": .string(owner)]
+            editing = SwDocDraft.new(companyId: companyId, overrides)
+          }
+        }
+        .padding(.top, -8)
+      }
       if suLoading(model, empty: rows.isEmpty) {
         SuLoadingCard()
       } else if rows.isEmpty && archived.isEmpty && drivers.isEmpty {
@@ -376,10 +407,16 @@ struct SuComplianceDocumentsPage: View {
         SuRegisterList(
           register: register, rows: rows, archived: archived, drivers: drivers, clients: clients,
           checksDrivers: register.drivingLicences && role.seesPeople, status: $status, owner: $owner,
-          customer: $customer, query: $query
+          customer: $customer, query: $query,
+          onRenew: { row in renewing = SwRenewing(entry: row.entry, owner: row.owner) },
+          onArchived: { doc in open(doc) }
         ) { row in
-          detail = row
-          detailOpen = true
+          if let doc = register.documents.first(where: { $0.rid == row.entry.recordId }), canEdit {
+            open(doc)
+          } else {
+            detail = row
+            detailOpen = true
+          }
         }
       }
     }
@@ -388,6 +425,16 @@ struct SuComplianceDocumentsPage: View {
         SuDocumentDetail(row: detail, format: format)
       }
     }
+    .swDocumentDialog($editing, model: model)
+    .swRenewDialog($renewing, model: model)
+  }
+
+  /// Editors change stored documents in the form; the rest see their details.
+  private var canEdit: Bool { SwAccess(model).edits && SwComplianceGate.documents }
+
+  private func open(_ doc: JSONValue) {
+    guard canEdit else { return }
+    editing = SwDocDraft(doc, isNew: false)
   }
 
   /// The customers papers may belong to, with the register's extras.
@@ -432,6 +479,8 @@ private struct SuRegisterList: View {
   @Binding var owner: String
   @Binding var customer: String
   @Binding var query: String
+  let onRenew: (SuDocumentRow) -> Void
+  let onArchived: (JSONValue) -> Void
   let onOpen: (SuDocumentRow) -> Void
 
   var body: some View {
@@ -536,6 +585,7 @@ private struct SuRegisterList: View {
     } else {
       ForEach(filtered) { row in
         SuRegisterRow(row: row, onOpen: onOpen)
+        SwRenewAction(entry: row.entry, title: row.title) { onRenew(row) }
       }
     }
   }
@@ -543,7 +593,7 @@ private struct SuRegisterList: View {
   @ViewBuilder
   private var archivedRows: some View {
     ForEach(archived.map(Rec.init)) { record in
-      SuArchivedRow(doc: record.raw, register: register)
+      SuArchivedRow(doc: record.raw, register: register) { onArchived(record.raw) }
     }
   }
 
@@ -644,11 +694,12 @@ private struct SuRegisterRow: View {
 private struct SuArchivedRow: View {
   let doc: JSONValue
   let register: SuRegister
+  let onOpen: () -> Void
   @Environment(\.palette) private var palette
 
   var body: some View {
     let entry = SuCompliance.recordEntry(doc, days: register.reminderDays, byType: register.reminderDaysByType)
-    SuRow {
+    SuRow(action: onOpen) {
       HStack(spacing: 12) {
         IconView(.archive, size: 16).foregroundStyle(palette.slate(400))
         VStack(alignment: .leading, spacing: 2) {
@@ -761,11 +812,18 @@ struct SuVehiclesPage: View {
   @Environment(ShellRouter.self) private var router
   @Environment(\.palette) private var palette
   @State private var list = "current"
+  @State private var editing: SwVehicleDraft?
+  @State private var paper: SwDocDraft?
+  @State private var linking = false
 
   var body: some View {
     let register = SuRegister(model.one)
     WebPage(refresh: { [model] in await model.one.sync() }) {
       SuComplianceHeader(current: .vehicles, extras: register.extras)
+      if register.extras {
+        SwVehicleActions(register: register, linking: $linking) { editing = $0 }
+          .padding(.top, -8)
+      }
       if suLoading(model, empty: register.company == nil) {
         SuLoadingCard()
       } else if !register.extras {
@@ -784,10 +842,25 @@ struct SuVehiclesPage: View {
               "Add the company’s vehicles to keep their registration, insurance and other papers together."))
         }
       } else {
-        SuVehicleList(register: register, list: $list)
+        SuVehicleList(
+          register: register, list: $list, onEdit: { editing = SwVehicleDraft($0, isNew: false) },
+          onAddPaper: { addPaper($0, register: register) })
         unlinkedNote(register)
       }
     }
+    .swVehicleDialog($editing, model: model)
+    .swDocumentDialog($paper, model: model)
+  }
+
+  /// A paper for a vehicle: its registration to start with.
+  private func addPaper(_ vehicle: JSONValue, register: SuRegister) {
+    guard let companyId = register.company?.rid else { return }
+    paper = SwDocDraft.new(
+      companyId: companyId,
+      [
+        "ownerType": "vehicle", "vehicleId": .string(vehicle.rid), "ownerName": .string(vehicle.str("plate")),
+        "type": "vehicle_registration",
+      ])
   }
 
   /// Vehicle papers that only name a vehicle by its plate.
@@ -816,6 +889,8 @@ struct SuVehiclesPage: View {
 private struct SuVehicleList: View {
   let register: SuRegister
   @Binding var list: String
+  let onEdit: (JSONValue) -> Void
+  let onAddPaper: (JSONValue) -> Void
 
   var body: some View {
     let archivedCount = register.vehicles.filter { $0.flag("archived") }.count
@@ -847,7 +922,7 @@ private struct SuVehicleList: View {
       SuNoMatch(t("Every vehicle is archived."))
     } else {
       ForEach(vehicles.map(Rec.init)) { record in
-        SuVehicleRow(vehicle: record.raw, register: register)
+        SuVehicleRow(vehicle: record.raw, register: register, onEdit: onEdit, onAddPaper: onAddPaper)
       }
     }
   }
@@ -857,12 +932,28 @@ private struct SuVehicleList: View {
 private struct SuVehicleRow: View {
   let vehicle: JSONValue
   let register: SuRegister
+  let onEdit: (JSONValue) -> Void
+  let onAddPaper: (JSONValue) -> Void
   @Environment(AppModel.self) private var model
   @Environment(\.palette) private var palette
 
   var body: some View {
+    VStack(alignment: .leading, spacing: 0) {
+      line
+      if SwVehicleActions.editable(model) {
+        HStack(spacing: 8) {
+          WebButton(t("Add paper"), icon: .filePlus2, variant: .outline, size: .sm) { onAddPaper(vehicle) }
+          WebButton(t("Edit"), icon: .pencil, variant: .ghost, size: .sm) { onEdit(vehicle) }
+        }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 12)
+      }
+    }
+  }
+
+  private var line: some View {
     let papers = ownPapers
-    SuRow {
+    return SuRow {
       VStack(alignment: .leading, spacing: 0) {
         FlowLayout(spacing: 8, lineSpacing: 4) {
           Text(vehicle.str("plate")).font(.web(16, .medium)).foregroundStyle(palette.slate(900))

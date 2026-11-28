@@ -2,9 +2,10 @@ import MahamKit
 import SwiftUI
 
 // `/banking` and `/banking/:accountId` (src/apps/books/pages/banking/index.tsx
-// with src/lib/banking/match.ts), read only: every bank, cash and card
-// account with what the books hold, and an account's statement lines with
-// their matching state and reconciliation.
+// with src/lib/banking/match.ts): every bank, cash and card account with what
+// the books hold, and an account's statement lines with their matching state
+// and reconciliation. Transfers, typed statement lines, matching and the
+// lines' menus save natively (AwBankingWrites) once they can on this iPhone.
 
 /// One entry of the books on a money account (`BookEntry`).
 struct AcBookEntry: Sendable {
@@ -88,16 +89,23 @@ enum AcBanking {
 struct AcBankingPage: View {
   @Environment(AppModel.self) private var model
   @Environment(ShellRouter.self) private var router
+  @Environment(SuiteState.self) private var suite: SuiteState?
+  @State private var transferring = false
 
   var body: some View {
     let one = model.one
     let books = one.acBooks
     let accounts = AcBanking.moneyAccounts(books)
     let transactions = one.records(.bankTransactions)
+    let canTransfer = AwWrite.journals && AwAccess(model, suite).edits && !accounts.isEmpty
     WebPage(spacing: 16, refresh: { [model] in await model.one.sync() }) {
       PageHeader(
         t("Banking"), description: t("Import statements, match them to your books and keep every account reconciled.")
-      )
+      ) {
+        if canTransfer {
+          WebButton(t("Transfer money"), icon: .arrowLeftRight, variant: .outline) { transferring = true }
+        }
+      }
       .padding(.bottom, -16)
       AcPayrollNote()
       if accounts.isEmpty {
@@ -119,6 +127,7 @@ struct AcBankingPage: View {
         }
       }
     }
+    .awTransferDialog($transferring, accounts: AwPick.money(one), from: nil)
   }
 }
 
@@ -197,24 +206,61 @@ struct AcBankAccountPage: View {
   let id: String
   @Environment(AppModel.self) private var model
   @Environment(ShellRouter.self) private var router
+  @Environment(SuiteState.self) private var suite: SuiteState?
   @Environment(\.palette) private var palette
   @State private var tab = "match"
+  @State private var transferring = false
+  @State private var adding: JSONValue?
+  @State private var matching: JSONValue?
+
+  init(id: String) {
+    self.id = id
+  }
 
   var body: some View {
     let one = model.one
     let books = one.acBooks
     let account = books.account(id)
+    let access = AwAccess(model, suite)
     RecordDetailPage(
       record: account?.raw, title: account.map { localName($0.raw) } ?? "", subtitle: account.map(subtitle),
       breadcrumb: t("Banking")
     ) {
       if let account, reconciled(account, books) { Badge(t("Reconciled"), tone: .green) }
+    } actions: {
+      if let account {
+        if AwWrite.journals, access.edits {
+          WebButton(t("Transfer"), icon: .arrowLeftRight, variant: .outline, size: .sm) { transferring = true }
+        }
+        if AwWrite.statementLines, access.accounting {
+          WebButton(t("Add statement lines"), icon: .listPlus, size: .sm) { adding = account.raw }
+        }
+      }
     } content: {
       if let account {
         AcPayrollNote()
         content(account, books)
       }
     }
+    .awTransferDialog($transferring, accounts: transferAccounts(account), from: id)
+    .awStatementLinesDialog($adding)
+    .awMatchDialog($matching)
+  }
+
+  /// The money accounts a transfer can be between (this one at least).
+  private func transferAccounts(_ account: AcAccount?) -> [JSONValue] {
+    let money = AwPick.money(model.one)
+    if money.contains(where: { $0.rid == id }) { return money }
+    return account.map { [$0.raw] } ?? []
+  }
+
+  /// A line's menu and match panel, for those who may change statement lines.
+  private func lineActions(_ tx: JSONValue) -> AwLineActions? {
+    guard AwWrite.matching, AwAccess(model, suite).accounting else { return nil }
+    let model = self.model
+    var onMatch: (() -> Void)? = nil
+    if tab == "match" { onMatch = { matching = tx } }
+    return AwLineActions(tab: tab, onMatch: onMatch, run: { action in AwLineAction.run(action, line: tx, model: model) })
   }
 
   private func subtitle(_ account: AcAccount) -> String {
@@ -274,7 +320,9 @@ struct AcBankAccountPage: View {
           .padding(.vertical, 48)
         } else {
           ForEach(shown.map(Rec.init)) { record in
-            AcStatementLineRow(transaction: record.raw, entry: matched(record.raw, byKey), format: format)
+            AcStatementLineRow(
+              transaction: record.raw, entry: matched(record.raw, byKey), format: format,
+              actions: lineActions(record.raw))
           }
         }
       }
@@ -317,14 +365,34 @@ struct AcStatementLineRow: View {
   let transaction: JSONValue
   let entry: AcBookEntry?
   let format: CompanyFormat
+  /// The line's menu and match panel, for those who may change statement lines.
+  var actions: AwLineActions? = nil
   @Environment(AppModel.self) private var model
   @Environment(ShellRouter.self) private var router
   @Environment(\.palette) private var palette
 
   var body: some View {
+    if let actions {
+      HStack(spacing: 0) {
+        Button {
+          Haptics.play(.tap)
+          (actions.onMatch ?? action)?()
+        } label: {
+          content.contentShape(Rectangle())
+        }
+        .buttonStyle(PressedFill(radius: 0, color: .slate(100)))
+        AwLineMenu(transaction: transaction, actions: actions)
+          .padding(.trailing, 8)
+      }
+      .overlay(alignment: .top) { Rectangle().fill(palette.slate(100)).frame(height: 1) }
+    } else {
+      AcTapRow(action: action) { content }
+    }
+  }
+
+  private var content: some View {
     let amount = transaction.num("amount")
-    AcTapRow(action: action) {
-      HStack(alignment: .top, spacing: 12) {
+    return HStack(alignment: .top, spacing: 12) {
         VStack(alignment: .leading, spacing: 3) {
           Text(transaction.text("description") ?? "—")
             .font(.web(14, .medium))
@@ -342,7 +410,6 @@ struct AcStatementLineRow: View {
       .padding(.horizontal, 16)
       .padding(.vertical, 12)
       .frame(minHeight: 56)
-    }
   }
 
   private var action: (() -> Void)? {

@@ -302,8 +302,14 @@ struct SuFilesPage: View {
           )
           : t("Ask the owner of the company to switch it on in Compliance → Settings.")
       ) {
-        if canSwitch {
-          SuWebButton(t("Switch on"), path: "/files", variant: .primary, size: .md)
+        if canSwitch && SwAccess.can(.companies, .activities) {
+          WebButton(t("Switch on"), size: .md) {
+            Task {
+              await SwSave.run(model, done: t("Finding files and papers switched on")) { ctx in
+                SwCompliance.setFileFinder(ctx, on: true)
+              }
+            }
+          }
         }
       }
     }

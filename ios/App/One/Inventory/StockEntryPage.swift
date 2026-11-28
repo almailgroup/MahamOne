@@ -8,6 +8,7 @@ import SwiftUI
 struct InvStockEntryPage: View {
   let id: String
   @Environment(AppModel.self) private var model
+  @State private var confirming = false
 
   init(id: String) {
     self.id = id
@@ -18,12 +19,36 @@ struct InvStockEntryPage: View {
     let format = one.format
     let inventory = InvInventoryCache.inventory(one)
     let entry = one.record(.stockEntries, id)
+    let number = entry?.str("number") ?? ""
     RecordDetailPage(record: entry, title: title(entry), breadcrumb: t("Inventory")) {
       Badge(status: InvLabels.postedBadge(entry?.str("status") ?? ""))
+    } actions: {
+      if entry?.str("status") == "posted", IwGate.entries, IwGate.edits(model) {
+        WebButton(t("Void entry"), icon: .ban, variant: .outline) { confirming = true }
+      }
     } content: {
       if let entry {
         InvFactsCard(facts: facts(entry, inventory: inventory, format: format), note: entry.text("notes"))
         InvEntryLinesCard(entry: entry, inventory: inventory, format: format)
+      }
+    }
+    .webDialog(
+      isPresented: $confirming, title: t("Void {number}?", ["number": number]),
+      description: t("The entry stays on record, and its stock movements leave the books.")
+    ) {
+      EmptyView()
+    } footer: {
+      IwConfirmFooter(label: t("Void entry"), onCancel: { confirming = false }, onConfirm: { voidNow(number) })
+    }
+  }
+
+  /// `voidStockEntry(id)`, confirmed.
+  private func voidNow(_ number: String) {
+    confirming = false
+    let id = self.id
+    Task {
+      await IwSave.run(model, done: { (_: Void) in t("{number} voided", ["number": number]) }) { ctx in
+        try InventoryWrites.voidStockEntry(ctx, id: id)
       }
     }
   }

@@ -3,8 +3,9 @@ import SwiftUI
 
 // Templates (`src/apps/books/pages/templates.tsx`): the designs invoices,
 // quotes and credit notes print with, their colour and layout, what every
-// document prints, and the gallery of designs. Shown here as they are set;
-// they are chosen on the web.
+// document prints, and the gallery of designs, whose thumbnails come with
+// the app (Resources/Templates). The design of each type is chosen here,
+// natively (SwTemplates); its colour and layout are shown as they are set.
 
 /// A design of the gallery (`TEMPLATE_META`).
 struct SuTemplate: Identifiable, Sendable {
@@ -87,11 +88,7 @@ struct SuTemplatesPage: View {
         t("Templates"),
         description: t(
           "Pick the look of your invoices, quotes and credit notes. You can also choose a template per document.")
-      ) {
-        if !role.readOnly && role.role != .staff {
-          SuWebButton(t("Edit on the web"), path: "/templates", size: .md)
-        }
-      }
+      )
       .padding(.bottom, -24)
       if suLoading(model, empty: company == nil) {
         SuLoadingCard()
@@ -108,6 +105,7 @@ struct SuTemplatesPage: View {
               SegmentOption("credit", t("Credit notes")),
             ])
           SuDesignCard(design: SuDesign(company: company, type: type))
+          SwSameAsInvoicesSwitch(type: type)
         }
         SuEveryDocumentCard(company: company)
         SuGallery(design: SuDesign(company: company, type: type), language: languageBinding(company))
@@ -294,7 +292,8 @@ private struct SuGallery: View {
         options: [SegmentOption("en", "English"), SegmentOption("ar", "العربية"), SegmentOption("ar-en", t("Bilingual"))],
         small: true)
       ForEach(SuTemplate.all) { template in
-        SuTemplateCard(template: template, active: template.id == design.templateId, language: language)
+        SuTemplateCard(
+          template: template, active: template.id == design.templateId, language: language, type: design.type)
       }
       Text(t("Thumbnails show sample data. Previews use your logo, colour and details."))
         .font(.web(14))
@@ -307,7 +306,7 @@ private struct SuTemplateCard: View {
   let template: SuTemplate
   let active: Bool
   let language: String
-  @Environment(AppModel.self) private var model
+  var type = "invoice"
   @Environment(\.palette) private var palette
 
   var body: some View {
@@ -319,6 +318,9 @@ private struct SuTemplateCard: View {
         HStack(spacing: 8) {
           Text(t(template.name)).font(.web(16, .semibold)).foregroundStyle(palette.slate(900))
           Spacer(minLength: 0)
+          if !active {
+            SwUseTemplateButton(template: template, type: type)
+          }
           if active {
             HStack(spacing: 4) {
               IconView(.circleCheck, size: 12)
@@ -351,14 +353,13 @@ private struct SuTemplateCard: View {
     }
   }
 
-  /// The thumbnail the web keeps in `public/templates` (`modern-ar.jpg`).
+  /// The thumbnail the web keeps in `public/templates` (`modern-ar.jpg`), bundled with the app.
   private var thumbnail: some View {
-    let placeholder = palette.slate(100)
-    return AsyncImage(url: url) { phase in
-      if let image = phase.image {
-        image.resizable().aspectRatio(contentMode: .fill)
+    Group {
+      if let image = SwTemplates.thumbnail(template.id, language: language) {
+        Image(uiImage: image).resizable().aspectRatio(contentMode: .fill)
       } else {
-        placeholder
+        palette.slate(100)
       }
     }
     .frame(maxWidth: .infinity)
@@ -368,9 +369,4 @@ private struct SuTemplateCard: View {
     .accessibilityLabel(Text(t("{name} invoice template", ["name": t(template.name)])))
   }
 
-  private var url: URL? {
-    guard let base = model.services?.config.webURL else { return nil }
-    let suffix = language == "ar" ? "-ar" : language == "ar-en" ? "-ar-en" : ""
-    return URL(string: "templates/\(template.id)\(suffix).jpg", relativeTo: base)?.absoluteURL
-  }
 }

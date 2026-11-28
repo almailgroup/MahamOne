@@ -25,7 +25,9 @@ struct InvProductsPage: View {
         t("Products & services"),
         description: t("What you sell and buy, with prices, and stock for the goods you keep.")
       ) {
-        WebButton(t("New item"), icon: .plus, haptic: .press) { router.push(.newProduct) }
+        if IwGate.items && IwGate.edits(model) {
+          WebButton(t("New item"), icon: .plus, haptic: .press) { newItem("service") }
+        }
       }
       InvProductFigures(inventory: inventory, format: format)
       if inventory.products.isEmpty {
@@ -56,9 +58,11 @@ struct InvProductsPage: View {
           description: t(
             "Add what you sell, such as delivery or printing, and the goods you keep in stock, with their prices.")
         ) {
-          FlowLayout(spacing: 8, lineSpacing: 8) {
-            WebButton(t("New item"), icon: .plus) { router.push(.newProduct) }
-            WebButton(t("New stock item"), icon: .boxes, variant: .outline) { router.push(.newProduct) }
+          if IwGate.items && IwGate.edits(model) {
+            FlowLayout(spacing: 8, lineSpacing: 8) {
+              WebButton(t("New item"), icon: .plus) { newItem("service") }
+              WebButton(t("New stock item"), icon: .boxes, variant: .outline) { newItem("stock") }
+            }
           }
         }
       }
@@ -150,6 +154,12 @@ struct InvProductsPage: View {
   private func follow(_ route: Route) {
     showing = false
     router.push(route)
+  }
+
+  /// `/products?new=1&kind=…`: the item form, of that kind.
+  private func newItem(_ kind: String) {
+    IwIntent.newItem(kind: kind)
+    router.push(.newProduct)
   }
 }
 

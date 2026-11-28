@@ -7,6 +7,7 @@ import SwiftUI
 struct InvLandedCostPage: View {
   let id: String
   @Environment(AppModel.self) private var model
+  @State private var confirming = false
 
   init(id: String) {
     self.id = id
@@ -17,14 +18,39 @@ struct InvLandedCostPage: View {
     let format = one.format
     let inventory = InvInventoryCache.inventory(one)
     let cost = one.record(.landedCosts, id)
+    let number = cost?.str("number") ?? ""
     RecordDetailPage(
-      record: cost, title: "\(t("Landed cost")) \(cost?.str("number") ?? "")", breadcrumb: t("Inventory")
+      record: cost, title: "\(t("Landed cost")) \(number)", breadcrumb: t("Inventory")
     ) {
       Badge(status: InvLabels.postedBadge(cost?.str("status") ?? "", allocated: true))
+    } actions: {
+      if cost?.str("status") == "active", IwGate.landedCosts, IwGate.edits(model) {
+        WebButton(t("Void landed cost"), icon: .ban, variant: .outline) { confirming = true }
+      }
     } content: {
       if let cost {
         InvLandedCostSummary(cost: cost, format: format)
         InvAllocationCard(cost: cost, inventory: inventory, format: format)
+      }
+    }
+    .webDialog(
+      isPresented: $confirming, title: t("Void {number}?", ["number": number]),
+      description: t(
+        "The charges go back to their expense accounts and the cost of the goods goes back to what was paid for them.")
+    ) {
+      EmptyView()
+    } footer: {
+      IwConfirmFooter(label: t("Void landed cost"), onCancel: { confirming = false }, onConfirm: { voidNow(number) })
+    }
+  }
+
+  /// `voidLandedCost(id)`, confirmed.
+  private func voidNow(_ number: String) {
+    confirming = false
+    let id = self.id
+    Task {
+      await IwSave.run(model, done: { (_: Void) in t("{number} voided", ["number": number]) }) { ctx in
+        try InventoryWrites.voidLandedCost(ctx, id: id)
       }
     }
   }

@@ -3,10 +3,11 @@ import MahamKit
 import SwiftUI
 
 // Settings (`src/pages/settings`, `src/features/shell/settings-sections.tsx`):
-// the sections in a row that scrolls sideways, as on a phone, each with its
-// current values. The company's settings are changed on the web ("Edit on
-// the web" opens the section there); this iPhone's own are changed here:
-// the language, the appearance, the Face ID lock and signing out.
+// the sections in a row that scrolls sideways, as on a phone. The company's
+// settings are changed here, natively, as the web changes them
+// (SwSettingsSections); the sections not ported yet show their values.
+// This iPhone's own are changed here too: the language, the appearance, the
+// Face ID lock, the password and signing out.
 
 /// A section of Settings.
 struct SuSettingsItem: Identifiable, Sendable {
@@ -179,24 +180,32 @@ private struct SuSettingsSectionView: View {
         SuAppearanceSettings()
       case "cloud":
         SuCloudSettings()
-        editButton
       default:
-        ForEach(values.cards(path)) { card in
-          SuValuesCard(card.title, description: card.description, rows: card.rows)
+        if SwSettings.native.contains(path) && model.one.company != nil {
+          SwSettings.section(path)
+          extraCards
+        } else {
+          ForEach(values.cards(path)) { card in
+            SuValuesCard(card.title, description: card.description, rows: card.rows)
+          }
+          if path == "team" { SwAppLayoutCard() }
         }
-        editButton
       }
     }
   }
 
-  /// Opens the section on the web, where it is changed (viewers only look).
+  /// What a section shows beside its fields: the custom wording (Language &
+  /// wording), the chart of accounts and VAT (Accounting), as they are.
   @ViewBuilder
-  private var editButton: some View {
-    if !SuRole(model).readOnly {
-      HStack {
-        Spacer(minLength: 0)
-        SuWebButton(t("Edit on the web"), path: "/settings/\(path)", size: .md)
+  private var extraCards: some View {
+    let values = SuSettingsValues(model: model)
+    switch path {
+    case "labels", "accounting":
+      ForEach(values.cards(path).dropFirst(path == "labels" ? 1 : 2)) { card in
+        SuValuesCard(card.title, description: card.description, rows: card.rows)
       }
+    default:
+      EmptyView()
     }
   }
 }
@@ -677,11 +686,7 @@ private struct SuAccountSettings: View {
         }
       }
     }
-    Card {
-      CardHeader(t("Password"), description: t("Change the password you sign in with.")) {
-        SuWebButton(t("Edit on the web"), path: "/settings/account")
-      }
-    }
+    SwPasswordCard()
     Card {
       CardHeader(t("Sign out"), description: t("Sign out on this device. Your other devices stay signed in.")) {
         WebButton(t("Sign out"), icon: .logOut, variant: .outline, size: .sm) { signingOut = true }

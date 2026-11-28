@@ -71,6 +71,15 @@ final class OneData {
     return record(.companies, companyId)
   }
 
+  /// What the company's server has, as last asked (`link.features`): the
+  /// suite's ports wait for it as the web does (`linkHasFeature`). Every
+  /// company opened here is kept in the cloud.
+  var cloud: SwCloud? {
+    _ = revision
+    guard let mirror else { return nil }
+    return SwCloud(features: mirror.state.features ?? [])
+  }
+
   /// The company is on this iPhone (at least partly, while it downloads again).
   var hasData: Bool {
     _ = revision
@@ -192,6 +201,25 @@ final class OneData {
   /// A kind of record this app may save yet.
   static func canWrite(_ kind: RecordKind) -> Bool {
     OneWritable.kinds.contains(kind.rawValue)
+  }
+
+  /// The signed-in person's link to the company, as the web's write
+  /// functions read it from `db.syncState` (who they are, their role, and
+  /// whether the owner lets them approve). Nil until the company is open.
+  var writeLink: DcLink? {
+    guard let mirror else { return nil }
+    let state = mirror.state
+    return DcLink(userId: state.userId, role: state.role, approver: state.approver == true)
+  }
+
+  /// The next counter of a kind from the company's counter in the cloud
+  /// (`reserve_number`), for a write that gives a new number: the web takes
+  /// it before saving, so two devices never give the same number. Nil
+  /// offline, with no answer in 3 s, or with nothing to ask: the write then
+  /// numbers it on this iPhone, as the web does.
+  func reserveNumber(_ request: DcCounterRequest?) async -> ReservedCounter? {
+    guard let request, let engine else { return nil }
+    return await engine.reserveNumber(kind: request.kind, date: request.date, min: request.min)
   }
 
   // MARK: Syncing

@@ -126,7 +126,7 @@ struct CtContactListPage: View {
       initial: "active",
       matches: { record, chip in record.raw.flag("archived") == (chip == "archived") },
       searchPlaceholder: copy.search, searchText: { CtContactListPage.searchText($0.raw) },
-      newLabel: copy.newLabel, onNew: { router.push(.newContact(kind)) },
+      newLabel: DcWrite.contacts && DcWrite.edits(model) ? copy.newLabel : nil, onNew: { router.push(.newContact(kind)) },
       emptyIcon: copy.icon, emptyTitle: copy.emptyTitle, emptyDescription: copy.empty, noMatch: copy.noMatch
     ) { record in
       CtContactRow(contact: record.raw, kind: kind, stats: stats[record.id] ?? CtContactStats(), format: format)
@@ -296,14 +296,21 @@ struct CtContactPage: View {
         CtContactBadges(contact: contact, kind: shown, format: one.format)
       }
     } actions: {
-      if shown == .vendor {
-        WebButton(t("New bill"), icon: .plus, size: .sm) { router.push(.newPurchaseDocument(.bill)) }
-      } else {
-        WebButton(t("New quote"), variant: .outline, size: .sm) { router.push(.newSalesDocument(.quote)) }
-        WebButton(t("New invoice"), icon: .plus, size: .sm) { router.push(.newSalesDocument(.invoice)) }
+      if DcWrite.documents && DcWrite.edits(model) {
+        if shown == .vendor {
+          WebButton(t("New bill"), icon: .plus, size: .sm) { router.push(.newPurchaseDocument(.bill)) }
+        } else {
+          WebButton(t("New quote"), variant: .outline, size: .sm) { router.push(.newSalesDocument(.quote)) }
+          WebButton(t("New invoice"), icon: .plus, size: .sm) { router.push(.newSalesDocument(.invoice)) }
+        }
       }
-      WebButton(t("Edit"), icon: .pencil, variant: .outline, size: .sm) {
-        router.push(.editContact(shown, id: id))
+      if DcWrite.contacts && DcWrite.edits(model) {
+        WebButton(t("Edit"), icon: .pencil, variant: .outline, size: .sm) {
+          router.push(.editContact(shown, id: id))
+        }
+        if let contact, shown == .customer {
+          DcCreditHoldButton(contact: contact)
+        }
       }
     } content: {
       if let contact {
@@ -745,8 +752,10 @@ struct CtContactDetailsCard: View {
     let people = contact.list("contacts")
     Card {
       CardHeader(t("Details")) {
-        WebButton(t("Edit"), icon: .pencil, variant: .ghost, size: .sm) {
-          router.push(.editContact(data.kind, id: contact.rid))
+        if DcWrite.contacts {
+          WebButton(t("Edit"), icon: .pencil, variant: .ghost, size: .sm) {
+            router.push(.editContact(data.kind, id: contact.rid))
+          }
         }
       }
       VStack(alignment: .leading, spacing: 20) {
