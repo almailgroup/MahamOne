@@ -11,6 +11,7 @@ enum AreaPages {
     DocumentsWriteArea.page(for:),
     InventoryWriteArea.page(for:),
     AccountingWriteArea.page(for:),
+    PeopleWriteArea.page(for:),
     FormBridge.page(for:),
     InventoryArea.page(for:),
     ContactsArea.page(for:),

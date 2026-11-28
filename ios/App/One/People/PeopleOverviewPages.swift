@@ -75,7 +75,9 @@ private struct PeOverviewView: View {
     WebPage(refresh: { [model] in await model.one.sync() }) {
       PageHeader(t("Overview"), description: subtitle) {
         WebButton(t("Directory"), icon: .idCard, variant: .outline) { router.push(.directory) }
-        WebButton(t("Add employee"), icon: .userPlus, haptic: .press) { router.push(.newEmployee) }
+        if PwKinds.can(PwKinds.employee) {
+          WebButton(t("Add employee"), icon: .userPlus, haptic: .press) { router.push(.newEmployee) }
+        }
       }
       VStack(alignment: .leading, spacing: 20) {
         VStack(spacing: 12) {
@@ -321,7 +323,9 @@ private struct PeDirectoryView: View {
       if contacts.isEmpty {
         Card {
           WebEmptyState(icon: .usersRound, title: t("No employees yet")) {
-            WebButton(t("Add employee"), haptic: .press) { router.push(.newEmployee) }
+            if PwKinds.can(PwKinds.employee) {
+              WebButton(t("Add employee"), haptic: .press) { router.push(.newEmployee) }
+            }
           }
         }
       } else {

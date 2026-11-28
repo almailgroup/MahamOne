@@ -20,7 +20,10 @@ enum OneWritable {
     "products", "warehouses", "stockMovements", "stockEntries", "landedCosts", "stockIssues",
     // Accounting (Write/Accounting).
     "journals", "assets", "depreciationRuns", "yearEnds", "bankTransactions", "vatReturns",
-    // Compliance and settings (Write/Suite).
-    "complianceDocuments", "renewals", "complianceMarks", "vehicles", "taxRates",
+    // Compliance and settings (Write/Suite); a renewal's fee is an expense.
+    "complianceDocuments", "renewals", "complianceMarks", "vehicles", "taxRates", "expenses",
+    // People and payroll (Write/People).
+    "employees", "payRuns", "payrollSettings", "leaveRecords", "staffLoans", "finalSettlements",
+    "peopleSettings", "letterTemplates", "employeeLetters", "staffingCostings",
   ]
 }

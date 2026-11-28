@@ -114,6 +114,8 @@ private struct PePayrollView: View {
     let employees = one.peEmployees
     WebPage(refresh: { [model] in await model.one.sync() }) {
       PePayrollHeader(tab: "runs")
+      PwNewPayRunButton()
+        .padding(.bottom, 16)
       if employees.isEmpty {
         Card {
           WebEmptyState(
@@ -122,7 +124,9 @@ private struct PePayrollView: View {
               "Pay runs are prepared from the employee records: salary, allowances, IBAN and whether they are insured with PIFSS."
             )
           ) {
-            WebButton(t("New employee"), icon: .plus, haptic: .press) { router.push(.newEmployee) }
+            if PwKinds.can(PwKinds.employee) {
+              WebButton(t("New employee"), icon: .plus, haptic: .press) { router.push(.newEmployee) }
+            }
           }
         }
       } else if runs.isEmpty {
@@ -271,6 +275,7 @@ private struct PePayRunBody: View {
     VStack(alignment: .leading, spacing: 24) {
       Badge(status: PePayroll.runStatus(run.status))
         .padding(.top, -16)
+      PwPayRunActions(runId: run.id)
       VStack(spacing: 12) {
         PePair {
           PeStat(label: t("Gross pay"), value: format.money(totals.gross), small: true)
@@ -645,8 +650,12 @@ private struct PeLeaveView: View {
     ]
     WebPage(refresh: { [model] in await model.one.sync() }) {
       PePayrollHeader(tab: "leave")
-      WebButton(t("Leave reasons"), icon: .tags, variant: .outline, size: .sm) { router.push(.leaveReasons) }
-        .padding(.bottom, 16)
+      FlowLayout(spacing: 8) {
+        WebButton(t("Leave reasons"), icon: .tags, variant: .outline, size: .sm) { router.push(.leaveReasons) }
+        PwOpeningsButton()
+        if !current.isEmpty { PwRecordLeaveButton() }
+      }
+      .padding(.bottom, 16)
       if current.isEmpty {
         Card {
           WebEmptyState(
@@ -710,7 +719,14 @@ private struct PeLeaveView: View {
 /// `/payroll/leave-reasons`: the company's own reasons for leave and the two switches.
 struct PeLeaveReasonsPage: View {
   var body: some View {
-    PeGate { PeLeaveReasonsView() }
+    PeGate {
+      // Editable where the payroll settings may be saved on this iPhone.
+      if PwKinds.can(PwKinds.payrollSettings) {
+        PwLeaveReasonsView()
+      } else {
+        PeLeaveReasonsView()
+      }
+    }
   }
 }
 
@@ -855,6 +871,8 @@ private struct PeLoansView: View {
     let outstanding = Self.outstanding(rows, p)
     WebPage(refresh: { [model] in await model.one.sync() }) {
       PePayrollHeader(tab: "loans")
+      PwNewLoanButton()
+        .padding(.bottom, 16)
       if rows.isEmpty {
         Card {
           WebEmptyState(
@@ -936,7 +954,14 @@ private struct PeLoanLine: Identifiable {
 /// leave policy; provisions; the accounts the payroll posts to.
 struct PePayrollSettingsPage: View {
   var body: some View {
-    PeGate { PePayrollSettingsView() }
+    PeGate {
+      // Editable where the payroll settings may be saved on this iPhone.
+      if PwKinds.can(PwKinds.payrollSettings) {
+        PwPayrollSettingsView()
+      } else {
+        PePayrollSettingsView()
+      }
+    }
   }
 }
 

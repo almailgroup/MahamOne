@@ -16,6 +16,10 @@ struct PeLetterRows: View {
   @Environment(\.palette) private var palette
   @State private var open: JSONValue?
   @State private var showing = false
+  /// Issuing, sending, voiding or deleting the letter open, asked first (`PwLetterFooter`).
+  @State private var stage = PwLetterStage.view
+  @State private var note = ""
+  @State private var busy = false
 
   var body: some View {
     let one = model.one
@@ -33,17 +37,29 @@ struct PeLetterRows: View {
           },
           action: {
             open = letter
+            stage = .view
             showing = true
           })
       }
     }
     .webDialog(isPresented: $showing, title: dialogTitle, description: dialogDescription(one)) {
-      if let letter = open {
+      if let letter = current(one) {
         PeLetterDetail(letter: letter, format: format)
+        PwLetterStageBody(stage: stage, number: letter.str("number"), note: $note)
       }
     } footer: {
-      WebButton(t("Close"), variant: .outline) { showing = false }
+      if let letter = current(one) {
+        PwLetterFooter(letter: letter, stage: $stage, note: $note, busy: $busy) { showing = false }
+      } else {
+        WebButton(t("Close"), variant: .outline) { showing = false }
+      }
     }
+  }
+
+  /// The letter open, as it is saved now.
+  private func current(_ one: OneData) -> JSONValue? {
+    guard let open else { return nil }
+    return one.record(.employeeLetters, open.rid) ?? open
   }
 
   /// The employee (in the company's list) and the kind of letter, with what made a draft.
@@ -93,7 +109,9 @@ struct PeLetterList: View {
   var body: some View {
     Card {
       CardHeader(title) {
-        WebButton(t("New letter"), icon: .filePlus2, size: .sm) { router.push(.newLetter) }
+        if PwKinds.can(PwKinds.letters) {
+          WebButton(t("New letter"), icon: .filePlus2, size: .sm) { router.push(.newLetter) }
+        }
       }
       PeRows {
         PeLetterRows(letters: letters, showEmployee: showEmployee)
@@ -210,7 +228,9 @@ private struct PeLettersView: View {
       PageHeader(t("Letters"), description: t("Letters to and about employees, made from the company’s templates.")) {
         if on {
           WebButton(t("Letter templates"), icon: .files, variant: .outline) { router.push(.letterTemplates) }
-          WebButton(t("New letter"), icon: .filePlus2, haptic: .press) { router.push(.newLetter) }
+          if PwKinds.can(PwKinds.letters) {
+            WebButton(t("New letter"), icon: .filePlus2, haptic: .press) { router.push(.newLetter) }
+          }
         }
       }
       if !on {
@@ -281,7 +301,9 @@ private struct PeLettersEmpty: View {
   var body: some View {
     WebEmptyState(icon: .mails, title: title, description: description) {
       if tab != "void" {
-        WebButton(t("New letter"), icon: .filePlus2, variant: .outline) { router.push(.newLetter) }
+        if PwKinds.can(PwKinds.letters) {
+          WebButton(t("New letter"), icon: .filePlus2, variant: .outline) { router.push(.newLetter) }
+        }
       }
     }
   }
@@ -320,7 +342,9 @@ private struct PeLettersSwitch: View {
         "Salary, experience and employment certificates, warning letters and no objection certificates, filled from each employee’s record and printed with the company’s letterhead."
       )
     ) {
-      if canSwitch {
+      if canSwitch && PwKinds.can(PwKinds.lettersSwitch) {
+        PwLettersSwitchRow(on: on)
+      } else if canSwitch {
         PeSwitchRow(
           label: t("Use employee letters"),
           description: t(
@@ -432,11 +456,22 @@ private struct PeLetterTemplateView: View {
     WebPage(refresh: { [model] in await model.one.sync() }) {
       if let template {
         PageHeader(template.displayName, breadcrumb: t("Letter templates"), onBreadcrumb: { router.back() })
-        PeTemplateDetail(template: template)
+        if let raw = editable(one, wanted) {
+          // Editable where templates may be saved on this iPhone and letters are on (`saveTemplate`).
+          PwTemplateEditor(template: raw).id(raw.str("updatedAt"))
+        } else {
+          PeTemplateDetail(template: template)
+        }
       } else {
         PeNotFound(message: t("This template could not be found."), back: t("Letter templates"))
       }
     }
+  }
+
+  /// The template as the editor starts from it, when the person may change it here.
+  private func editable(_ one: OneData, _ id: String) -> JSONValue? {
+    guard PwKinds.can(PwKinds.templates), PwLetterAccess.on(one), PwLetters.canDraft(one.pwLink) else { return nil }
+    return PwLetterAccess.templates(one).first { $0.rid == id }
   }
 }
 
@@ -521,7 +556,9 @@ private struct PeCostingsView: View {
         description: t("Posts priced from staff cost, with overhead and a margin, and the quotes they make.")
       ) {
         if settings.on && canEdit {
-          WebButton(t("New costing"), icon: .plus, haptic: .press) { router.push(.newCosting) }
+          if PwKinds.can(PwKinds.costings) {
+            WebButton(t("New costing"), icon: .plus, haptic: .press) { router.push(.newCosting) }
+          }
         }
       }
       if !settings.on {
@@ -537,7 +574,9 @@ private struct PeCostingsView: View {
                 )
               ) {
                 if canEdit {
-                  WebButton(t("New costing"), icon: .plus, variant: .outline) { router.push(.newCosting) }
+                  if PwKinds.can(PwKinds.costings) {
+                    WebButton(t("New costing"), icon: .plus, variant: .outline) { router.push(.newCosting) }
+                  }
                 }
               }
             }
@@ -592,7 +631,9 @@ private struct PeCostingSwitch: View {
         "Price posts of guards, cleaners and other staff from what they cost, with overhead and a margin, and make a quote for the customer with sell prices only."
       )
     ) {
-      if canEdit {
+      if canEdit && PwKinds.can(PwKinds.costingSwitch) {
+        PwCostingSwitchRow(on: on)
+      } else if canEdit {
         PeSwitchRow(
           label: t("Use manpower costing"),
           description: t(
@@ -694,7 +735,12 @@ private struct PeCostingView: View {
     let costing = one.record(.staffingCostings, id)
     WebPage(refresh: { [model] in await model.one.sync() }) {
       if let costing, one.pePeopleSettings.costing.on {
-        PeCostingDetail(costing: costing)
+        if PwKinds.can(PwKinds.costings) && PwCosting.canEdit(one.pwLink) {
+          // Editable where costings may be saved on this iPhone (`saveCosting`).
+          PwCostingEditor(id: id)
+        } else {
+          PeCostingDetail(costing: costing)
+        }
       } else if model.one.hasData, model.one.phase == .ready {
         Card {
           WebEmptyState(

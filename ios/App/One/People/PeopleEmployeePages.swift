@@ -50,7 +50,9 @@ private struct PeEmployeesView: View {
     let departmentChoices = departmentOptions(employees, people.departments)
     WebPage(refresh: { [model] in await model.one.sync() }) {
       PageHeader(t("Employees"), description: t("Your staff, their papers and end-of-service estimates.")) {
-        WebButton(t("New employee"), icon: .plus, haptic: .press) { router.push(.newEmployee) }
+        if PwKinds.can(PwKinds.employee) {
+          WebButton(t("New employee"), icon: .plus, haptic: .press) { router.push(.newEmployee) }
+        }
       }
       if employees.isEmpty {
         Card {
@@ -59,7 +61,9 @@ private struct PeEmployeesView: View {
             description: t(
               "Add your staff to track Civil IDs, residencies and work permits, and to estimate end-of-service pay.")
           ) {
-            WebButton(t("New employee"), icon: .plus, haptic: .press) { router.push(.newEmployee) }
+            if PwKinds.can(PwKinds.employee) {
+              WebButton(t("New employee"), icon: .plus, haptic: .press) { router.push(.newEmployee) }
+            }
           }
         }
       } else {
@@ -395,6 +399,11 @@ private struct PeEmployeeHeader: View {
         Text(LanguageStore.shared.isArabic ? employee.name : arabic)
           .font(.web(14))
           .foregroundStyle(palette.slate(500))
+      }
+      if PwKinds.can(PwKinds.employee) {
+        WebButton(t("Edit"), icon: .pencil, variant: .outline, size: .sm) {
+          router.push(.editEmployee(id: employee.id))
+        }
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
@@ -896,6 +905,12 @@ private struct PeLeaveTab: View {
     let sick = PeLeave.sickDaysByTier(records, year: year, dayOff: dayOff)
     let reasons = reasonRows(settings, records: records)
     VStack(alignment: .leading, spacing: 24) {
+      if employee.isCurrent {
+        FlowLayout(spacing: 8) {
+          PwRecordLeaveButton(employeeId: employee.id)
+          PwRecordLeaveButton(employeeId: employee.id, balance: true)
+        }
+      }
       PeCard(
         t("Annual leave"),
         description: ownDays
@@ -917,7 +932,7 @@ private struct PeLeaveTab: View {
           .foregroundStyle(palette.slate(500))
         }
         if let brought = employee.leaveOpening {
-          PeBroughtForward(brought: brought, format: format)
+          PeBroughtForward(brought: brought, format: format, employeeId: employee.id)
         }
         if let eligible = balance.eligibleFrom, today < eligible {
           Text(firstLeaveText(format.date(eligible), months: policy.firstYearMonths))
@@ -1022,6 +1037,8 @@ private struct PeLeaveTab: View {
 private struct PeBroughtForward: View {
   let brought: PeLeaveOpening
   let format: CompanyFormat
+  /// Whose it is, for changing or confirming it on this iPhone.
+  var employeeId: String?
   @Environment(\.palette) private var palette
 
   var body: some View {
@@ -1048,6 +1065,9 @@ private struct PeBroughtForward: View {
         )
         .font(.web(12))
         .foregroundStyle(palette[.amber(800)])
+      }
+      if let employeeId {
+        PwLeaveOpeningButtons(employeeId: employeeId)
       }
     }
     .padding(12)
@@ -1080,6 +1100,7 @@ private struct PeLeaveRecordsCard: View {
                   .font(.web(14, tabular: true))
                   .foregroundStyle(record.status == "cancelled" ? palette.slate(500) : palette.slate(700))
                   .strikethrough(record.status == "cancelled")
+                if record.status == "approved" { PwCancelLeaveButton(recordId: record.id) }
               })
           }
         }
@@ -1122,6 +1143,9 @@ private struct PeLoansTab: View {
     let runs = one.pePayRuns
     let settlements = one.peSettlements
     let loans = one.peStaffLoans.filter { $0.employeeId == employee.id }.sorted { $0.date > $1.date }
+    if employee.isCurrent {
+      PwNewLoanButton(employeeId: employee.id)
+    }
     if loans.isEmpty {
       Card {
         WebEmptyState(
@@ -1137,7 +1161,12 @@ private struct PeLoansTab: View {
           PeLineRow(
             title: loanTitle(loan, format: format), detail: loanDetail(loan, format: format),
             detail2: loan.status == "active" ? progress(loan, balance: balance, recovered: recovered, format: format) : nil,
-            trailing: { PeLoanBadge(loan: loan, balance: balance) })
+            trailing: {
+              PeLoanBadge(loan: loan, balance: balance)
+              if loan.status == "active" && recovered == 0 && loan.payRunId == nil {
+                PwCancelLoanButton(loanId: loan.id)
+              }
+            })
         }
       }
     }
@@ -1295,7 +1324,9 @@ private struct PeEmployeeLettersTab: View {
             "Salary, experience and employment certificates, warning letters and no objection certificates, filled from their record."
           )
         ) {
-          WebButton(t("New letter"), icon: .filePlus2, haptic: .press) { router.push(.newLetter) }
+          if PwKinds.can(PwKinds.letters) {
+            WebButton(t("New letter"), icon: .filePlus2, haptic: .press) { router.push(.newLetter) }
+          }
         }
       }
     } else {
@@ -1431,6 +1462,16 @@ private struct PeSettlementView: View {
       if let employee {
         if let live {
           PePostedSettlement(employee: employee, settlement: live)
+          // Paid from the bank, its payment undone, or reversed, on this iPhone.
+          PwSettlementActions(employeeId: employeeId)
+            .padding(.top, 16)
+        } else if PwKinds.can(PwKinds.settlement) {
+          PageHeader(
+            t("Final settlement"),
+            description: t(
+              "Everything due on leaving, worked out from the records. Check each amount before posting."),
+            breadcrumb: employee.displayName, onBreadcrumb: { router.back() })
+          PwSettlementActions(employeeId: employeeId)
         } else {
           estimate(employee)
         }
