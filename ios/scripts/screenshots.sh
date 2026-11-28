@@ -67,6 +67,12 @@ CASES=(
   "employees-light-en||Employees|$P -MahamRoute /employees -MahamScheme light -MahamLanguage en"
   "payroll-light-en||Payroll|$P -MahamRoute /payroll -MahamScheme light -MahamLanguage en"
   "people-light-ar||People overview, Arabic|$P -MahamRoute /people -MahamScheme light -MahamLanguage ar"
+  "invoice-new-light-en||New invoice form|$P -MahamRoute /invoices/new -MahamScheme light -MahamLanguage en"
+  "invoice-edit-light-ar||Editing an invoice, Arabic|$P -MahamRoute /invoices/p-inv-4/edit -MahamScheme light -MahamLanguage ar"
+  "client-new-light-en||New client form|$P -MahamRoute /clients/new -MahamScheme light -MahamLanguage en"
+  "item-new-light-en||New item form|$P -MahamRoute /products?new=1 -MahamScheme light -MahamLanguage en"
+  "journal-new-light-en||New journal|$P -MahamRoute /journals/new -MahamScheme light -MahamLanguage en"
+  "adjust-new-light-en||Stock adjustment form|$P -MahamRoute /inventory/adjustments/new -MahamScheme light -MahamLanguage en"
   "tasks-light-en||Maham Tasks|$P -MahamDepartment tasks -MahamScheme light -MahamLanguage en"
   "signin-light-en||Signing in (preview mode off)|-MahamScheme light -MahamLanguage en"
 )
