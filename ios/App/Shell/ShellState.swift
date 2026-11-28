@@ -166,6 +166,12 @@ final class SuiteState {
     defaults.set(id.rawValue, forKey: Self.lastAppKey)
   }
 
+  /// The app opens nothing of the web: an action is offered once its form
+  /// is native (an area answers its route; each form checks it may save).
+  static func hasNativeForm(_ action: CreateAction) -> Bool {
+    AreaPages.page(for: Route(path: action.to)) != nil
+  }
+
   /// What the create menu offers (`createGroups`): the current app's groups
   /// first, then those of the other apps the person works in, each action
   /// once and each group (by its name) once.
@@ -177,7 +183,9 @@ final class SuiteState {
     var groups: [CreateGroup] = []
     for app in order where access(app.id).canEdit {
       for group in app.create {
-        let actions = group.actions.filter { !seen.contains($0.id) && (flags.costing || !$0.costingOnly) }
+        let actions = group.actions.filter {
+          !seen.contains($0.id) && (flags.costing || !$0.costingOnly) && Self.hasNativeForm($0)
+        }
         actions.forEach { seen.insert($0.id) }
         if actions.isEmpty { continue }
         if let index = groups.firstIndex(where: { $0.label == group.label }) {
