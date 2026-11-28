@@ -31,7 +31,7 @@ public final class WriteContext {
 
   public init(
     companyId: String, userId: String?, userName: String? = nil, role: MemberRole, now: Date = Date(),
-    today: String? = nil, makeId: @escaping () -> String = { newId() },
+    today: String? = nil, makeId: @escaping () -> String = { MahamKit.newId() },
     records: @escaping (String) -> [String: JSONValue]
   ) {
     self.companyId = companyId
