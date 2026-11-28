@@ -138,9 +138,9 @@ enum WriteParity {
       }
     }
     if !problems.isEmpty {
-      Issue.record(
-        "\(scenario): \(problems.count) difference(s)\n  " + problems.prefix(12).joined(separator: "\n  "),
-        sourceLocation: sourceLocation)
+      let listed: String = problems.prefix(12).joined(separator: "\n  ")
+      let message: String = "\(scenario): \(problems.count) difference(s)\n  \(listed)"
+      Issue.record("\(message)", sourceLocation: sourceLocation)
     }
   }
 
