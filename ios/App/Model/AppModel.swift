@@ -132,7 +132,7 @@ final class AppModel {
         return
       }
     #endif
-    one.open(company, userId: userId)
+    one.open(company, userId: userId, authorName: session?.user.authorName ?? "")
   }
 
   // MARK: Signing in and out

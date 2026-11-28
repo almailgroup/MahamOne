@@ -31,6 +31,8 @@ final class OneData {
   private(set) var companyId: String?
 
   private let services: AppServices?
+  /// Who saves, for the activity log (`user.fullName || user.email`).
+  private var author: (id: String, name: String)?
   private var mirror: Mirror?
   private var engine: SyncEngine?
   private var watchers: [Task<Void, Never>] = []
@@ -79,7 +81,8 @@ final class OneData {
 
   /// Opens the company's copy on this iPhone, or downloads it, and keeps it
   /// in step with the cloud. Opening the one already open just syncs it.
-  func open(_ company: Company, userId: String) {
+  func open(_ company: Company, userId: String, authorName: String = "") {
+    author = (userId, authorName)
     if companyId == company.id {
       Task { await sync() }
       return
@@ -111,6 +114,8 @@ final class OneData {
     }
     guard companyId == company.id else { return }
     var configuration = SyncConfiguration()
+    // Only the kinds whose saving rules are ported and tested against the web's.
+    configuration.writableKinds = OneWritable.kinds
     configuration.onProgress = { [weak self] progress in
       Task { @MainActor in
         guard let self, self.companyId == company.id, progress.kind == .download else { return }
@@ -157,6 +162,36 @@ final class OneData {
     cache = [:]
     byId = [:]
     revision &+= 1
+  }
+
+  // MARK: Saving
+
+  /// Saves one user action, as the web saves one in a Dexie transaction:
+  /// `body` reads the company's records and writes its changes through the
+  /// context (the ports of the web's write functions, in MahamKit/Write);
+  /// the sync engine then applies them here and queues them for the cloud,
+  /// all or nothing. Throws `SyncWriteError` with the web's words when the
+  /// rules refuse it.
+  @discardableResult
+  func write<T>(_ body: (WriteContext) throws -> T) async throws -> T {
+    guard let mirror, let engine, let companyId else {
+      throw SyncWriteError.refused("This company is still being downloaded. Try again in a moment.")
+    }
+    let context = WriteContext(
+      companyId: companyId, userId: author?.id, userName: author?.name, role: mirror.state.role,
+      records: { mirror.recordsById($0) })
+    let result = try body(context)
+    let changes = context.changes
+    if !changes.isEmpty {
+      try await engine.perform(group: changes)
+      invalidate()
+    }
+    return result
+  }
+
+  /// A kind of record this app may save yet.
+  static func canWrite(_ kind: RecordKind) -> Bool {
+    OneWritable.kinds.contains(kind.rawValue)
   }
 
   // MARK: Syncing
@@ -236,6 +271,14 @@ final class OneData {
       state.cursor = 1
       guard let made = try? Mirror.seeded(directory: directory, state: state, records: records) else { return }
       mirror = made
+      author = (userId, "Sample User")
+      // An engine that is never started: saving works on the made-up data, nothing is sent.
+      if let services {
+        var configuration = SyncConfiguration()
+        configuration.writableKinds = OneWritable.kinds
+        engine = SyncEngine(
+          mirror: made, api: SupabaseCloudAPI(db: services.db), userId: userId, configuration: configuration)
+      }
       phase = .ready
       invalidate()
     }

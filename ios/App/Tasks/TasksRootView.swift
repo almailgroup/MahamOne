@@ -254,12 +254,6 @@ struct TasksRootView: View {
         Button("General", systemImage: "tray.full") {
           path.append(TasksRoute.general)
         }
-        if let url = model.services?.config.tasksWebURL {
-          Divider()
-          Link(destination: url) {
-            Label("Open Maham Tasks on the web", systemImage: "safari")
-          }
-        }
       }
     }
     ToolbarSpacer(.fixed, placement: .topBarTrailing)
@@ -360,12 +354,6 @@ private struct NotInTasksView: View {
           .buttonStyle(.glassProminent)
           .disabled(checking)
 
-          if let url = model.services?.config.tasksWebURL {
-            Link(destination: url) {
-              Label("Open the website", systemImage: "safari")
-            }
-            .buttonStyle(.glass)
-          }
         }
         .controlSize(.large)
       }

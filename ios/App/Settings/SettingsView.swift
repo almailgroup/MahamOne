@@ -80,17 +80,6 @@ struct SettingsView: View {
           Text("Your open tasks and the company's clients appear in the iPhone's search. Ask Siri to add a task or what's due today.")
         }
 
-        if let config = model.services?.config {
-          Section("On the web") {
-            Link(destination: config.webURL) {
-              Label("Maham One", systemImage: "safari")
-            }
-            Link(destination: config.tasksWebURL) {
-              Label("Maham Tasks", systemImage: "safari")
-            }
-          }
-        }
-
         Section {
           Button("Sign Out", role: .destructive) { confirmingSignOut = true }
         } footer: {

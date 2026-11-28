@@ -134,16 +134,14 @@ func suDaysText(_ daysLeft: Int) -> String {
 
 // MARK: Shared pieces
 
-/// Opens a page of Maham One on the web inside the app (Settings that are
-/// changed there, a dialog the app doesn't have yet); what is saved there
-/// comes back with the sync run as it closes.
+/// A button that used to open a page of Maham One on the web. The app
+/// opens nothing of the web: until the action it stood for is native, it
+/// shows nothing.
 struct SuWebButton: View {
   let title: String
   let path: String
   var variant: ButtonVariant = .outline
   var size: ButtonSize = .sm
-  @Environment(AppModel.self) private var model
-  @State private var showing = false
 
   init(_ title: String, path: String, variant: ButtonVariant = .outline, size: ButtonSize = .sm) {
     self.title = title
@@ -152,19 +150,7 @@ struct SuWebButton: View {
     self.size = size
   }
 
-  var body: some View {
-    WebButton(title, icon: .externalLink, variant: variant, size: size) { showing = true }
-      .fullScreenCover(isPresented: $showing, onDismiss: { Task { await model.one.sync() } }) {
-        if let url {
-          SafariView(url: url).ignoresSafeArea()
-        }
-      }
-  }
-
-  private var url: URL? {
-    guard let base = model.services?.config.webURL else { return nil }
-    return URL(string: "#\(path)", relativeTo: base)?.absoluteURL
-  }
+  var body: some View { EmptyView() }
 }
 
 /// A heading above a group of cards: 14pt, 600, uppercase (the calendar's months, the updates' days).

@@ -35,20 +35,50 @@ public struct AuthUser: Codable, Equatable, Sendable {
   public var id: String
   public var email: String?
   public var factors: [AuthFactor]
+  /// The name in the account's metadata (`user_metadata.full_name`), as the
+  /// web names the author of a change (`user.fullName || user.email`).
+  public var fullName: String?
 
-  public init(id: String, email: String?, factors: [AuthFactor] = []) {
+  public init(id: String, email: String?, factors: [AuthFactor] = [], fullName: String? = nil) {
     self.id = id
     self.email = email
     self.factors = factors
+    self.fullName = fullName
   }
 
-  enum CodingKeys: String, CodingKey { case id, email, factors }
+  enum CodingKeys: String, CodingKey {
+    case id, email, factors, fullName
+    case metadata = "user_metadata"
+  }
+
+  private struct Metadata: Decodable {
+    var fullName: String?
+    enum CodingKeys: String, CodingKey { case fullName = "full_name" }
+  }
 
   public init(from decoder: Decoder) throws {
     let c = try decoder.container(keyedBy: CodingKeys.self)
     id = try c.decode(String.self, forKey: .id)
     email = try c.decodeIfPresent(String.self, forKey: .email)
     factors = (try? c.decodeIfPresent([AuthFactor].self, forKey: .factors)) ?? []
+    // Kept as `fullName` once saved; read from the server's `user_metadata` the first time.
+    fullName =
+      (try? c.decodeIfPresent(String.self, forKey: .fullName))
+      ?? (try? c.decodeIfPresent(Metadata.self, forKey: .metadata))?.fullName
+  }
+
+  public func encode(to encoder: Encoder) throws {
+    var c = encoder.container(keyedBy: CodingKeys.self)
+    try c.encode(id, forKey: .id)
+    try c.encodeIfPresent(email, forKey: .email)
+    try c.encode(factors, forKey: .factors)
+    try c.encodeIfPresent(fullName, forKey: .fullName)
+  }
+
+  /// Who to name on a change (`fullName || email`).
+  public var authorName: String {
+    let name = (fullName ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+    return name.isEmpty ? (email ?? "") : name
   }
 
   /// An authenticator app that has been set up (verified).

@@ -14,6 +14,9 @@ let package = Package(
   ],
   targets: [
     .target(name: "MahamKit"),
-    .testTarget(name: "MahamKitTests", dependencies: ["MahamKit"]),
+    .testTarget(
+      name: "MahamKitTests", dependencies: ["MahamKit"],
+      // The web's own outputs for the write ports' parity tests (scripts/web-fixtures/writes-*.gen.ts).
+      resources: [.copy("Fixtures")]),
   ]
 )
